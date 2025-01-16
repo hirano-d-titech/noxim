@@ -34,9 +34,9 @@ void Router::rxProcess()
 	}
 	routed_flits = 0;
 	local_drained = 0;
-    } 
-    else 
-    { 
+    }
+    else
+    {
 	// This process simply sees a flow of incoming flits. All arbitration
 	// and wormhole related issues are addressed in the txProcess()
 	//assert(false);
@@ -47,9 +47,19 @@ void Router::rxProcess()
 	    //LOG<<"****RX****DIRECTION ="<<i<<  endl;
 
 	    if (req_rx[i].read() == 1 - current_level_rx[i])
-	    { 
+	    {
+		// prob of Flit loss
+		if (rand() / (RAND_MAX + 1.0) < GlobalParams::wired_flit_loss_rate) {
+			continue;
+		}
+
 		Flit received_flit = flit_rx[i].read();
 		//LOG<<"request opposite to the current_level, reading flit "<<received_flit<<endl;
+
+		// prob of bit error
+		if (rand() / (RAND_MAX + 1.0) < GlobalParams::wired_bit_error_rate) {
+			received_flit.payload.data ^= (1 << (rand() % 32));
+		}
 
 		int vc = received_flit.vc_id;
 

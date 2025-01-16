@@ -365,6 +365,11 @@ void Hub::antennaToTileProcess()
 				{
 					LOG << " RT_OUTVC_BUSY reservation direction " << dst_port << " for flit " << received_flit << endl;
 				}
+				else if (rt_status == RT_ALREADY_OTHER_OUT)
+				{
+					// TODO: is this status valid?
+					LOG << "RT_ALREADY_OTHER_OUT a channel different from " << channel << " already reserved by Hub port["<< i << "]["<<channel<<"]" << endl;
+				}
 				else assert(false); // no meaningful status here
 
 
@@ -386,8 +391,19 @@ void Hub::antennaToTileProcess()
 
 			if (!(target[channel]->buffer_rx.IsEmpty()))
 			{
+				// prob of flit loss
+				if (rand() / (RAND_MAX + 1.0) < GlobalParams::wireless_flit_loss_rate) {
+					target[channel]->buffer_rx.Pop();
+					continue;
+				}
+
 				Flit received_flit = target[channel]->buffer_rx.Front();
 				power.antennaBufferFront();
+
+				// prob of bit error in payload
+				if (rand() / (RAND_MAX + 1.0) < GlobalParams::wireless_bit_error_rate) {
+					received_flit.payload.data ^= (1 << (rand() % 32));
+				}
 
 				if ( !buffer_to_tile[port][vc].IsFull() )
 				{
@@ -560,8 +576,19 @@ void Hub::tileToAntennaProcess()
 
 			if (!buffer_from_tile[i][vc].IsEmpty())
 			{
+				// prob of flit loss
+				if (rand() / (RAND_MAX + 1.0) < GlobalParams::wireless_flit_loss_rate) {
+					buffer_from_tile[i][vc].Pop();
+					continue;
+				}
+
 				Flit flit = buffer_from_tile[i][vc].Front();
 				// powerFront already accounted in 1st phase
+
+				// prob of bit error in payload
+				if (rand() / (RAND_MAX + 1.0) < GlobalParams::wireless_bit_error_rate) {
+					flit.payload.data ^= (1 << (rand() % 32));
+				}
 
 				assert(r_from_tile[i][vc] == DIRECTION_WIRELESS);
 

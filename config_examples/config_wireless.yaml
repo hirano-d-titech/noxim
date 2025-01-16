@@ -1,0 +1,105 @@
+# トポロジー設定
+topology: MESH
+mesh_dim_x: 4  # メッシュのX方向サイズ
+mesh_dim_y: 4  # メッシュのY方向サイズ
+buffer_depth: 4  # 各ルータのバッファ深さ [flits]
+flit_size: 32  # フリットのサイズ [ビット]
+r2r_link_length: 1.0
+r2h_link_length: 2.0
+n_virtual_channels: 1  # 仮想チャネルの数
+
+# Routing algorithms:
+#   XY
+#   DELTA
+#   WEST_FIRST
+#   NORTH_LAST
+#   NEGATIVE_FIRST
+#   ODD_EVEN
+#   DYAD
+#   TABLE_BASED
+# Each of the above labels should match a corresponding
+# implementation in the routingAlgorithms source code directory
+routing_algorithm: XY
+routing_table_filename: ""
+
+# Routing specific parameters
+#   dyad_threshold: double
+dyad_threshold: 0.6
+
+# Selection Strategies:
+#   RANDOM
+#   BUFFER_LEVEL
+#   NOP
+# Each of the above labels should match a corresponding
+# implementation in the selectionStrategies source code directory
+selection_strategy: RANDOM
+
+# Encoding Models:
+#   RAW
+#   REPEAT
+# Each of the above labels should match a corresponding
+# implementation in the encodingModels source code directory
+encoding_model: REPEAT
+
+# 無線通信設定
+use_winoc: true  # 無線通信を有効化
+Hubs:
+  defaults:
+    rx_radio_channels: [0]  # ハブが受信可能なチャネル
+    tx_radio_channels: [0]  # ハブが送信可能なチャネル
+    attached_nodes: []      # 接続されるノードリスト
+    to_tile_buffer_size: 4  # タイルへのバッファサイズ
+    from_tile_buffer_size: 4  # タイルからのバッファサイズ
+    rx_buffer_size: 4  # 受信バッファサイズ
+    tx_buffer_size: 4  # 送信バッファサイズ
+  0:
+    attached_nodes: [0, 1, 4, 5]  # ハブ0に接続されるノード
+  1:
+    attached_nodes: [2, 3, 6, 7]  # ハブ1に接続されるノード
+  2:
+    attached_nodes: [8, 9, 12, 13]  # ハブ2に接続されるノード
+  3:
+    attached_nodes: [10, 11, 14, 15]  # ハブ3に接続されるノード
+
+RadioChannels:
+  defaults:
+    data_rate: 16  # データレート [Gbps]
+    ber: [0, 0]  # 現在未使用のビットエラー率
+    mac_policy: [TOKEN_PACKET]  # トークン制御ポリシー
+
+# 無線通信のエラー設定
+wireless_flit_loss_rate: 0.05  # 無線通信でのフリット損失率（5%）
+wireless_bit_error_rate: 1e-4  # 無線通信でのビットエラー率
+
+# シミュレーションパラメータ
+clock_period_ps: 1000  # クロック周期 [ピコ秒]
+reset_time: 1000  # リセット期間 [サイクル]
+simulation_time: 10000  # シミュレーション時間 [サイクル]
+stats_warm_up_time: 1000  # 統計収集開始までのウォームアップ期間
+detailed: true  # 詳細な統計出力を有効化
+max_volume_to_be_drained: 0
+
+# Winoc
+# enable wireless, when false, all wireless channel configuration is
+# ignored
+use_winoc: false
+# experimental power saving strategy
+use_wirxsleep: false
+
+# トラフィックパラメータ
+traffic_distribution: TRAFFIC_RANDOM  # ランダムなトラフィック分布
+min_packet_size: 8  # 最小パケットサイズ [フリット]
+max_packet_size: 16  # 最大パケットサイズ [フリット]
+packet_injection_rate: 0.01  # パケット注入率
+probability_of_retransmission: 0.01  # 再送の確率
+
+# その他の設定
+verbose_mode: VERBOSE_HIGH  # 詳細な出力を有効化
+trace_mode: false  # VCDトレース出力を無効化
+show_buffer_stats: true  # バッファ統計の出力を有効化
+
+traffic_table_filename: "t.txt"
+
+# Trace
+trace_mode: false
+trace_filename: ""

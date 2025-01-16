@@ -77,6 +77,10 @@ void loadConfiguration() {
     GlobalParams::encoding_model = readParam<string>(config, "encoding_model", "RAW");
     GlobalParams::packet_injection_rate = readParam<double>(config, "packet_injection_rate");
     GlobalParams::probability_of_retransmission = readParam<double>(config, "probability_of_retransmission");
+    GlobalParams::wired_flit_loss_rate = readParam<double>(config, "wired_flit_loss_rate", 1E-5);
+    GlobalParams::wireless_flit_loss_rate = readParam<double>(config, "wireless_flit_loss_rate", 0.01);
+    GlobalParams::wired_bit_error_rate = readParam<double>(config, "wired_bit_error_rate", 1E-9);
+    GlobalParams::wireless_bit_error_rate = readParam<double>(config, "wireless_bit_error_rate", 1E-4);
     GlobalParams::traffic_distribution = readParam<string>(config, "traffic_distribution");
     GlobalParams::traffic_table_filename = readParam<string>(config, "traffic_table_filename");
     GlobalParams::clock_period_ps = readParam<int>(config, "clock_period_ps");

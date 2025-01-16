@@ -51,6 +51,13 @@ dyad_threshold: 0.6
 # implementation in the selectionStrategies source code directory
 selection_strategy: RANDOM
 
+# Encoding Models:
+#   RAW
+#   REPEAT
+# Each of the above labels should match a corresponding
+# implementation in the encodingModels source code directory
+encoding_model: RAW
+
 #
 # WIRELESS CONFIGURATION
 #
