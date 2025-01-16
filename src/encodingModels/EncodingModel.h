@@ -14,8 +14,11 @@ struct Flit;
 class EncodingModel
 {
     public:
-    virtual bool encode(Packet &packet, queue < Flit > &sending_flits);
-    virtual bool decode(vector < Flit > &received_flits, Packet &packet);
+    virtual ~EncodingModel() {};
+    virtual bool encode(Packet &packet, queue < Flit > &sending_flits) = 0;
+    virtual bool decode(vector < Flit > &received_flits, Packet &packet) = 0;
+    int getDecodeCount() { return _decodeCount; }
+    int getFailureCount() { return _failureCount; }
     int getErrorCount() { return _errorCount; }
 
     protected:
@@ -30,7 +33,7 @@ class EncodingModel
     inline void hash_combine(size_t &seed, size_t value) {
         seed ^= value + 0x9e3779b97f4a7c15ULL + (seed << 6) + (seed >> 2);
     }
-    int _decodeCount, _failureCount, _errorCount;
+    unsigned int _decodeCount = 0, _failureCount = 0, _errorCount = 0;
 };
 
 #endif

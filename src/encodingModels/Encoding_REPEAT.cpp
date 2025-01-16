@@ -16,7 +16,7 @@ bool Encoding_REPEAT::encode(Packet &packet, queue < Flit > &sending_flits) {
 
     for (int i = 0; i < repeated; i++)
     {
-        Flit flit;
+        Flit flit(packet);
         flit.sequence_no = i;
         flit.payload = payloads[i % packet.flit_left];
 
@@ -31,6 +31,8 @@ bool Encoding_REPEAT::encode(Packet &packet, queue < Flit > &sending_flits) {
 
         sending_flits.push(flit);
     }
+
+    return true;
 }
 
 bool Encoding_REPEAT::decode(vector < Flit > &received_flits, Packet &packet) {
@@ -56,7 +58,7 @@ bool Encoding_REPEAT::decode(vector < Flit > &received_flits, Packet &packet) {
     {
         Payload corrected = {0};
 
-        for (size_t bit = 0; bit < corrected.data.length(); bit++)
+        for (int bit = 0; bit < corrected.data.length(); bit++)
         {
             int ones = 0;
 
@@ -66,12 +68,13 @@ bool Encoding_REPEAT::decode(vector < Flit > &received_flits, Packet &packet) {
                     ones++;
                 }
             }
-            
+
             corrected.data[bit] = ones > (REPETITION / 2) ? 1 : 0;
         }
-    
+
         decoded[i] = corrected;
     }
-    
+
     onDecodeSuccess(verifyPayloads(decoded, predicted));
+    return true;
 }

@@ -6,7 +6,7 @@
 
 using namespace std;
 
-class Encoding_REPEAT : EncodingModel {
+class Encoding_REPEAT : public EncodingModel {
     public:
         bool encode(Packet &packet, queue < Flit > &sending_flits)override;
         bool decode(vector < Flit > &received_flits, Packet &packet)override;

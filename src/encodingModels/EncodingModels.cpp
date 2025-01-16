@@ -8,7 +8,7 @@ EncodingModel * EncodingModels::get(const string & encodingModelName) {
     if (it == getEncodingModelsMap()->end())
         return 0;
 
-        return it->second;
+    return it->second;
 }
 
 EncodingModelsMap * EncodingModels::getEncodingModelsMap() {

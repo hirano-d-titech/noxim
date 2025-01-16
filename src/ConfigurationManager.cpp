@@ -74,7 +74,7 @@ void loadConfiguration() {
     GlobalParams::routing_algorithm = readParam<string>(config, "routing_algorithm");
     GlobalParams::routing_table_filename = readParam<string>(config, "routing_table_filename"); 
     GlobalParams::selection_strategy = readParam<string>(config, "selection_strategy");
-    GlobalParams::encoding_model = readParam<string>(config, "encoding_model");
+    GlobalParams::encoding_model = readParam<string>(config, "encoding_model", "RAW");
     GlobalParams::packet_injection_rate = readParam<double>(config, "packet_injection_rate");
     GlobalParams::probability_of_retransmission = readParam<double>(config, "probability_of_retransmission");
     GlobalParams::traffic_distribution = readParam<string>(config, "traffic_distribution");

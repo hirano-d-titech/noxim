@@ -254,6 +254,11 @@ unsigned int GlobalStats::getReceivedFlits()
     return n;
 }
 
+unsigned int GlobalStats::getErrorDecodedPackets()
+{
+	return EncodingModels::get(GlobalParams::encoding_model)->getErrorCount();
+}
+
 double GlobalStats::getThroughput()
 {
     if (GlobalParams::topology == TOPOLOGY_MESH) 
@@ -493,6 +498,7 @@ void GlobalStats::showStats(std::ostream & out, bool detailed)
 
     //int total_cycles = GlobalParams::simulation_time - GlobalParams::stats_warm_up_time;
     out << "% Total received packets: " << getReceivedPackets() << endl;
+	out << "% Total error decoded packets: " << getErrorDecodedPackets() << endl;
     out << "% Total received flits: " << getReceivedFlits() << endl;
     out << "% Received/Ideal flits Ratio: " << getReceivedIdealFlitRatio() << endl;
     out << "% Average wireless utilization: " << getWirelessPackets()/(double)getReceivedPackets() << endl;

@@ -31,6 +31,8 @@ bool Encoding_RAW::encode(Packet &packet, queue < Flit > &sending_flits) {
 
         sending_flits.push(flit);
     }
+
+    return true;
 }
 
 bool Encoding_RAW::decode(vector < Flit > &received_flits, Packet &packet) {
@@ -48,4 +50,5 @@ bool Encoding_RAW::decode(vector < Flit > &received_flits, Packet &packet) {
     }
 
     onDecodeSuccess(verifyPayloads(received, predicted));
+    return true;
 }

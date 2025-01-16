@@ -6,10 +6,10 @@
 
 using namespace std;
 
-class Encoding_RAW : EncodingModel {
+class Encoding_RAW : public EncodingModel {
     public:
-        bool encode(Packet &packet, queue < Flit > &sending_flits)override;
-        bool decode(vector < Flit > &received_flits, Packet &packet)override;
+        bool encode(Packet &packet, queue < Flit > &sending_flits);
+        bool decode(vector < Flit > &received_flits, Packet &packet);
 
         static Encoding_RAW * getInstance();
 
