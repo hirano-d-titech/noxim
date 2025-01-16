@@ -17,6 +17,8 @@
 #include "DataStructs.h"
 #include "GlobalTrafficTable.h"
 #include "Utils.h"
+#include "encodingModels/EncodingModel.h"
+#include "encodingModels/EncodingModels.h"
 
 using namespace std;
 
@@ -44,6 +46,8 @@ SC_MODULE(ProcessingElement)
     bool current_level_rx;	// Current level for Alternating Bit Protocol (ABP)
     bool current_level_tx;	// Current level for Alternating Bit Protocol (ABP)
     queue < Packet > packet_queue;	// Local queue of packets
+    queue < Flit > front_packet_flits; // Local queue of flits of front packets
+    vector < Flit > flit_buffer;
     bool transmittedAtPreviousCycle;	// Used for distributions with memory
 
     // Functions
@@ -65,6 +69,8 @@ SC_MODULE(ProcessingElement)
     bool never_transmit;	// true if the PE does not transmit any packet 
     //  (valid only for the table based traffic)
 
+    EncodingModel * encodingModel;
+
     void fixRanges(const Coord, Coord &);	// Fix the ranges of the destination
     int randInt(int min, int max);	// Extracts a random integer number between min and max
     int getRandomSize();	// Returns a random size in flits for the packet
@@ -78,13 +84,21 @@ SC_MODULE(ProcessingElement)
 
     // Constructor
     SC_CTOR(ProcessingElement) {
-	SC_METHOD(rxProcess);
-	sensitive << reset;
-	sensitive << clock.pos();
+        SC_METHOD(rxProcess);
+        sensitive << reset;
+        sensitive << clock.pos();
 
-	SC_METHOD(txProcess);
-	sensitive << reset;
-	sensitive << clock.pos();
+        SC_METHOD(txProcess);
+        sensitive << reset;
+        sensitive << clock.pos();
+
+        encodingModel = EncodingModels::get(GlobalParams::encoding_model);
+
+        if (encodingModel == 0)
+        {
+            cerr << " FATAL: invalid encoding model -ecm " << GlobalParams::selection_strategy << ", check with noxim -help" << endl;
+            exit(-1);
+        }
     }
 
 };

@@ -30,6 +30,7 @@ int GlobalParams::max_packet_size;
 string GlobalParams::routing_algorithm;
 string GlobalParams::routing_table_filename;
 string GlobalParams::selection_strategy;
+string GlobalParams::encoding_model;
 double GlobalParams::packet_injection_rate;
 double GlobalParams::probability_of_retransmission;
 double GlobalParams::locality;

@@ -74,6 +74,7 @@ void loadConfiguration() {
     GlobalParams::routing_algorithm = readParam<string>(config, "routing_algorithm");
     GlobalParams::routing_table_filename = readParam<string>(config, "routing_table_filename"); 
     GlobalParams::selection_strategy = readParam<string>(config, "selection_strategy");
+    GlobalParams::encoding_model = readParam<string>(config, "encoding_model");
     GlobalParams::packet_injection_rate = readParam<double>(config, "packet_injection_rate");
     GlobalParams::probability_of_retransmission = readParam<double>(config, "probability_of_retransmission");
     GlobalParams::traffic_distribution = readParam<string>(config, "traffic_distribution");
@@ -268,6 +269,7 @@ void showConfig()
          << "- routing_algorithm = " << GlobalParams::routing_algorithm << endl
       // << "- routing_table_filename = " << GlobalParams::routing_table_filename << endl
          << "- selection_strategy = " << GlobalParams::selection_strategy << endl
+         << "- encoding_model = " << GlobalParams::encoding_model << endl
          << "- packet_injection_rate = " << GlobalParams::packet_injection_rate << endl
          << "- probability_of_retransmission = " << GlobalParams::probability_of_retransmission << endl
          << "- traffic_distribution = " << GlobalParams::traffic_distribution << endl
@@ -522,6 +524,9 @@ void parseCmdLine(int arg_num, char *arg_vet[])
 	    else if (!strcmp(arg_vet[i], "-sel")) {
 		GlobalParams::selection_strategy = arg_vet[++i];
 	    } 
+        else if (!strcmp(arg_vet[i], "-ecm")) {
+        GlobalParams::encoding_model = arg_vet[++i];
+        }
 	    else if (!strcmp(arg_vet[i], "-pir")) 
 	    {
 		

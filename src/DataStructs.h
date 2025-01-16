@@ -130,6 +130,17 @@ struct Flit {
 
     int hub_relay_node;
 
+    Flit(){}
+
+    Flit(Packet packet){
+        src_id = packet.src_id;
+        dst_id = packet.dst_id;
+        vc_id = packet.vc_id;
+        timestamp = packet.timestamp;
+        sequence_length = packet.size;
+        hop_no = 0;
+    }
+
     inline bool operator ==(const Flit & flit) const {
 	return (flit.src_id == src_id && flit.dst_id == dst_id
 		&& flit.flit_type == flit_type
