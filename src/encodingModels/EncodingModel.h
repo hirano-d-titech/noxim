@@ -27,7 +27,7 @@ class EncodingModel
     bool verifyPayloads(const vector < Payload > decoded, const vector < Payload > predicted);
 
     void onDecodeFailure() { _decodeCount++; _failureCount++; }
-    void onDecodeSuccess(bool withError) { _decodeCount++; if (withError) _errorCount++; }
+    void onDecodeSuccess(bool withoutError) { _decodeCount++; if (!withoutError) _errorCount++; }
 
     private:
     inline void hash_combine(size_t &seed, size_t value) {

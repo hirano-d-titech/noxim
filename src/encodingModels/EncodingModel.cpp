@@ -43,11 +43,11 @@ bool EncodingModel::predictPayloadsOver(const vector < Flit > &flits, vector< Pa
         if (flit.src_id != src_id) return false; // all src_id should be same in flits.
         if (flit.dst_id != dst_id) return false; // all dst_id should be same in flits.
         if (flit.timestamp != timestamp) return false; // all timestamp should be same in flits.
-        if (i == size-1)
+        if (i == size-1) {
             if (flit.flit_type != FLIT_TYPE_TAIL) return false; // last flit must be tail typed.
-        else
+        } else {
             if (flit.flit_type != FLIT_TYPE_BODY) return false; // other flit must be body typed.
-
+        }
         received.push_back(flits[i].payload);
     }
 

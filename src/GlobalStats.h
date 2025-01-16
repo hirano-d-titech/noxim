@@ -63,9 +63,6 @@ class GlobalStats {
     // Returns the total number of received flits
     unsigned int getReceivedFlits();
 
-    // Returns the total number of wrong-decoded packets
-    unsigned int getErrorDecodedPackets();
-
     // number of packets that used the wireless network
     unsigned int getWirelessPackets();
 
