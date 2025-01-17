@@ -36,19 +36,35 @@ bool Encoding_RAW::encode(Packet &packet, queue < Flit > &sending_flits) {
 }
 
 bool Encoding_RAW::decode(vector < Flit > &received_flits, Packet &packet) {
-    vector < Payload > received, predicted;
-    if (!predictPayloadsOver(received_flits, received, predicted))
+    double flit_keep_rate = 1.0 - GlobalParams::wired_flit_loss_rate;
+    map<int, int> bit_error_map;
+
+    for (auto &&flit : received_flits)
     {
-        onDecodeFailure();
-        return false;
+        // calculate flit loss rate
+        if (pow(flit_keep_rate, flit.hop_no) < rand() / (RAND_MAX + 1.0))
+        {
+            // if at least one flit loss, it cant be decode.
+            onDecodeFailure();
+            return false;
+        }
+
+        // counting flipping-bit chance
+        if (bit_error_map.find(flit.hop_no) != bit_error_map.end())
+        {
+            bit_error_map.at(flit.hop_no) += flit.payload.data.length();
+        }
+        else
+        {
+            bit_error_map.emplace(flit.hop_no, flit.payload.data.length());
+        }
     }
 
-    if (received.size() != predicted.size())
+    for (auto &&pair : bit_error_map)
     {
-        onDecodeFailure();
-        return false;
+        
     }
 
-    onDecodeSuccess(verifyPayloads(received, predicted));
+    onDecodeSuccess(true);
     return true;
 }

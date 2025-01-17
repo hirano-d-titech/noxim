@@ -48,18 +48,8 @@ void Router::rxProcess()
 
 	    if (req_rx[i].read() == 1 - current_level_rx[i])
 	    {
-		// prob of Flit loss
-		if (rand() / (RAND_MAX + 1.0) < GlobalParams::wired_flit_loss_rate) {
-			continue;
-		}
-
 		Flit received_flit = flit_rx[i].read();
 		//LOG<<"request opposite to the current_level, reading flit "<<received_flit<<endl;
-
-		// prob of bit error
-		if (rand() / (RAND_MAX + 1.0) < GlobalParams::wired_bit_error_rate) {
-			received_flit.payload.data ^= (1 << (rand() % 32));
-		}
 
 		int vc = received_flit.vc_id;
 
@@ -217,6 +207,7 @@ void Router::txProcess()
 		      //if (GlobalParams::verbose_mode > VERBOSE_OFF) 
 		      LOG << "Input[" << i << "][" << vc << "] forwarded to Output[" << o << "], flit: " << flit << endl;
 
+			  flit.hop_no++;
 		      flit_tx[o].write(flit);
 		      current_level_tx[o] = 1 - current_level_tx[o];
 		      req_tx[o].write(current_level_tx[o]);

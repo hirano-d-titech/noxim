@@ -22,9 +22,14 @@ class EncodingModel
     int getErrorCount() { return _errorCount; }
 
     protected:
+    // with calc
     vector< Payload > generatePayloads(const Packet &packet);
     bool predictPayloadsOver(const vector < Flit > &flits, vector< Payload > &received, vector< Payload > &payloads);
     bool verifyPayloads(const vector < Payload > decoded, const vector < Payload > predicted);
+
+    // with virtual
+    static double pesudo_prob_poisson(int n, int k, double p);
+    static double pseudo_prob_repeat(double p, int n);
 
     void onDecodeFailure() { _decodeCount++; _failureCount++; }
     void onDecodeSuccess(bool withoutError) { _decodeCount++; if (!withoutError) _errorCount++; }
