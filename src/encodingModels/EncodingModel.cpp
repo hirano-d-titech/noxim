@@ -89,16 +89,30 @@ double EncodingModel::pesudo_prob_poisson(int n, int k, double p){
     assert(n >= 0 && k >= 0 && n >= k);
 
     double lambda = n * p;
-    if(lambda == 0.0){
-        return (k <= 0) ? 1.0 : 0.0;
-    }
+    if(lambda == 0.0) return (k <= 0) ? 1.0 : 0.0;
 
     double sum = 0.0;
-    double term = exp(-lambda); // P(X = 0)
+    double term = exp(-lambda);
     for(int i = 0; i < k; ++i){
         sum += term;
         term *= lambda / (i + 1);
     }
 
     return 1.0 - sum;
+}
+
+double EncodingModel::pseudo_prob_repeat(double p, int n){
+    assert(p >= 0.0 && p <= 1.0);
+    assert(n >= 0);
+    
+    if (p == 0.0) return 0.0;
+    if (n == 0) return 0.0;
+    if (p == 1.0) return 1.0;
+
+    double lambda = static_cast<double>(n) * p;
+
+    // if lambda is very small, it can be approximated
+    if (lambda < 1e-7) return lambda;
+
+    return -std::expm1(-lambda);
 }
