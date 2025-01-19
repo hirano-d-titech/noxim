@@ -14,15 +14,15 @@ bool Encoding_RAW::encode(Packet &packet, queue < Flit > &sending_flits) {
     for (size_t i = 0; i < packet.size; i++)
     {
         Flit flit(packet);
-        flit.sequence_no = i;
-        flit.hub_relay_node = NOT_VALID;
+        flit.meta.sequence_no = i;
+        flit.meta.hub_relay_node = NOT_VALID;
 
         if (i == 0)
-            flit.flit_type = FLIT_TYPE_HEAD;
+            flit.meta.flit_type = FLIT_TYPE_HEAD;
         else if (i == packet.size-1)
-            flit.flit_type = FLIT_TYPE_TAIL;
+            flit.meta.flit_type = FLIT_TYPE_TAIL;
         else
-            flit.flit_type = FLIT_TYPE_BODY;
+            flit.meta.flit_type = FLIT_TYPE_BODY;
 
         sending_flits.push(flit);
     }

@@ -22,15 +22,15 @@ int Hub::route(Flit& f)
 	for (vector<int>::size_type i=0; i< GlobalParams::hub_configuration[local_id].attachedNodes.size();i++)
 	{
 		// ...to a destination which is connected to the Hub
-		if (GlobalParams::hub_configuration[local_id].attachedNodes[i]==f.dst_id)
+		if (GlobalParams::hub_configuration[local_id].attachedNodes[i]==f.meta.dst_id)
 		{
-			return tile2Port(f.dst_id);
+			return tile2Port(f.meta.dst_id);
 		}
 		// ...or to a relay which is locally connected to the Hub
-		if (GlobalParams::hub_configuration[local_id].attachedNodes[i]==f.hub_relay_node)
+		if (GlobalParams::hub_configuration[local_id].attachedNodes[i]==f.meta.hub_relay_node)
 		{
 			assert(GlobalParams::winoc_dst_hops>0);
-			return tile2Port(f.hub_relay_node);
+			return tile2Port(f.meta.hub_relay_node);
 		}
 
 	}
@@ -331,18 +331,18 @@ void Hub::antennaToTileProcess()
 			power.antennaBufferFront();
 
 			// Check antenna buffer_rx making appropriate reservations
-			if (received_flit.flit_type==FLIT_TYPE_HEAD)
+			if (received_flit.meta.flit_type==FLIT_TYPE_HEAD)
 			{
 				int dst_port;
 
-				if (received_flit.hub_relay_node!=NOT_VALID)
-					dst_port = tile2Port(received_flit.hub_relay_node);
+				if (received_flit.meta.hub_relay_node!=NOT_VALID)
+					dst_port = tile2Port(received_flit.meta.hub_relay_node);
 				else
-                    dst_port = tile2Port(received_flit.dst_id);
+                    dst_port = tile2Port(received_flit.meta.dst_id);
 
 				TReservation r;
 				r.input = channel;
-				r.vc = received_flit.vc_id;
+				r.vc = received_flit.meta.vc_id;
 
 				LOG << " Checking reservation availability of output port " << dst_port << " by channel " << channel << " for flit " << received_flit << endl;
 
@@ -395,7 +395,7 @@ void Hub::antennaToTileProcess()
 				power.antennaBufferFront();
 
 				received_flit.hub_hop_no++;
-				if (!received_flit.virtual_encoding)
+				if (!received_flit.meta.virtual_encoding)
 				{
 					// prob of flit loss
 					if (rand() / (RAND_MAX + 1.0) < GlobalParams::wireless_flit_loss_rate) {
@@ -418,7 +418,7 @@ void Hub::antennaToTileProcess()
 					buffer_to_tile[port][vc].Push(received_flit);
 					power.bufferToTilePush();
 
-					if (received_flit.flit_type == FLIT_TYPE_TAIL)
+					if (received_flit.meta.flit_type == FLIT_TYPE_TAIL)
 					{
 						LOG << "Releasing reservation for output port " << port << ", flit " << received_flit << endl;
 						TReservation r;
@@ -513,12 +513,12 @@ void Hub::tileToAntennaProcess()
 
 				Flit flit = buffer_from_tile[i][vc].Front();
 
-				assert(flit.vc_id == vc);
+				assert(flit.meta.vc_id == vc);
 
 				power.bufferFromTileFront();
 				r_from_tile[i][vc] = route(flit);
 
-				if (flit.flit_type == FLIT_TYPE_HEAD)
+				if (flit.meta.flit_type == FLIT_TYPE_HEAD)
 				{
 					TReservation r;
 					r.input = i;
@@ -527,10 +527,10 @@ void Hub::tileToAntennaProcess()
 					assert(r_from_tile[i][vc]==DIRECTION_WIRELESS);
 					int channel;
 
-					if (flit.hub_relay_node==NOT_VALID)
-						channel = selectChannel(local_id, tile2Hub(flit.dst_id));
+					if (flit.meta.hub_relay_node==NOT_VALID)
+						channel = selectChannel(local_id, tile2Hub(flit.meta.dst_id));
 					else
-						channel = selectChannel(local_id, tile2Hub(flit.hub_relay_node));
+						channel = selectChannel(local_id, tile2Hub(flit.meta.hub_relay_node));
 
 
 					assert(channel!=NOT_VALID && "hubs are not connected by any channel");
@@ -584,7 +584,7 @@ void Hub::tileToAntennaProcess()
 				// powerFront already accounted in 1st phase
 
 				flit.hub_hop_no++;
-				if (!flit.virtual_encoding)
+				if (!flit.meta.virtual_encoding)
 				{
 					// prob of flit loss
 					if (rand() / (RAND_MAX + 1.0) < GlobalParams::wireless_flit_loss_rate) {
@@ -609,7 +609,7 @@ void Hub::tileToAntennaProcess()
 						power.bufferFromTilePop();
 						init[channel]->buffer_tx.Push(flit);
 						power.antennaBufferPush();
-						if (flit.flit_type == FLIT_TYPE_TAIL)
+						if (flit.meta.flit_type == FLIT_TYPE_TAIL)
 						{
 							TReservation r;
 							r.input = i;
@@ -640,7 +640,7 @@ void Hub::tileToAntennaProcess()
 		if (req_rx[i]->read() == 1 - current_level_rx[i])
 		{
 			Flit received_flit = flit_rx[i]->read();
-			int vc = received_flit.vc_id;
+			int vc = received_flit.meta.vc_id;
 			LOG << "Reading " << received_flit << " from signal flit_rx[" << i << "]" << endl;
 
 			/*

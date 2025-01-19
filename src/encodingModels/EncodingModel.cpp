@@ -26,12 +26,12 @@ bool EncodingModel::predictPayloadsOver(const vector < Flit > &flits, vector< Pa
     size_t size = flits.size();
     if (size < 2) return false; // flit_buffer must contains 2 or more flits. (head and tail)
     Flit flit_head = flits[0];
-    if (flit_head.flit_type != FLIT_TYPE_HEAD) return false; // top flit must be head typed.
+    if (flit_head.meta.flit_type != FLIT_TYPE_HEAD) return false; // top flit must be head typed.
 
-    int src_id = flit_head.src_id;
-    int dst_id = flit_head.dst_id;
-    double timestamp = flit_head.timestamp;
-    int length = flit_head.sequence_length;
+    int src_id = flit_head.meta.src_id;
+    int dst_id = flit_head.meta.dst_id;
+    double timestamp = flit_head.meta.timestamp;
+    int length = flit_head.meta.sequence_length;
 
     received.clear();
     received.reserve(size);
@@ -40,13 +40,13 @@ bool EncodingModel::predictPayloadsOver(const vector < Flit > &flits, vector< Pa
     for (size_t i = 1; i < size; i++)
     {
         Flit flit = flits[i];
-        if (flit.src_id != src_id) return false; // all src_id should be same in flits.
-        if (flit.dst_id != dst_id) return false; // all dst_id should be same in flits.
-        if (flit.timestamp != timestamp) return false; // all timestamp should be same in flits.
+        if (flit.meta.src_id != src_id) return false; // all src_id should be same in flits.
+        if (flit.meta.dst_id != dst_id) return false; // all dst_id should be same in flits.
+        if (flit.meta.timestamp != timestamp) return false; // all timestamp should be same in flits.
         if (i == size-1) {
-            if (flit.flit_type != FLIT_TYPE_TAIL) return false; // last flit must be tail typed.
+            if (flit.meta.flit_type != FLIT_TYPE_TAIL) return false; // last flit must be tail typed.
         } else {
-            if (flit.flit_type != FLIT_TYPE_BODY) return false; // other flit must be body typed.
+            if (flit.meta.flit_type != FLIT_TYPE_BODY) return false; // other flit must be body typed.
         }
         received.push_back(flits[i].payload);
     }

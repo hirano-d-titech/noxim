@@ -61,9 +61,9 @@ inline ostream & operator <<(ostream & os, const Flit & flit)
     if (GlobalParams::verbose_mode == VERBOSE_HIGH) {
 
 	os << "### FLIT ###" << endl;
-	os << "Source Tile[" << flit.src_id << "]" << endl;
-	os << "Destination Tile[" << flit.dst_id << "]" << endl;
-	switch (flit.flit_type) {
+	os << "Source Tile[" << flit.meta.src_id << "]" << endl;
+	os << "Destination Tile[" << flit.meta.dst_id << "]" << endl;
+	switch (flit.meta.flit_type) {
 	case FLIT_TYPE_HEAD:
 	    os << "Flit Type is HEAD" << endl;
 	    break;
@@ -74,15 +74,13 @@ inline ostream & operator <<(ostream & os, const Flit & flit)
 	    os << "Flit Type is TAIL" << endl;
 	    break;
 	}
-	os << "Sequence no. " << flit.sequence_no << endl;
+	os << "Sequence no. " << flit.meta.sequence_no << endl;
 	os << "Payload printing not implemented (yet)." << endl;
-	os << "Unix timestamp at packet generation " << flit.
-	    timestamp << endl;
-	os << "Total number of hops from source to destination is " <<
-	    flit.hop_no << endl;
+	os << "Unix timestamp at packet generation " << flit.meta.timestamp << endl;
+	os << "Total number of hops from source to destination is " << flit.hop_no << endl;
     } else {
 	os << "(";
-	switch (flit.flit_type) {
+	switch (flit.meta.flit_type) {
 	case FLIT_TYPE_HEAD:
 	    os << "H";
 	    break;
@@ -94,7 +92,7 @@ inline ostream & operator <<(ostream & os, const Flit & flit)
 	    break;
 	}
 
-	os <<  flit.sequence_no << ", " << flit.src_id << "->" << flit.dst_id << " VC " << flit.vc_id << ")";
+	os <<  flit.meta.sequence_no << ", " << flit.meta.src_id << "->" << flit.meta.dst_id << " VC " << flit.meta.vc_id << ")";
     }
 
     return os;
@@ -143,10 +141,10 @@ inline ostream & operator <<(ostream & os, const Coord & coord)
 
 inline void sc_trace(sc_trace_file * &tf, const Flit & flit, string & name)
 {
-    sc_trace(tf, flit.src_id, name + ".src_id");
-    sc_trace(tf, flit.dst_id, name + ".dst_id");
-    sc_trace(tf, flit.sequence_no, name + ".sequence_no");
-    sc_trace(tf, flit.timestamp, name + ".timestamp");
+    sc_trace(tf, flit.meta.src_id, name + ".src_id");
+    sc_trace(tf, flit.meta.dst_id, name + ".dst_id");
+    sc_trace(tf, flit.meta.sequence_no, name + ".sequence_no");
+    sc_trace(tf, flit.meta.timestamp, name + ".timestamp");
     sc_trace(tf, flit.hop_no, name + ".hop_no");
 }
 

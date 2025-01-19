@@ -53,7 +53,7 @@ void Buffer::Print()
     {
 	Flit f = m.front();
 	m.pop();
-	cout << bstr << t[f.flit_type] << f.sequence_no <<  "(" << f.dst_id << ") | ";
+	cout << bstr << t[f.meta.flit_type] << f.meta.sequence_no <<  "(" << f.meta.dst_id << ") | ";
     }
     cout << "]*" << endl;
     cout << endl;
@@ -68,7 +68,7 @@ void Buffer::deadlockCheck()
     if (IsEmpty()) return;
 
     Flit f = buffer.front();
-    int seq = f.sequence_no;
+    int seq = f.meta.sequence_no;
 
     if (last_front_flit_seq==seq)
     {
@@ -100,7 +100,7 @@ bool Buffer::deadlockFree()
 
     Flit f = buffer.front();
     
-    int seq = f.sequence_no;
+    int seq = f.meta.sequence_no;
 
 
     if (last_front_flit_seq==seq)

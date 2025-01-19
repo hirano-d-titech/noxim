@@ -24,22 +24,22 @@ void Stats::receivedFlit(const double arrival_time,
     if (arrival_time - GlobalParams::reset_time < warm_up_time)
 	return;
 
-    int i = searchCommHistory(flit.src_id);
+    int i = searchCommHistory(flit.meta.src_id);
 
     if (i == -1) {
 	// first flit received from a given source
 	// initialize CommHist structure
 	CommHistory ch;
 
-	ch.src_id = flit.src_id;
+	ch.src_id = flit.meta.src_id;
 	ch.total_received_flits = 0;
 	chist.push_back(ch);
 
 	i = chist.size() - 1;
     }
 
-    if (flit.flit_type == FLIT_TYPE_HEAD)
-	chist[i].delays.push_back(arrival_time - flit.timestamp);
+    if (flit.meta.flit_type == FLIT_TYPE_HEAD)
+	chist[i].delays.push_back(arrival_time - flit.meta.timestamp);
 
     chist[i].total_received_flits++;
     chist[i].last_received_flit_time = arrival_time - warm_up_time;

@@ -52,7 +52,7 @@ void Router::rxProcess()
 		//LOG<<"request opposite to the current_level, reading flit "<<received_flit<<endl;
 
 		received_flit.hop_no++;
-		if (!received_flit.virtual_encoding)
+		if (!received_flit.meta.virtual_encoding)
 		{
 			// prob of Flit loss
 			if (rand() / (RAND_MAX + 1.0) < GlobalParams::wired_flit_loss_rate) {
@@ -64,7 +64,7 @@ void Router::rxProcess()
 			}
 		}
 
-		int vc = received_flit.vc_id;
+		int vc = received_flit.meta.vc_id;
 
 		if (!buffer[i][vc].IsFull()) 
 		{
@@ -80,7 +80,7 @@ void Router::rxProcess()
 		    current_level_rx[i] = 1 - current_level_rx[i];
 
 		    // if a new flit is injected from local PE
-		    if (received_flit.src_id == local_id)
+		    if (received_flit.meta.src_id == local_id)
 			power.networkInterface();
 		}
 
@@ -135,16 +135,16 @@ void Router::txProcess()
 		  Flit flit = buffer[i][vc].Front();
 		  power.bufferRouterFront();
 
-		  if (flit.flit_type == FLIT_TYPE_HEAD) 
+		  if (flit.meta.flit_type == FLIT_TYPE_HEAD) 
 		    {
 		      // prepare data for routing
 		      RouteData route_data;
 		      route_data.current_id = local_id;
 		      //LOG<< "current_id= "<< route_data.current_id <<" for sending " << flit << endl;
-		      route_data.src_id = flit.src_id;
-		      route_data.dst_id = flit.dst_id;
+		      route_data.src_id = flit.meta.src_id;
+		      route_data.dst_id = flit.meta.dst_id;
 		      route_data.dir_in = i;
-		      route_data.vc_id = flit.vc_id;
+		      route_data.vc_id = flit.meta.vc_id;
 
 		      // TODO: see PER POSTERI (adaptive routing should not recompute route if already reserved)
 		      int o = route(route_data);
@@ -153,7 +153,7 @@ void Router::txProcess()
 		      if (o>=DIRECTION_HUB_RELAY)
 			  {
 		      	Flit f = buffer[i][vc].Pop();
-		      	f.hub_relay_node = o-DIRECTION_HUB_RELAY;
+		      	f.meta.hub_relay_node = o-DIRECTION_HUB_RELAY;
 		      	buffer[i][vc].Push(f);
 		      	o = DIRECTION_HUB;
 			  }
@@ -226,7 +226,7 @@ void Router::txProcess()
 		      req_tx[o].write(current_level_tx[o]);
 		      buffer[i][vc].Pop();
 
-		      if (flit.flit_type == FLIT_TYPE_TAIL)
+		      if (flit.meta.flit_type == FLIT_TYPE_TAIL)
 		      {
 			  TReservation r;
 			  r.input = i;

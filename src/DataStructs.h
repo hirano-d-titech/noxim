@@ -115,48 +115,88 @@ struct TBufferFullStatus {
     bool mask[MAX_VIRTUAL_CHANNELS];
 };
 
-// Flit -- Flit definition
-struct Flit {
+struct FlitMetadata {
     int src_id;
     int dst_id;
     int vc_id; // Virtual Channel
     FlitType flit_type;	// The flit type (FLIT_TYPE_HEAD, FLIT_TYPE_BODY, FLIT_TYPE_TAIL)
     int sequence_no;		// The sequence number of the flit inside the packet
     int sequence_length;
-    Payload payload;	// Optional payload
     double timestamp;		// Unix timestamp at packet generation
-    int hop_no;			// Current number of hops from source to destination
-    int hub_hop_no;     // Current number of passed wireless-hops
     bool use_low_voltage_path;
     bool virtual_encoding;
 
     int hub_relay_node;
 
-    Flit(){}
+    FlitMetadata(){}
 
-    Flit(Packet packet){
+    FlitMetadata(Packet packet){
         src_id = packet.src_id;
         dst_id = packet.dst_id;
         vc_id = packet.vc_id;
         timestamp = packet.timestamp;
         sequence_length = packet.size;
-        hop_no = 0;
         use_low_voltage_path = packet.use_low_voltage_path;
         hub_relay_node = NOT_VALID;
         virtual_encoding = true;
     }
 
-    inline bool operator ==(const Flit & flit) const {
-	return (flit.src_id == src_id && flit.dst_id == dst_id
-		&& flit.flit_type == flit_type
-		&& flit.vc_id == vc_id
-		&& flit.sequence_no == sequence_no
-		&& flit.sequence_length == sequence_length
-		&& flit.payload == payload && flit.timestamp == timestamp
-		&& flit.hop_no == hop_no
-		&& flit.use_low_voltage_path == use_low_voltage_path);
-}};
+    inline bool operator ==(const FlitMetadata & meta) const {
+	return (meta.src_id == src_id && meta.dst_id == dst_id
+		&& meta.flit_type == flit_type
+		&& meta.vc_id == vc_id
+		&& meta.sequence_no == sequence_no
+		&& meta.sequence_length == sequence_length
+		&& meta.timestamp == timestamp
+		&& meta.use_low_voltage_path == use_low_voltage_path
+        && meta.virtual_encoding == virtual_encoding);
+    }
+};
 
+// Flit -- Flit definition
+struct Flit {
+    Payload payload;	// Optional payload
+
+    FlitMetadata meta;
+    std::vector<FlitMetadata> nc_meta;
+
+    int hop_no;			// Current number of hops from source to destination
+    int hub_hop_no;     // Current number of passed wireless-hops
+
+    Flit(){}
+
+    Flit(Packet packet){
+        meta = {packet};
+    }
+
+    Flit(FlitMetadata metadata){
+        meta = metadata;
+    }
+
+    void merge(FlitMetadata metadata){
+        nc_meta.push_back(metadata);
+    }
+
+    bool eraceFindIf(FlitMetadata metadata){
+        for (size_t i = 0; i < nc_meta.size(); i++)
+        {
+            if (nc_meta[i] == metadata){
+                nc_meta.erase(nc_meta.begin() + i);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    FlitMetadata pop(){
+        auto back = nc_meta.back();
+        nc_meta.pop_back();
+        return back;
+    }
+
+    inline bool operator ==(const Flit & flit) const {
+	return (flit.meta == meta && flit.payload == payload);
+}};
 
 typedef struct 
 {

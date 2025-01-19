@@ -17,18 +17,18 @@ bool Encoding_REPEAT::encode(Packet &packet, queue < Flit > &sending_flits) {
     for (int i = 0; i < repeated; i++)
     {
         Flit flit(packet);
-        flit.sequence_no = i;
+        flit.meta.sequence_no = i;
         flit.payload = payloads[i % packet.flit_left];
-        flit.virtual_encoding = false;
+        flit.meta.virtual_encoding = false;
 
-        flit.hub_relay_node = NOT_VALID;
+        flit.meta.hub_relay_node = NOT_VALID;
 
         if (i == 0)
-            flit.flit_type = FLIT_TYPE_HEAD;
+            flit.meta.flit_type = FLIT_TYPE_HEAD;
         else if (i == repeated-1)
-            flit.flit_type = FLIT_TYPE_TAIL;
+            flit.meta.flit_type = FLIT_TYPE_TAIL;
         else
-            flit.flit_type = FLIT_TYPE_BODY;
+            flit.meta.flit_type = FLIT_TYPE_BODY;
 
         sending_flits.push(flit);
     }

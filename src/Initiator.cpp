@@ -31,10 +31,10 @@ void Initiator::thread_process()
 
 		// hub relay management  ////////////////////////////////////////////////////////////////
 		// if explicitly set in the header flit, trasmission target should reach a relay hub
-		if (flit_payload.flit_type == FLIT_TYPE_HEAD)
+		if (flit_payload.meta.flit_type == FLIT_TYPE_HEAD)
 		{
-			if (flit_payload.hub_relay_node!=NOT_VALID) {
-				current_hub_relay = flit_payload.hub_relay_node;
+			if (flit_payload.meta.hub_relay_node!=NOT_VALID) {
+				current_hub_relay = flit_payload.meta.hub_relay_node;
 				LOG << "HUB RELAY: Flit " << flit_payload << " setting transmission hub relay " << current_hub_relay << " to reach destination " << endl;
 			}
 			else
@@ -43,12 +43,12 @@ void Initiator::thread_process()
 
 		if (current_hub_relay!=NOT_VALID)
 		{
-			flit_payload.hub_relay_node = current_hub_relay;
-			destHub = tile2Hub(flit_payload.hub_relay_node);
+			flit_payload.meta.hub_relay_node = current_hub_relay;
+			destHub = tile2Hub(flit_payload.meta.hub_relay_node);
 		}
 		else
 		{
-			destHub = tile2Hub(flit_payload.dst_id);
+			destHub = tile2Hub(flit_payload.meta.dst_id);
 		}
 		////////////////////////////////////////////////////////////////////////////////
 
@@ -78,10 +78,10 @@ void Initiator::thread_process()
 			buffer_tx.Pop();
 			hub->power.antennaBufferPop();
 
-			if (flit_payload.flit_type == FLIT_TYPE_HEAD)
+			if (flit_payload.meta.flit_type == FLIT_TYPE_HEAD)
 				hub->transmission_in_progress.at(_channel_id) = true;
 
-			if (flit_payload.flit_type == FLIT_TYPE_TAIL)
+			if (flit_payload.meta.flit_type == FLIT_TYPE_TAIL)
 			{
 				LOG << "*** [Ch"<< _channel_id <<"] tail flit sent " << flit_payload << ", releasing token" << endl;
 				hub->flag[_channel_id]->write(RELEASE_CHANNEL);
