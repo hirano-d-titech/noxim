@@ -155,6 +155,7 @@ struct FlitMetadata {
 
 // Flit -- Flit definition
 struct Flit {
+    static constexpr int MAX_NC_META = 4;
     Payload payload;	// Optional payload
 
     FlitMetadata meta;
