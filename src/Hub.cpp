@@ -351,7 +351,7 @@ void Hub::antennaToTileProcess()
 				if (rt_status == RT_AVAILABLE)
 				{
 					LOG << "Reserving output port " << dst_port << " by channel " << channel << " for flit " << received_flit << endl;
-					antenna2tile_reservation_table.reserve(r, dst_port);
+					antenna2tile_reservation_table.reserve(r, received_flit.meta, dst_port);
 
 					// The number of commucation using the wireless network, accounting also
 					// partial wired path
@@ -380,7 +380,7 @@ void Hub::antennaToTileProcess()
 	for (unsigned int i = 0; i < rxChannels.size(); i++)
 	{
 		int channel = rxChannels[i];
-		vector<pair<int,int> > reservations = antenna2tile_reservation_table.getReservations(channel);
+		vector<pair<int,int> > reservations = antenna2tile_reservation_table.getReservationsFrom(channel);
 
 		if (reservations.size()!=0)
 		{
@@ -542,7 +542,7 @@ void Hub::tileToAntennaProcess()
 					if (rt_status == RT_AVAILABLE)
 					{
 						LOG << "Reservation of channel " << channel << " from Hub port["<< i << "]["<<vc<<"] by flit " << flit << endl;
-						tile2antenna_reservation_table.reserve(r, channel);
+						tile2antenna_reservation_table.reserve(r, flit.meta, channel);
 					}
 					else if (rt_status == RT_ALREADY_SAME)
 					{
@@ -569,7 +569,7 @@ void Hub::tileToAntennaProcess()
 	// 2nd phase: Forwarding
 	for (int i = 0; i < num_ports; i++)
 	{
-		vector<pair<int,int> > reservations = tile2antenna_reservation_table.getReservations(i);
+		vector<pair<int,int> > reservations = tile2antenna_reservation_table.getReservationsFrom(i);
 
 		if (reservations.size()!=0)
 		{

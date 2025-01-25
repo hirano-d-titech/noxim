@@ -29,6 +29,14 @@ enum FlitType {
     FLIT_TYPE_HEAD, FLIT_TYPE_BODY, FLIT_TYPE_TAIL
 };
 
+enum NCState {
+    NC_ORIGIN, // non Network Coding encoded
+    NC_MERGED, // NC: one of mixed destination
+    NC_UNIQUE, // NC: unique destination
+    NC_REMAIN, // NC: have to removed by decode (in only XOR)
+    NC_OPTION, // NC: other flit for decoding
+};
+
 // Payload -- Payload definition
 struct Payload {
     sc_uint<32> data;	// Bus for the data to be exchanged
@@ -129,6 +137,7 @@ struct FlitMetadata {
     bool virtual_encoding;
 
     int hub_relay_node;
+    NCState nc_state;
 
     FlitMetadata(){}
 
@@ -141,6 +150,7 @@ struct FlitMetadata {
         use_low_voltage_path = packet.use_low_voltage_path;
         hub_relay_node = NOT_VALID;
         virtual_encoding = true;
+        nc_state = NC_ORIGIN;
     }
 
     inline bool operator ==(const FlitMetadata & meta) const {

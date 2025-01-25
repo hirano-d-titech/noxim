@@ -22,16 +22,41 @@ struct TReservation
 {
     int input;
     int vc;
+    int mult;
+    NCState nc_state;
     inline bool operator ==(const TReservation & r) const
     {
-	return (r.input==input && r.vc == vc);
+	return (r.input==input && r.vc == vc && r.nc_state == nc_state);
     }
 };
 
 typedef struct RTEntry
 {
+    /**
+     * reserved in-out route in this out port.
+     */
     vector<TReservation> reservations;
+
+    /**
+     * should be network coding applied?
+     */
+    bool nc_enabled;
+
+    /**
+     * if nc_enabled false, move 0 to reservations.size() repeatedly
+     * when reservations.size > 1, set next getReservationTo() to reservations[index]
+     */
     vector<TReservation>::size_type index;
+
+    /**
+     * if nc_enabled true, flit meta should be this.
+     */
+    FlitMetadata head_meta;
+
+    /**
+     * allow over-reserving if out_multiplicity + incoming_flit.mult <= Flit::MAX_NC_META
+     */
+    int out_multiplicity;
 } TRTEntry;
 
 class ReservationTable {
@@ -45,14 +70,18 @@ class ReservationTable {
     int checkReservation(const TReservation r, const int port_out);
 
     // Connects port_in with port_out. Asserts if port_out is reserved
-    void reserve(const TReservation r, const int port_out);
+    void reserve(const TReservation r, FlitMetadata meta, const int port_out);
 
     // Releases port_out connection. 
     // Asserts if port_out is not reserved or not valid
     void release(const TReservation r, const int port_out);
 
     // Returns the pairs of output port and virtual channel reserved by port_in
-    vector<pair<int,int> > getReservations(const int port_int);
+    vector<pair<int,int> > getReservationsFrom(const int port_int);
+
+    pair<vector<const TReservation>, bool> getReservationsTo(const int port_out);
+
+    FlitMetadata getInitialFlitMetadataTo(const int port_out);
 
     // update the index of the reservation having highest priority in the current cycle
     void updateIndex();

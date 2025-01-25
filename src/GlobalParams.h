@@ -37,6 +37,7 @@ using namespace std;
 #define DEFAULT_VC 		0
 
 #define RT_AVAILABLE 1
+#define RT_ENCODABLE 2
 #define RT_ALREADY_SAME -1
 #define RT_ALREADY_OTHER_OUT -2
 #define RT_OUTVC_BUSY -3

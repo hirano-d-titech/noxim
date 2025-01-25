@@ -8,8 +8,12 @@
  * This file contains the implementation of the router
  */
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <iostream>
+#include <functional>
 #include "Router.h"
-
+#include "networkCodings/NC_XOR.h"
 
 inline int toggleKthBit(int n, int k)
 {
@@ -161,16 +165,65 @@ void Router::txProcess()
 		      TReservation r;
 		      r.input = i;
 		      r.vc = vc;
+			  r.mult = 1 + buffer[i][vc].Front().nc_meta.size();
+			  r.nc_state = buffer[i][vc].Front().meta.nc_state;
 
 		      LOG << " checking availability of Output[" << o << "] for Input[" << i << "][" << vc << "] flit " << flit << endl;
 
 		      int rt_status = reservation_table.checkReservation(r,o);
 
-		      if (rt_status == RT_AVAILABLE) 
+		      if (rt_status == RT_AVAILABLE)
 		      {
 			  LOG << " reserving direction " << o << " for flit " << flit << endl;
-			  reservation_table.reserve(r, o);
+			  reservation_table.reserve(r, flit.meta, o);
 		      }
+			  else if (rt_status == RT_ENCODABLE)
+			  {
+			  switch (GlobalParams::network_coding_type)
+			  {
+			  case NC_TYPE_NONE:
+				assert(false);
+				break;
+			  case NC_TYPE_XOR:{
+			    auto reservations = reservation_table.getReservationsTo(o);
+				assert(reservations.first.size() != 0);
+				// avoid excessive complexity
+				if (reservations.first.size() > 1) continue;
+			  	// send other flit for decoding
+				{
+					auto resv0 = reservations.first[0];
+					int dirPrev = reflexDirection(resv0.input) == o ? i : reflexDirection(resv0.input);
+					int dirNext = reflexDirection(i) == o ? resv0.input : reflexDirection(i);
+		
+					TReservation trPrev;
+					trPrev.input = resv0.input;
+					trPrev.vc = resv0.vc;
+					trPrev.mult = resv0.mult;
+					trPrev.nc_state = NC_OPTION;
+					// initial optional flit must have sent without network-coded
+					if (reservation_table.checkReservation(trPrev, dirPrev) != RT_AVAILABLE ||
+						reservation_table.checkReservation(r, dirNext) != RT_AVAILABLE) {
+						continue;
+					}
+					// create option flits data for XOR decoding
+					auto prevOptMeta = reservation_table.getInitialFlitMetadataTo(o);
+					auto selfOptMeta = flit.meta;
+					selfOptMeta.dst_id = prevOptMeta.dst_id;
+					selfOptMeta.nc_state = NC_OPTION;
+					prevOptMeta.dst_id = flit.meta.dst_id;
+					prevOptMeta.flit_type = FLIT_TYPE_HEAD;
+					prevOptMeta.nc_state = NC_OPTION;
+					prevOptMeta.sequence_length = prevOptMeta.sequence_length - prevOptMeta.sequence_no;
+					reservation_table.reserve(r, selfOptMeta, dirNext);
+					reservation_table.reserve(trPrev, prevOptMeta, dirPrev);
+				}
+				break;}
+			  default:
+				break;
+			  }
+			  LOG << " reserving direction " << o << " for flit " << flit << "with network coding" << endl;
+			  reservation_table.reserve(r, flit.meta, o);
+			  }
 		      else if (rt_status == RT_ALREADY_SAME)
 		      {
 			  LOG << " RT_ALREADY_SAME reserved direction " << o << " for flit " << flit << endl;
@@ -190,99 +243,128 @@ void Router::txProcess()
 	    start_from_vc[i] = (start_from_vc[i]+1)%GlobalParams::n_virtual_channels;
 	}
 
-      start_from_port = (start_from_port + 1) % (DIRECTIONS + 2);
+	start_from_port = (start_from_port + 1) % (DIRECTIONS + 2);
 
-      // 2nd phase: Forwarding
-      //if (local_id==6) LOG<<"*TX*****local_id="<<local_id<<"__ack_tx[0]= "<<ack_tx[0].read()<<endl;
-      for (int i = 0; i < DIRECTIONS + 2; i++) 
-      { 
-	  vector<pair<int,int> > reservations = reservation_table.getReservations(i);
-	  
-	  if (reservations.size()!=0)
-	  {
+	// 2nd phase: Forwarding
+	//if (local_id==6) LOG<<"*TX*****local_id="<<local_id<<"__ack_tx[0]= "<<ack_tx[0].read()<<endl;
+	for (int out = 0; out < DIRECTIONS + 2; out++)
+	{
+		vector<const TReservation> reservations;
+		bool nc_enabled;
+		std::tie(reservations, nc_enabled) = reservation_table.getReservationsTo(out);
 
-	      int rnd_idx = rand()%reservations.size();
+		auto size = reservations.size();
+		if (size==0)
+		{
+			// LOG<<"we have no reservation for direction "<<i<< endl;
+			continue;
+		}
 
-	      int o = reservations[rnd_idx].first;
-	      int vc = reservations[rnd_idx].second;
-	     // LOG<< "found reservation from input= " << i << "_to output= "<<o<<endl;
-	      // can happen
-	      if (!buffer[i][vc].IsEmpty())  
-	      {
-		  // power contribution already computed in 1st phase
-		  Flit flit = buffer[i][vc].Front();
-		  //LOG<< "*****TX***Direction= "<<i<< "************"<<endl;
-		  //LOG<<"_cl_tx="<<current_level_tx[o]<<"req_tx="<<req_tx[o].read()<<" _ack= "<<ack_tx[o].read()<< endl;
-		  
-		  if ( (current_level_tx[o] == ack_tx[o].read()) &&
-		       (buffer_full_status_tx[o].read().mask[vc] == false) ) 
-		  {
-		      //if (GlobalParams::verbose_mode > VERBOSE_OFF) 
-		      LOG << "Input[" << i << "][" << vc << "] forwarded to Output[" << o << "], flit: " << flit << endl;
+		// all flit must be in cycle
+		bool inCycle = true;
+		for (auto i = 0; i < reservations.size();){
+			auto it = reservations.begin() + i;
+			if (buffer[it->input][it->vc].IsEmpty()){
+				inCycle = false;
+				break;
+			}
+		}
 
-			  flit.hop_no++;
-		      flit_tx[o].write(flit);
-		      current_level_tx[o] = 1 - current_level_tx[o];
-		      req_tx[o].write(current_level_tx[o]);
-		      buffer[i][vc].Pop();
+		if (!inCycle)
+		{
+			LOG << " Cannot forward any tx-flit to direction output to " << out << "."<< endl;
+			//LOG << " **DEBUG APB: current_level_tx: " << current_level_tx[out] << " ack_tx: " << ack_tx[out].read() << endl;
+			//LOG << " **DEBUG buffer_full_status_tx " << buffer_full_status_tx[out].read().mask[vc] << endl;
+			//LOG<<"END_NO_cl_tx="<<current_level_tx[out]<<"_req_tx="<<req_tx[out].read()<<" _ack= "<<ack_tx[out].read()<< endl;
 
-		      if (flit.meta.flit_type == FLIT_TYPE_TAIL)
-		      {
-			  TReservation r;
-			  r.input = i;
-			  r.vc = vc;
-			  reservation_table.release(r,o);
-		      }
+			// if removed flit's type is head, it should be released from reservationTable?
+			continue;
+		}
 
-		      /* Power & Stats ------------------------------------------------- */
-		      if (o == DIRECTION_HUB) power.r2hLink();
-		      else
-			  power.r2rLink();
+		// local functions
+		std::function<Flit(int, int)> popFlit = [this, out](int in, int vc){
+			Flit tmpf = buffer[in][vc].Front();
+			if (out != DIRECTION_LOCAL && in != DIRECTION_LOCAL) {
+				routed_flits++;
+			}
+			if (tmpf.meta.flit_type == FLIT_TYPE_TAIL) {
+				int mult = 1 + tmpf.nc_meta.size();
+				reservation_table.release(TReservation{in, vc, mult}, out);
+			}
+			buffer[in][vc].Pop();
+			return tmpf;
+		};
+		std::function<bool(int vc)> isVcValid = [this,out](int vc){
+			return current_level_tx[out] == ack_tx[out].read() && !buffer_full_status_tx[out].read().mask[vc];
+		};
 
-		      power.bufferRouterPop();
-		      power.crossBar();
+		Flit flit;
+		if (!nc_enabled)
+		{
+			auto resv = reservations[size == 1 ? 0 : rand()%reservations.size()];
+			if (!isVcValid(resv.vc)) continue;
+			flit = popFlit(resv.input, resv.vc);
+		}
+		else
+		{
+			assert(GlobalParams::network_coding_type != NC_TYPE_NONE);
 
-		      if (o == DIRECTION_LOCAL) 
-		      {
-			  power.networkInterface();
-			  LOG << "Consumed flit " << flit << endl;
-			  stats.receivedFlit(sc_time_stamp().to_double() / GlobalParams::clock_period_ps, flit);
-			  if (GlobalParams:: max_volume_to_be_drained) 
-			  {
-			      if (drained_volume >= GlobalParams:: max_volume_to_be_drained)
-				  sc_stop();
-			      else 
-			      {
-				  drained_volume++;
-				  local_drained++;
-			      }
-			  }
-		      } 
-		      else if (i != DIRECTION_LOCAL) // not generated locally
-			  routed_flits++;
-		      /* End Power & Stats ------------------------------------------------- */
-			 //LOG<<"END_OK_cl_tx="<<current_level_tx[o]<<"_req_tx="<<req_tx[o].read()<<" _ack= "<<ack_tx[o].read()<< endl;
-		  }
-		  else
-		  {
-		      LOG << " Cannot forward Input[" << i << "][" << vc << "] to Output[" << o << "], flit: " << flit << endl;
-		      //LOG << " **DEBUG APB: current_level_tx: " << current_level_tx[o] << " ack_tx: " << ack_tx[o].read() << endl;
-		      LOG << " **DEBUG buffer_full_status_tx " << buffer_full_status_tx[o].read().mask[vc] << endl;
+			flit.meta = reservation_table.getInitialFlitMetadataTo(out);
+			if (!isVcValid(flit.meta.vc_id)) continue;
 
-		  	//LOG<<"END_NO_cl_tx="<<current_level_tx[o]<<"_req_tx="<<req_tx[o].read()<<" _ack= "<<ack_tx[o].read()<< endl;
-		      /*
-		      if (flit.flit_type == FLIT_TYPE_HEAD)
-			  reservation_table.release(i,flit.vc_id,o);
-			  */
-		  }
-	      }
-	  } // if not reserved 
-	 // else LOG<<"we have no reservation for direction "<<i<< endl;
+			switch (GlobalParams::network_coding_type)
+			{
+			case NC_TYPE_XOR:
+				auto nc_xor = NC_XOR::getInstance();
+				for (auto &&tr : reservations)
+				{
+					nc_xor->merge(flit, popFlit(tr.input, tr.vc));
+				}
+				break;
+			default:
+				break;
+			}
+		}
+
+		//if (GlobalParams::verbose_mode > VERBOSE_OFF) 
+		LOG << "Input[x][vc] forwarded to Output[" << out << "], flit: " << flit << endl;
+
+		flit.meta.hop_no++;
+		flit_tx[out].write(flit);
+		current_level_tx[out] = 1 - current_level_tx[out];
+		req_tx[out].write(current_level_tx[out]);
+
+		/* Power & Stats ------------------------------------------------- */
+		if (out == DIRECTION_HUB) power.r2hLink();
+		else
+		power.r2rLink();
+
+		power.bufferRouterPop();
+		power.crossBar();
+
+		if (out == DIRECTION_LOCAL)
+		{
+		power.networkInterface();
+		LOG << "Consumed flit " << flit << endl;
+		stats.receivedFlit(sc_time_stamp().to_double() / GlobalParams::clock_period_ps, flit);
+		if (GlobalParams:: max_volume_to_be_drained) 
+		{
+			if (drained_volume >= GlobalParams:: max_volume_to_be_drained)
+			sc_stop();
+			else
+			{
+			drained_volume++;
+			local_drained++;
+			}
+		}
+		}
+		/* End Power & Stats ------------------------------------------------- */
+		//LOG<<"END_OK_cl_tx="<<current_level_tx[o]<<"_req_tx="<<req_tx[o].read()<<" _ack= "<<ack_tx[o].read()<< endl;
       } // for loop directions
 
       if ((int)(sc_time_stamp().to_double() / GlobalParams::clock_period_ps)%2==0)
 	  reservation_table.updateIndex();
-    }   
+    }
 }
 
 NoP_data Router::getCurrentNoPData()
