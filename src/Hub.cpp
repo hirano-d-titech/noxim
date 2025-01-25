@@ -394,7 +394,7 @@ void Hub::antennaToTileProcess()
 				Flit received_flit = target[channel]->buffer_rx.Front();
 				power.antennaBufferFront();
 
-				received_flit.hub_hop_no++;
+				received_flit.meta.hub_hop_no++;
 				if (!received_flit.meta.virtual_encoding)
 				{
 					// prob of flit loss
@@ -583,7 +583,7 @@ void Hub::tileToAntennaProcess()
 				Flit flit = buffer_from_tile[i][vc].Front();
 				// powerFront already accounted in 1st phase
 
-				flit.hub_hop_no++;
+				flit.meta.hub_hop_no++;
 				if (!flit.meta.virtual_encoding)
 				{
 					// prob of flit loss

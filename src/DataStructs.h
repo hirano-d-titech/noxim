@@ -123,6 +123,8 @@ struct FlitMetadata {
     int sequence_no;		// The sequence number of the flit inside the packet
     int sequence_length;
     double timestamp;		// Unix timestamp at packet generation
+    int hop_no;		// Current number of hops from source to destination
+    int hub_hop_no;     // Current number of passed wireless-hops
     bool use_low_voltage_path;
     bool virtual_encoding;
 
@@ -161,20 +163,26 @@ struct Flit {
     FlitMetadata meta;
     std::vector<FlitMetadata> nc_meta;
 
-    int hop_no;			// Current number of hops from source to destination
-    int hub_hop_no;     // Current number of passed wireless-hops
-
     Flit(){}
 
-    Flit(Packet packet){
+    Flit(Packet packet, FlitType type){
         meta = {packet};
+        meta.flit_type = type;
+        nc_meta.reserve(MAX_NC_META);
     }
 
     Flit(FlitMetadata metadata){
         meta = metadata;
     }
 
-    void merge(FlitMetadata metadata){
+    void merge_nc(std::vector<FlitMetadata> metadatas){
+        for (auto &&metadata : metadatas)
+        {
+            merge_nc(metadata);
+        }
+    }
+
+    void merge_nc(FlitMetadata metadata){
         nc_meta.push_back(metadata);
     }
 

@@ -27,6 +27,7 @@ int GlobalParams::buffer_depth;
 int GlobalParams::flit_size;
 int GlobalParams::min_packet_size;
 int GlobalParams::max_packet_size;
+int GlobalParams::network_coding_type;
 string GlobalParams::routing_algorithm;
 string GlobalParams::routing_table_filename;
 string GlobalParams::selection_strategy;

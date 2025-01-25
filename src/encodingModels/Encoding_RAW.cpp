@@ -13,16 +13,13 @@ Encoding_RAW * Encoding_RAW::getInstance() {
 bool Encoding_RAW::encode(Packet &packet, queue < Flit > &sending_flits) {
     for (size_t i = 0; i < packet.size; i++)
     {
-        Flit flit(packet);
+        auto type = i == 0 ? FLIT_TYPE_HEAD :
+                    i == packet.size-1 ? FLIT_TYPE_TAIL :
+                    FLIT_TYPE_BODY;
+
+        Flit flit(packet, type);
         flit.meta.sequence_no = i;
         flit.meta.hub_relay_node = NOT_VALID;
-
-        if (i == 0)
-            flit.meta.flit_type = FLIT_TYPE_HEAD;
-        else if (i == packet.size-1)
-            flit.meta.flit_type = FLIT_TYPE_TAIL;
-        else
-            flit.meta.flit_type = FLIT_TYPE_BODY;
 
         sending_flits.push(flit);
     }
@@ -37,7 +34,7 @@ bool Encoding_RAW::decode(vector < Flit > &received_flits, Packet &packet) {
     for (auto &&flit : received_flits)
     {
         // calculate flit loss rate
-        if (pow(flit_keep_rate, flit.hop_no) < rand() / (RAND_MAX + 1.0))
+        if (pow(flit_keep_rate, flit.meta.hop_no) < rand() / (RAND_MAX + 1.0))
         {
             // if at least one flit loss, it cant be decode.
             onDecodeFailure();
@@ -45,10 +42,10 @@ bool Encoding_RAW::decode(vector < Flit > &received_flits, Packet &packet) {
         }
 
         // counting flipping-bit chance
-        wired_fl += flit.hop_no;
-        wireless_fl += flit.hub_hop_no;
-        wired_be += flit.hop_no * flit.payload.data.length();
-        wireless_be += flit.hub_hop_no * flit.payload.data.length();
+        wired_fl += flit.meta.hop_no;
+        wireless_fl += flit.meta.hub_hop_no;
+        wired_be += flit.meta.hop_no * flit.payload.data.length();
+        wireless_be += flit.meta.hub_hop_no * flit.payload.data.length();
     }
 
     if (wired_fl > 0 && pseudo_prob_repeat(GlobalParams::wired_flit_loss_rate, wired_fl) > rand())

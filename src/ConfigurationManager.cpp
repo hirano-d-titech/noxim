@@ -71,8 +71,9 @@ void loadConfiguration() {
     GlobalParams::flit_size = readParam<int>(config, "flit_size");
     GlobalParams::min_packet_size = readParam<int>(config, "min_packet_size");
     GlobalParams::max_packet_size = readParam<int>(config, "max_packet_size");
+    auto nc_type = readParam<string>(config, "network_coding_type", "");
     GlobalParams::routing_algorithm = readParam<string>(config, "routing_algorithm");
-    GlobalParams::routing_table_filename = readParam<string>(config, "routing_table_filename"); 
+    GlobalParams::routing_table_filename = readParam<string>(config, "routing_table_filename");
     GlobalParams::selection_strategy = readParam<string>(config, "selection_strategy");
     GlobalParams::encoding_model = readParam<string>(config, "encoding_model", "RAW");
     GlobalParams::packet_injection_rate = readParam<double>(config, "packet_injection_rate");
@@ -97,7 +98,15 @@ void loadConfiguration() {
     GlobalParams::use_winoc = readParam<bool>(config, "use_winoc");
     GlobalParams::winoc_dst_hops = readParam<int>(config, "winoc_dst_hops",0);
     GlobalParams::use_powermanager = readParam<bool>(config, "use_wirxsleep");
-    
+
+    // set networkCodingType by integer
+    if (nc_type == "XOR") {
+        GlobalParams::network_coding_type = NC_TYPE_XOR;
+    } else if (nc_type == "MATRIX") {
+        GlobalParams::network_coding_type = NC_TYPE_MATRIX;
+    } else {
+        GlobalParams::network_coding_type = NC_TYPE_NONE;
+    }
 
     set<int> channelSet;
 
@@ -274,6 +283,7 @@ void showConfig()
       // << "- routing_table_filename = " << GlobalParams::routing_table_filename << endl
          << "- selection_strategy = " << GlobalParams::selection_strategy << endl
          << "- encoding_model = " << GlobalParams::encoding_model << endl
+         << "- network_coding_type = " << GlobalParams::network_coding_type << endl
          << "- packet_injection_rate = " << GlobalParams::packet_injection_rate << endl
          << "- probability_of_retransmission = " << GlobalParams::probability_of_retransmission << endl
          << "- traffic_distribution = " << GlobalParams::traffic_distribution << endl

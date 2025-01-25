@@ -51,7 +51,7 @@ void Router::rxProcess()
 		Flit received_flit = flit_rx[i].read();
 		//LOG<<"request opposite to the current_level, reading flit "<<received_flit<<endl;
 
-		received_flit.hop_no++;
+		received_flit.meta.hop_no++;
 		if (!received_flit.meta.virtual_encoding)
 		{
 			// prob of Flit loss
