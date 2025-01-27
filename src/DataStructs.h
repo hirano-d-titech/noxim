@@ -108,19 +108,19 @@ struct NoP_data {
     };
 };
 
-struct TBufferFullStatus {
-    TBufferFullStatus()
+struct TBufferCapStatus {
+    TBufferCapStatus()
     {
 	for (int i=0;i<MAX_VIRTUAL_CHANNELS;i++)
-	    mask[i] = false;
+	    mask[i] = GlobalParams::buffer_depth;
     };
-    inline bool operator ==(const TBufferFullStatus & bfs) const {
+    inline bool operator ==(const TBufferCapStatus & bfs) const {
 	for (int i=0;i<MAX_VIRTUAL_CHANNELS;i++)
 	    if (mask[i] != bfs.mask[i]) return false;
 	return true;
     };
    
-    bool mask[MAX_VIRTUAL_CHANNELS];
+    int mask[MAX_VIRTUAL_CHANNELS];
 };
 
 struct FlitMetadata {

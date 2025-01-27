@@ -52,7 +52,7 @@ SC_MODULE(NoC)
     // Signals mesh and switch bloc in delta topologies
     sc_signal_NSWEH<bool> **req;
     sc_signal_NSWEH<bool> **ack;
-    sc_signal_NSWEH<TBufferFullStatus> **buffer_full_status;
+    sc_signal_NSWEH<TBufferCapStatus> **buffer_cap_status;
     sc_signal_NSWEH<Flit> **flit;
     sc_signal_NSWE<int> **free_slots;
 
@@ -69,8 +69,8 @@ SC_MODULE(NoC)
     sc_signal<bool> *ack_from_hub;
     sc_signal<bool> *ack_to_hub;
 
-    sc_signal<TBufferFullStatus> *buffer_full_status_from_hub;
-    sc_signal<TBufferFullStatus> *buffer_full_status_to_hub;
+    sc_signal<TBufferCapStatus> *buffer_cap_status_from_hub;
+    sc_signal<TBufferCapStatus> *buffer_cap_status_to_hub;
 
 
 

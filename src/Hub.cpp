@@ -292,7 +292,7 @@ void Hub::antennaToTileProcess()
 
 				LOG << "Flit " << flit << " found on buffer_to_tile[" << i <<"][" << vc << "] " << endl;
 				if (current_level_tx[i] == ack_tx[i].read() &&
-					buffer_full_status_tx[i].read().mask[vc] == false)
+					buffer_cap_status_tx[i].read().mask[vc] == false)
 				{
 					LOG << "Flit " << flit << " moved from buffer_to_tile[" << i <<"][" << vc << "] to signal flit_tx["<<i<<"] " << endl;
 
@@ -415,6 +415,7 @@ void Hub::antennaToTileProcess()
 					power.antennaBufferPop();
 					LOG << "*** [Ch" << channel << "] Moving flit  " << received_flit << " from buffer_rx to buffer_to_tile[" << port <<"][" << vc << "]" << endl;
 
+					// TODO: if multiple flit can be generated in Hub (e.g., network coding), tx-buffer system like Router::tx_buffer should be implemented.
 					buffer_to_tile[port][vc].Push(received_flit);
 					power.bufferToTilePush();
 
@@ -465,11 +466,11 @@ void Hub::tileToAntennaProcess()
 			flag[channel]->write(HOLD_CHANNEL);
 		}
 
-		TBufferFullStatus bfs;
+		TBufferCapStatus bfs;
 		for (int i = 0; i < num_ports; i++)
 		{
 			ack_rx[i]->write(0);
-			buffer_full_status_rx[i].write(bfs);
+			buffer_cap_status_rx[i].write(bfs);
 			current_level_rx[i] = 0;
 		}
 		return;
@@ -607,6 +608,8 @@ void Hub::tileToAntennaProcess()
 					{
 						buffer_from_tile[i][vc].Pop();
 						power.bufferFromTilePop();
+
+						// TODO: if multiple flit can be generated in Hub (e.g., network coding), tx-buffer system like Router::tx_buffer should be implemented.
 						init[channel]->buffer_tx.Push(flit);
 						power.antennaBufferPush();
 						if (flit.meta.flit_type == FLIT_TYPE_TAIL)
@@ -668,10 +671,10 @@ void Hub::tileToAntennaProcess()
 		}
 		ack_rx[i]->write(current_level_rx[i]);
 		// updates the mask of VCs to prevent incoming data on full buffers
-		TBufferFullStatus bfs;
+		TBufferCapStatus bfs;
 		for (int vc=0;vc<GlobalParams::n_virtual_channels;vc++)
-			bfs.mask[vc] = buffer_from_tile[i][vc].IsFull();
-		buffer_full_status_rx[i].write(bfs);
+			bfs.mask[vc] = buffer_from_tile[i][vc].getCurrentFreeSlots();
+		buffer_cap_status_rx[i].write(bfs);
 	}
 
 	// IMPORTANT: do not move from here

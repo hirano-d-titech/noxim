@@ -146,7 +146,7 @@ void NoC::buildButterfly()
 	cout <<"dimX_stg= "<< dimX << "  " << "dimY_sw= " << dimY << endl ;
 	req = new sc_signal_NSWEH<bool>*[dimX];
 	ack = new sc_signal_NSWEH<bool>*[dimX];
-	buffer_full_status = new sc_signal_NSWEH<TBufferFullStatus>*[dimX];
+	buffer_cap_status = new sc_signal_NSWEH<TBufferCapStatus>*[dimX];
 	flit = new sc_signal_NSWEH<Flit>*[dimX];
 
 	// not used in butterfly
@@ -158,7 +158,7 @@ void NoC::buildButterfly()
 	for (int i=0; i < dimX; i++) {
 		req[i] = new sc_signal_NSWEH<bool>[dimY];
 		ack[i] = new sc_signal_NSWEH<bool>[dimY];
-		buffer_full_status[i] = new sc_signal_NSWEH<TBufferFullStatus>[dimY];
+		buffer_cap_status[i] = new sc_signal_NSWEH<TBufferCapStatus>[dimY];
 		flit[i] = new sc_signal_NSWEH<Flit>[dimY];
 
 		free_slots[i] = new sc_signal_NSWE<int>[dimY];
@@ -215,13 +215,13 @@ void NoC::buildButterfly()
 			t[i][j]->hub_req_rx(req[i][j].from_hub);
 			t[i][j]->hub_flit_rx(flit[i][j].from_hub);
 			t[i][j]->hub_ack_rx(ack[i][j].to_hub);
-			t[i][j]->hub_buffer_full_status_rx(buffer_full_status[i][j].to_hub);
+			t[i][j]->hub_buffer_cap_status_rx(buffer_cap_status[i][j].to_hub);
 
 			// signals/port when tile transmits(tx) to hub
 			t[i][j]->hub_req_tx(req[i][j].to_hub); // 7, sc_out
 			t[i][j]->hub_flit_tx(flit[i][j].to_hub);
 			t[i][j]->hub_ack_tx(ack[i][j].from_hub);
-			t[i][j]->hub_buffer_full_status_tx(buffer_full_status[i][j].from_hub);
+			t[i][j]->hub_buffer_cap_status_tx(buffer_cap_status[i][j].from_hub);
 
 			//assert(false);
 			// TODO: Review port index. Connect each Hub to all its Channels
@@ -239,12 +239,12 @@ void NoC::buildButterfly()
 				hub[hub_id]->req_rx[port](req[i][j].to_hub);
 				hub[hub_id]->flit_rx[port](flit[i][j].to_hub);
 				hub[hub_id]->ack_rx[port](ack[i][j].from_hub);
-				hub[hub_id]->buffer_full_status_rx[port](buffer_full_status[i][j].from_hub);
+				hub[hub_id]->buffer_cap_status_rx[port](buffer_cap_status[i][j].from_hub);
 
 				hub[hub_id]->flit_tx[port](flit[i][j].from_hub);
 				hub[hub_id]->req_tx[port](req[i][j].from_hub);
 				hub[hub_id]->ack_tx[port](ack[i][j].to_hub);
-				hub[hub_id]->buffer_full_status_tx[port](buffer_full_status[i][j].to_hub);
+				hub[hub_id]->buffer_cap_status_tx[port](buffer_cap_status[i][j].to_hub);
 
 			}
 
@@ -258,7 +258,7 @@ void NoC::buildButterfly()
 	sc_signal<int> *int_dummy_signal= new sc_signal<int>;
 	sc_signal<Flit> *flit_dummy_signal= new sc_signal<Flit>;
 	sc_signal<NoP_data> *nop_data_dummy_signal = new sc_signal<NoP_data>;
-	sc_signal<TBufferFullStatus> *tbufferfullstatus_dummy_signal = new sc_signal<TBufferFullStatus>;
+	sc_signal<TBufferCapStatus> *tbufferfullstatus_dummy_signal = new sc_signal<TBufferCapStatus>;
 
 	for (int i = 1; i < stg ; i++) 		//stg
 	{
@@ -277,46 +277,46 @@ void NoC::buildButterfly()
 					t[i][j]->flit_rx[3](flit[i][j].west);
 					t[i][j]->req_rx[3](req[i][j].west);
 					t[i][j]->ack_rx[3](ack[i][j].west);
-					t[i][j]->buffer_full_status_rx[3](buffer_full_status[i][j].west);
+					t[i][j]->buffer_cap_status_rx[3](buffer_cap_status[i][j].west);
 					//tx signals not required for delta topologies
 					t[i][j]->flit_tx[3](*flit_dummy_signal);
 					t[i][j]->req_tx[3](*bool_dummy_signal);
 					t[i][j]->ack_tx[3](*bool_dummy_signal);
-					t[i][j]->buffer_full_status_tx[3](*tbufferfullstatus_dummy_signal);
+					t[i][j]->buffer_cap_status_tx[3](*tbufferfullstatus_dummy_signal);
 
 
 					t[i-1][j]->flit_tx[d](flit[i][j].west);
 					t[i-1][j]->req_tx[d](req[i][j].west);
 					t[i-1][j]->ack_tx[d](ack[i][j].west);
-					t[i-1][j]->buffer_full_status_tx[d](buffer_full_status[i][j].west);
+					t[i-1][j]->buffer_cap_status_tx[d](buffer_cap_status[i][j].west);
 					//tx signals not required for delta topologies
 					t[i-1][j]->flit_rx[d](*flit_dummy_signal);
 					t[i-1][j]->req_rx[d](*bool_dummy_signal);
 					t[i-1][j]->ack_rx[d](*bool_dummy_signal);
-					t[i-1][j]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+					t[i-1][j]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 
 
 					//*** Direction 2 ****
 					t[i][j]->flit_rx[2](flit[i][j].south);
 					t[i][j]->req_rx[2](req[i][j].south);
 					t[i][j]->ack_rx[2](ack[i][j].south);
-					t[i][j]->buffer_full_status_rx[2](buffer_full_status[i][j].south);
+					t[i][j]->buffer_cap_status_rx[2](buffer_cap_status[i][j].south);
 					//tx signals not required for delta topologies
 					t[i][j]->flit_tx[2](*flit_dummy_signal);
 					t[i][j]->req_tx[2](*bool_dummy_signal);
 					t[i][j]->ack_tx[2](*bool_dummy_signal);
-					t[i][j]->buffer_full_status_tx[2](*tbufferfullstatus_dummy_signal);
+					t[i][j]->buffer_cap_status_tx[2](*tbufferfullstatus_dummy_signal);
 
 
 					t[i-1][m]->flit_tx[d](flit[i][j].south);
 					t[i-1][m]->req_tx[d](req[i][j].south);
 					t[i-1][m]->ack_tx[d](ack[i][j].south);
-					t[i-1][m]->buffer_full_status_tx[d](buffer_full_status[i][j].south);
+					t[i-1][m]->buffer_cap_status_tx[d](buffer_cap_status[i][j].south);
 					//tx signals not required for delta topologies
 					t[i-1][m]->flit_rx[d](*flit_dummy_signal);
 					t[i-1][m]->req_rx[d](*bool_dummy_signal);
 					t[i-1][m]->ack_rx[d](*bool_dummy_signal);
-					t[i-1][m]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+					t[i-1][m]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 				}
 
 				else
@@ -325,46 +325,46 @@ void NoC::buildButterfly()
 					t[i][j]->flit_rx[3](flit[i-1][j].north);
 					t[i][j]->req_rx[3](req[i-1][j].north);
 					t[i][j]->ack_rx[3](ack[i-1][j].north);
-					t[i][j]->buffer_full_status_rx[3](buffer_full_status[i-1][j].north);
+					t[i][j]->buffer_cap_status_rx[3](buffer_cap_status[i-1][j].north);
 					//tx signals not required for delta topologies
 					t[i][j]->flit_tx[3](*flit_dummy_signal);
 					t[i][j]->req_tx[3](*bool_dummy_signal);
 					t[i][j]->ack_tx[3](*bool_dummy_signal);
-					t[i][j]->buffer_full_status_tx[3](*tbufferfullstatus_dummy_signal);
+					t[i][j]->buffer_cap_status_tx[3](*tbufferfullstatus_dummy_signal);
 
 
 					t[i-1][j]->flit_tx[d](flit[i-1][j].north);
 					t[i-1][j]->req_tx[d](req[i-1][j].north);
 					t[i-1][j]->ack_tx[d](ack[i-1][j].north);
-					t[i-1][j]->buffer_full_status_tx[d](buffer_full_status[i-1][j].north);
+					t[i-1][j]->buffer_cap_status_tx[d](buffer_cap_status[i-1][j].north);
 					//tx signals not required for delta topologies
 					t[i-1][j]->flit_rx[d](*flit_dummy_signal);
 					t[i-1][j]->req_rx[d](*bool_dummy_signal);
 					t[i-1][j]->ack_rx[d](*bool_dummy_signal);
-					t[i-1][j]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+					t[i-1][j]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 
 
 					//*** Direction 2 ****
 					t[i][j]->flit_rx[2](flit[i-1][m].north);
 					t[i][j]->req_rx[2](req[i-1][m].north);
 					t[i][j]->ack_rx[2](ack[i-1][m].north);
-					t[i][j]->buffer_full_status_rx[2](buffer_full_status[i-1][m].north);
+					t[i][j]->buffer_cap_status_rx[2](buffer_cap_status[i-1][m].north);
 					//tx signals not required for delta topologies
 					t[i][j]->flit_tx[2](*flit_dummy_signal);
 					t[i][j]->req_tx[2](*bool_dummy_signal);
 					t[i][j]->ack_tx[2](*bool_dummy_signal);
-					t[i][j]->buffer_full_status_tx[2](*tbufferfullstatus_dummy_signal);
+					t[i][j]->buffer_cap_status_tx[2](*tbufferfullstatus_dummy_signal);
 
 
 					t[i-1][m]->flit_tx[d](flit[i-1][m].north);
 					t[i-1][m]->req_tx[d](req[i-1][m].north);
 					t[i-1][m]->ack_tx[d](ack[i-1][m].north);
-					t[i-1][m]->buffer_full_status_tx[d](buffer_full_status[i-1][m].north);
+					t[i-1][m]->buffer_cap_status_tx[d](buffer_cap_status[i-1][m].north);
 					//tx signals not required for delta topologies
 					t[i-1][m]->flit_rx[d](*flit_dummy_signal);
 					t[i-1][m]->req_rx[d](*bool_dummy_signal);
 					t[i-1][m]->ack_rx[d](*bool_dummy_signal);
-					t[i-1][m]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+					t[i-1][m]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 				}
 
 			}
@@ -376,44 +376,44 @@ void NoC::buildButterfly()
 					t[i][j]->flit_rx[2](flit[i][j].south);
 					t[i][j]->req_rx[2](req[i][j].south);
 					t[i][j]->ack_rx[2](ack[i][j].south);
-					t[i][j]->buffer_full_status_rx[2](buffer_full_status[i][j].south);
+					t[i][j]->buffer_cap_status_rx[2](buffer_cap_status[i][j].south);
 					//tx signals not required for delta topologies
 					t[i][j]->flit_tx[2](*flit_dummy_signal);
 					t[i][j]->req_tx[2](*bool_dummy_signal);
 					t[i][j]->ack_tx[2](*bool_dummy_signal);
-					t[i][j]->buffer_full_status_tx[2](*tbufferfullstatus_dummy_signal);
+					t[i][j]->buffer_cap_status_tx[2](*tbufferfullstatus_dummy_signal);
 
 					t[i-1][j]->flit_tx[d](flit[i][j].south);
 					t[i-1][j]->req_tx[d](req[i][j].south);
 					t[i-1][j]->ack_tx[d](ack[i][j].south);
-					t[i-1][j]->buffer_full_status_tx[d](buffer_full_status[i][j].south);
+					t[i-1][j]->buffer_cap_status_tx[d](buffer_cap_status[i][j].south);
 					//rx signals not required for delta topologies
 					t[i-1][j]->flit_rx[d](*flit_dummy_signal);
 					t[i-1][j]->req_rx[d](*bool_dummy_signal);
 					t[i-1][j]->ack_rx[d](*bool_dummy_signal);
-					t[i-1][j]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+					t[i-1][j]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 
 					//*****Direction 3 *****
 
 					t[i][j]->flit_rx[3](flit[i][j].west);
 					t[i][j]->req_rx[3](req[i][j].west);
 					t[i][j]->ack_rx[3](ack[i][j].west);
-					t[i][j]->buffer_full_status_rx[3](buffer_full_status[i][j].west);
+					t[i][j]->buffer_cap_status_rx[3](buffer_cap_status[i][j].west);
 					//tx signals not required for delta topologies
 					t[i][j]->flit_tx[3](*flit_dummy_signal);
 					t[i][j]->req_tx[3](*bool_dummy_signal);
 					t[i][j]->ack_tx[3](*bool_dummy_signal);
-					t[i][j]->buffer_full_status_tx[3](*tbufferfullstatus_dummy_signal);
+					t[i][j]->buffer_cap_status_tx[3](*tbufferfullstatus_dummy_signal);
 
 					t[i-1][m]->flit_tx[d](flit[i][j].west);
 					t[i-1][m]->req_tx[d](req[i][j].west);
 					t[i-1][m]->ack_tx[d](ack[i][j].west);
-					t[i-1][m]->buffer_full_status_tx[d](buffer_full_status[i][j].west);
+					t[i-1][m]->buffer_cap_status_tx[d](buffer_cap_status[i][j].west);
 					//rx signals not required for delta topologies
 					t[i-1][m]->flit_rx[d](*flit_dummy_signal);
 					t[i-1][m]->req_rx[d](*bool_dummy_signal);
 					t[i-1][m]->ack_rx[d](*bool_dummy_signal);
-					t[i-1][m]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+					t[i-1][m]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 				}
 				else // stage not even
 				{
@@ -421,43 +421,43 @@ void NoC::buildButterfly()
 					t[i][j]->flit_rx[2](flit[i-1][j].east);
 					t[i][j]->req_rx[2](req[i-1][j].east);
 					t[i][j]->ack_rx[2](ack[i-1][j].east);
-					t[i][j]->buffer_full_status_rx[2](buffer_full_status[i-1][j].east);
+					t[i][j]->buffer_cap_status_rx[2](buffer_cap_status[i-1][j].east);
 					//tx signals not required for delta topologies
 					t[i][j]->flit_tx[2](*flit_dummy_signal);
 					t[i][j]->req_tx[2](*bool_dummy_signal);
 					t[i][j]->ack_tx[2](*bool_dummy_signal);
-					t[i][j]->buffer_full_status_tx[2](*tbufferfullstatus_dummy_signal);
+					t[i][j]->buffer_cap_status_tx[2](*tbufferfullstatus_dummy_signal);
 
 					t[i-1][j]->flit_tx[d](flit[i-1][j].east);
 					t[i-1][j]->req_tx[d](req[i-1][j].east);
 					t[i-1][j]->ack_tx[d](ack[i-1][j].east);
-					t[i-1][j]->buffer_full_status_tx[d](buffer_full_status[i-1][j].east);
+					t[i-1][j]->buffer_cap_status_tx[d](buffer_cap_status[i-1][j].east);
 					//rx signals not required for delta topologies
 					t[i-1][j]->flit_rx[d](*flit_dummy_signal);
 					t[i-1][j]->req_rx[d](*bool_dummy_signal);
 					t[i-1][j]->ack_rx[d](*bool_dummy_signal);
-					t[i-1][j]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+					t[i-1][j]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 
 					//*****Direction 3 ****
 					t[i][j]->flit_rx[3](flit[i-1][m].east);
 					t[i][j]->req_rx[3](req[i-1][m].east);
 					t[i][j]->ack_rx[3](ack[i-1][m].east);
-					t[i][j]->buffer_full_status_rx[3](buffer_full_status[i-1][m].east);
+					t[i][j]->buffer_cap_status_rx[3](buffer_cap_status[i-1][m].east);
 					//tx signals not required for delta topologies
 					t[i][j]->flit_tx[3](*flit_dummy_signal);
 					t[i][j]->req_tx[3](*bool_dummy_signal);
 					t[i][j]->ack_tx[3](*bool_dummy_signal);
-					t[i][j]->buffer_full_status_tx[3](*tbufferfullstatus_dummy_signal);
+					t[i][j]->buffer_cap_status_tx[3](*tbufferfullstatus_dummy_signal);
 
 					t[i-1][m]->flit_tx[d](flit[i-1][m].east);
 					t[i-1][m]->req_tx[d](req[i-1][m].east);
 					t[i-1][m]->ack_tx[d](ack[i-1][m].east);
-					t[i-1][m]->buffer_full_status_tx[d](buffer_full_status[i-1][m].east);
+					t[i-1][m]->buffer_cap_status_tx[d](buffer_cap_status[i-1][m].east);
 					//rx signals not required for delta topologies
 					t[i-1][m]->flit_rx[d](*flit_dummy_signal);
 					t[i-1][m]->req_rx[d](*bool_dummy_signal);
 					t[i-1][m]->ack_rx[d](*bool_dummy_signal);
-					t[i-1][m]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+					t[i-1][m]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 				}
 
 			}
@@ -500,8 +500,8 @@ void NoC::buildButterfly()
 	ack_from_hub = new sc_signal<bool>[n];
 	ack_to_hub = new sc_signal<bool>[n];
 
-	buffer_full_status_from_hub = new sc_signal<TBufferFullStatus>[n];
-	buffer_full_status_to_hub = new sc_signal<TBufferFullStatus>[n];
+	buffer_cap_status_from_hub = new sc_signal<TBufferCapStatus>[n];
+	buffer_cap_status_to_hub = new sc_signal<TBufferCapStatus>[n];
 
 
 	// Create the Core bloc
@@ -563,12 +563,12 @@ void NoC::buildButterfly()
 			hub[hub_id]->req_rx[port](req_to_hub[core_id]);
 			hub[hub_id]->flit_rx[port](flit_to_hub[core_id]);
 			hub[hub_id]->ack_rx[port](ack_from_hub[core_id]);
-			hub[hub_id]->buffer_full_status_rx[port](buffer_full_status_from_hub[core_id]);
+			hub[hub_id]->buffer_cap_status_rx[port](buffer_cap_status_from_hub[core_id]);
 
 			hub[hub_id]->flit_tx[port](flit_from_hub[core_id]);
 			hub[hub_id]->req_tx[port](req_from_hub[core_id]);
 			hub[hub_id]->ack_tx[port](ack_to_hub[core_id]);
-			hub[hub_id]->buffer_full_status_tx[port](buffer_full_status_to_hub[core_id]);
+			hub[hub_id]->buffer_cap_status_tx[port](buffer_cap_status_to_hub[core_id]);
 
 		}
 
@@ -606,43 +606,43 @@ void NoC::buildButterfly()
 		t[0][i]->flit_rx[3](flit[0][i].west);
 		t[0][i]->req_rx[3](req[0][i].west);
 		t[0][i]->ack_rx[3](ack[0][i].west);
-		t[0][i]->buffer_full_status_rx[3](buffer_full_status[0][i].west);
+		t[0][i]->buffer_cap_status_rx[3](buffer_cap_status[0][i].west);
 		//tx is not required in delta topologies
 		t[0][i]->flit_tx[3](*flit_dummy_signal);
 		t[0][i]->req_tx[3](*bool_dummy_signal);
 		t[0][i]->ack_tx[3](*bool_dummy_signal);
-		t[0][i]->buffer_full_status_tx[3](*tbufferfullstatus_dummy_signal);
+		t[0][i]->buffer_cap_status_tx[3](*tbufferfullstatus_dummy_signal);
 
 		core[i*2]->flit_tx[0](flit[0][i].west);
 		core[i*2]->req_tx[0](req[0][i].west);
 		core[i*2]->ack_tx[0](ack[0][i].west);
-		core[i*2]->buffer_full_status_tx[0](buffer_full_status[0][i].west);
+		core[i*2]->buffer_cap_status_tx[0](buffer_cap_status[0][i].west);
 		//rx is not required in delta topologies
 		core[i*2]->flit_rx[0](*flit_dummy_signal);
 		core[i*2]->req_rx[0](*bool_dummy_signal);
 		core[i*2]->ack_rx[0](*bool_dummy_signal);
-		core[i*2]->buffer_full_status_rx[0](*tbufferfullstatus_dummy_signal);
+		core[i*2]->buffer_cap_status_rx[0](*tbufferfullstatus_dummy_signal);
 
 
 		t[0][i]->flit_rx[2](flit[0][i].south);
 		t[0][i]->req_rx[2](req[0][i].south);
 		t[0][i]->ack_rx[2](ack[0][i].south);
-		t[0][i]->buffer_full_status_rx[2](buffer_full_status[0][i].south);
+		t[0][i]->buffer_cap_status_rx[2](buffer_cap_status[0][i].south);
 		//tx is not required in delta topologies
 		t[0][i]->flit_tx[2](*flit_dummy_signal);
 		t[0][i]->req_tx[2](*bool_dummy_signal);
 		t[0][i]->ack_tx[2](*bool_dummy_signal);
-		t[0][i]->buffer_full_status_tx[2](*tbufferfullstatus_dummy_signal);
+		t[0][i]->buffer_cap_status_tx[2](*tbufferfullstatus_dummy_signal);
 
 		core[(i*2)+1]->flit_tx[0](flit[0][i].south);
 		core[(i*2)+1]->req_tx[0](req[0][i].south);
 		core[(i*2)+1]->ack_tx[0](ack[0][i].south);
-		core[(i*2)+1]->buffer_full_status_tx[0](buffer_full_status[0][i].south);
+		core[(i*2)+1]->buffer_cap_status_tx[0](buffer_cap_status[0][i].south);
 		//rx is not required in delta topologies
 		core[(i*2)+1]->flit_rx[0](*flit_dummy_signal);
 		core[(i*2)+1]->req_rx[0](*bool_dummy_signal);
 		core[(i*2)+1]->ack_rx[0](*bool_dummy_signal);
-		core[(i*2)+1]->buffer_full_status_rx[0](*tbufferfullstatus_dummy_signal);
+		core[(i*2)+1]->buffer_cap_status_rx[0](*tbufferfullstatus_dummy_signal);
 	}
 
 	// ... Last stage
@@ -651,44 +651,44 @@ void NoC::buildButterfly()
 		t[stg-1][i]->flit_tx[0](flit[stg-1][i].north); // ack .east
 		t[stg-1][i]->req_tx[0](req[stg-1][i].north);
 		t[stg-1][i]->ack_tx[0](ack[stg-1][i].north);
-		t[stg-1][i]->buffer_full_status_tx[0](buffer_full_status[stg-1][i].north);
+		t[stg-1][i]->buffer_cap_status_tx[0](buffer_cap_status[stg-1][i].north);
 		//rx is not required in delta topologies
 		t[stg-1][i]->flit_rx[0](*flit_dummy_signal); // ack .east
 		t[stg-1][i]->req_rx[0](*bool_dummy_signal);
 		t[stg-1][i]->ack_rx[0](*bool_dummy_signal);
-		t[stg-1][i]->buffer_full_status_rx[0](*tbufferfullstatus_dummy_signal);
+		t[stg-1][i]->buffer_cap_status_rx[0](*tbufferfullstatus_dummy_signal);
 
 
 		core[i*2]->flit_rx[1](flit[stg-1][i].north);
 		core[i*2]->req_rx[1](req[stg-1][i].north);
 		core[i*2]->ack_rx[1](ack[stg-1][i].north);
-		core[i*2]->buffer_full_status_rx[1](buffer_full_status[stg-1][i].north);
+		core[i*2]->buffer_cap_status_rx[1](buffer_cap_status[stg-1][i].north);
 		//tx is not required in delta topologies
 		core[i*2]->flit_tx[1](*flit_dummy_signal);
 		core[i*2]->req_tx[1](*bool_dummy_signal);
 		core[i*2]->ack_tx[1](*bool_dummy_signal);
-		core[i*2]->buffer_full_status_tx[1](*tbufferfullstatus_dummy_signal);
+		core[i*2]->buffer_cap_status_tx[1](*tbufferfullstatus_dummy_signal);
 
 
 		t[stg-1][i]->flit_tx[1](flit[stg-1][i].east);  // ack .east
 		t[stg-1][i]->req_tx[1](req[stg-1][i].east);
 		t[stg-1][i]->ack_tx[1](ack[stg-1][i].east);
-		t[stg-1][i]->buffer_full_status_tx[1](buffer_full_status[stg-1][i].east);
+		t[stg-1][i]->buffer_cap_status_tx[1](buffer_cap_status[stg-1][i].east);
 		//rx is not required in delta topologies
 		t[stg-1][i]->flit_rx[1](*flit_dummy_signal);  // ack .east
 		t[stg-1][i]->req_rx[1](*bool_dummy_signal);
 		t[stg-1][i]->ack_rx[1](*bool_dummy_signal);
-		t[stg-1][i]->buffer_full_status_rx[1](*tbufferfullstatus_dummy_signal);
+		t[stg-1][i]->buffer_cap_status_rx[1](*tbufferfullstatus_dummy_signal);
 
 		core[(i*2)+1]->flit_rx[1](flit[stg-1][i].east);
 		core[(i*2)+1]->req_rx[1](req[stg-1][i].east);
 		core[(i*2)+1]->ack_rx[1](ack[stg-1][i].east);
-		core[(i*2)+1]->buffer_full_status_rx[1](buffer_full_status[stg-1][i].east);
+		core[(i*2)+1]->buffer_cap_status_rx[1](buffer_cap_status[stg-1][i].east);
 		//tx is not required in delta topologies
 		core[(i*2)+1]->flit_tx[1](*flit_dummy_signal);
 		core[(i*2)+1]->req_tx[1](*bool_dummy_signal);
 		core[(i*2)+1]->ack_tx[1](*bool_dummy_signal);
-		core[(i*2)+1]->buffer_full_status_tx[1](*tbufferfullstatus_dummy_signal);
+		core[(i*2)+1]->buffer_cap_status_tx[1](*tbufferfullstatus_dummy_signal);
 	}// ---------------------------------end mapping code-----------------
 
 
@@ -714,33 +714,33 @@ void NoC::buildButterfly()
 			core[c]->flit_tx[k](*flit_dummy_signal);
 			core[c]->req_tx[k](*bool_dummy_signal);
 			core[c]->ack_tx[k](*bool_dummy_signal);
-			core[c]->buffer_full_status_tx[k](*tbufferfullstatus_dummy_signal);
+			core[c]->buffer_cap_status_tx[k](*tbufferfullstatus_dummy_signal);
 
 			core[c]->flit_rx[k](*flit_dummy_signal);
 			core[c]->req_rx[k](*bool_dummy_signal);
 			core[c]->ack_rx[k](*bool_dummy_signal);
-			core[c]->buffer_full_status_rx[k](*tbufferfullstatus_dummy_signal);
+			core[c]->buffer_cap_status_rx[k](*tbufferfullstatus_dummy_signal);
 		}
 
 		core[c]->hub_flit_rx(flit_from_hub[c]);
 		core[c]->hub_req_rx(req_from_hub[c]);
 		core[c]->hub_ack_rx(ack_to_hub[c]);
-		core[c]->hub_buffer_full_status_rx(buffer_full_status_to_hub[c]);
+		core[c]->hub_buffer_cap_status_rx(buffer_cap_status_to_hub[c]);
 
 		core[c]->hub_flit_tx(flit_to_hub[c]);
 		core[c]->hub_req_tx(req_to_hub[c]);
 		core[c]->hub_ack_tx(ack_from_hub[c]);
-		core[c]->hub_buffer_full_status_tx(buffer_full_status_from_hub[c]);
+		core[c]->hub_buffer_cap_status_tx(buffer_cap_status_from_hub[c]);
 
 		//core[c]->hub_flit_rx(*flit_dummy_signal);
 		//core[c]->hub_req_rx(*bool_dummy_signal);
 		//core[c]->hub_ack_rx(*bool_dummy_signal);
-		//core[c]->hub_buffer_full_status_rx(*tbufferfullstatus_dummy_signal);
+		//core[c]->hub_buffer_cap_status_rx(*tbufferfullstatus_dummy_signal);
 
 		//core[c]->hub_flit_tx(*flit_dummy_signal);
 		//core[c]->hub_req_tx(*bool_dummy_signal);
 		//core[c]->hub_ack_tx(*bool_dummy_signal);
-		//core[c]->hub_buffer_full_status_tx(*tbufferfullstatus_dummy_signal);
+		//core[c]->hub_buffer_cap_status_tx(*tbufferfullstatus_dummy_signal);
 
 	}
 
@@ -796,7 +796,7 @@ void NoC::buildBaseline()
     cout <<"dimX_stg= "<< dimX << "  " << "dimY_sw= " << dimY << endl ;
     req = new sc_signal_NSWEH<bool>*[dimX];
     ack = new sc_signal_NSWEH<bool>*[dimX];
-    buffer_full_status = new sc_signal_NSWEH<TBufferFullStatus>*[dimX];
+    buffer_cap_status = new sc_signal_NSWEH<TBufferCapStatus>*[dimX];
     flit = new sc_signal_NSWEH<Flit>*[dimX];
 
     // not used in delta topologies
@@ -809,7 +809,7 @@ void NoC::buildBaseline()
     {
 	req[i] = new sc_signal_NSWEH<bool>[dimY];
 	ack[i] = new sc_signal_NSWEH<bool>[dimY];
-	buffer_full_status[i] = new sc_signal_NSWEH<TBufferFullStatus>[dimY];
+	buffer_cap_status[i] = new sc_signal_NSWEH<TBufferCapStatus>[dimY];
 	flit[i] = new sc_signal_NSWEH<Flit>[dimY];
 
 	free_slots[i] = new sc_signal_NSWE<int>[dimY];
@@ -866,13 +866,13 @@ void NoC::buildBaseline()
 	    t[i][j]->hub_req_rx(req[i][j].from_hub);
 	    t[i][j]->hub_flit_rx(flit[i][j].from_hub);
 	    t[i][j]->hub_ack_rx(ack[i][j].to_hub);
-	    t[i][j]->hub_buffer_full_status_rx(buffer_full_status[i][j].to_hub);
+	    t[i][j]->hub_buffer_cap_status_rx(buffer_cap_status[i][j].to_hub);
 
 	    // signals/port when tile transmits(tx) to hub
 	    t[i][j]->hub_req_tx(req[i][j].to_hub); // 7, sc_out
 	    t[i][j]->hub_flit_tx(flit[i][j].to_hub);
 	    t[i][j]->hub_ack_tx(ack[i][j].from_hub);
-	    t[i][j]->hub_buffer_full_status_tx(buffer_full_status[i][j].from_hub);
+	    t[i][j]->hub_buffer_cap_status_tx(buffer_cap_status[i][j].from_hub);
 
 	    // TODO: Review port index. Connect each Hub to all its Channels 
 	    map<int, int>::iterator it = GlobalParams::hub_for_tile.find(tile_id);
@@ -889,12 +889,12 @@ void NoC::buildBaseline()
 		hub[hub_id]->req_rx[port](req[i][j].to_hub);
 		hub[hub_id]->flit_rx[port](flit[i][j].to_hub);
 		hub[hub_id]->ack_rx[port](ack[i][j].from_hub);
-		hub[hub_id]->buffer_full_status_rx[port](buffer_full_status[i][j].from_hub);
+		hub[hub_id]->buffer_cap_status_rx[port](buffer_cap_status[i][j].from_hub);
 
 		hub[hub_id]->flit_tx[port](flit[i][j].from_hub);
 		hub[hub_id]->req_tx[port](req[i][j].from_hub);
 		hub[hub_id]->ack_tx[port](ack[i][j].to_hub);
-		hub[hub_id]->buffer_full_status_tx[port](buffer_full_status[i][j].to_hub);
+		hub[hub_id]->buffer_cap_status_tx[port](buffer_cap_status[i][j].to_hub);
 
 	    }
 
@@ -908,7 +908,7 @@ void NoC::buildBaseline()
     sc_signal<int> *int_dummy_signal= new sc_signal<int>;
     sc_signal<Flit> *flit_dummy_signal= new sc_signal<Flit>;
     sc_signal<NoP_data> *nop_data_dummy_signal = new sc_signal<NoP_data>;
-    sc_signal<TBufferFullStatus> *tbufferfullstatus_dummy_signal = new sc_signal<TBufferFullStatus>;
+    sc_signal<TBufferCapStatus> *tbufferfullstatus_dummy_signal = new sc_signal<TBufferCapStatus>;
 
     //NOTE: the only difference between Baseline and Butterfly mapping architecture is the first stage connections
     //First Stage Mapping(Stage 1)
@@ -933,23 +933,23 @@ void NoC::buildBaseline()
 	    t[1][j]->flit_rx[3](flit[0][2*j].north);
 	    t[1][j]->req_rx[3](req[0][2*j].north);
 	    t[1][j]->ack_rx[3](ack[0][2*j].north);
-	    t[1][j]->buffer_full_status_rx[3](buffer_full_status[0][2*j].north);
+	    t[1][j]->buffer_cap_status_rx[3](buffer_cap_status[0][2*j].north);
 	    //tx signals not required for delta topologies
 	    t[1][j]->flit_tx[3](*flit_dummy_signal);
 	    t[1][j]->req_tx[3](*bool_dummy_signal);
 	    t[1][j]->ack_tx[3](*bool_dummy_signal);
-	    t[1][j]->buffer_full_status_tx[3](*tbufferfullstatus_dummy_signal);
+	    t[1][j]->buffer_cap_status_tx[3](*tbufferfullstatus_dummy_signal);
 
 
 	    t[0][2*j]->flit_tx[d](flit[0][2*j].north);
 	    t[0][2*j]->req_tx[d](req[0][2*j].north);
 	    t[0][2*j]->ack_tx[d](ack[0][2*j].north);
-	    t[0][2*j]->buffer_full_status_tx[d](buffer_full_status[0][2*j].north);
+	    t[0][2*j]->buffer_cap_status_tx[d](buffer_cap_status[0][2*j].north);
 	    //tx signals not required for delta topologies
 	    t[0][2*j]->flit_rx[d](*flit_dummy_signal);
 	    t[0][2*j]->req_rx[d](*bool_dummy_signal);
 	    t[0][2*j]->ack_rx[d](*bool_dummy_signal);
-	    t[0][2*j]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+	    t[0][2*j]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 
 
 	    //*** Direction 2 ****
@@ -964,22 +964,22 @@ void NoC::buildBaseline()
 	    t[1][j]->flit_rx[2](flit[0][(2*j)+1].north);
 	    t[1][j]->req_rx[2](req[0][(2*j)+1].north);
 	    t[1][j]->ack_rx[2](ack[0][(2*j)+1].north);
-	    t[1][j]->buffer_full_status_rx[2](buffer_full_status[0][(2*j)+1].north);
+	    t[1][j]->buffer_cap_status_rx[2](buffer_cap_status[0][(2*j)+1].north);
 	    //tx signals not required for delta topologies
 	    t[1][j]->flit_tx[2](*flit_dummy_signal);
 	    t[1][j]->req_tx[2](*bool_dummy_signal);
 	    t[1][j]->ack_tx[2](*bool_dummy_signal);
-	    t[1][j]->buffer_full_status_tx[2](*tbufferfullstatus_dummy_signal);
+	    t[1][j]->buffer_cap_status_tx[2](*tbufferfullstatus_dummy_signal);
 
 	    t[0][(2*j)+1]->flit_tx[d](flit[0][(2*j)+1].north);
 	    t[0][(2*j)+1]->req_tx[d](req[0][(2*j)+1].north);
 	    t[0][(2*j)+1]->ack_tx[d](ack[0][(2*j)+1].north);
-	    t[0][(2*j)+1]->buffer_full_status_tx[d](buffer_full_status[0][(2*j)+1].north);
+	    t[0][(2*j)+1]->buffer_cap_status_tx[d](buffer_cap_status[0][(2*j)+1].north);
 	    //tx signals not required for delta topologies
 	    t[0][(2*j)+1]->flit_rx[d](*flit_dummy_signal);
 	    t[0][(2*j)+1]->req_rx[d](*bool_dummy_signal);
 	    t[0][(2*j)+1]->ack_rx[d](*bool_dummy_signal);
-	    t[0][(2*j)+1]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+	    t[0][(2*j)+1]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 
 	}
 	else
@@ -991,22 +991,22 @@ void NoC::buildBaseline()
 	    t[1][j]->flit_rx[3](flit[0][2*(j-r)].east);
 	    t[1][j]->req_rx[3](req[0][2*(j-r)].east);
 	    t[1][j]->ack_rx[3](ack[0][2*(j-r)].east);
-	    t[1][j]->buffer_full_status_rx[3](buffer_full_status[0][2*(j-r)].east);
+	    t[1][j]->buffer_cap_status_rx[3](buffer_cap_status[0][2*(j-r)].east);
 	    //tx signals not required for delta topologies
 	    t[1][j]->flit_tx[3](*flit_dummy_signal);
 	    t[1][j]->req_tx[3](*bool_dummy_signal);
 	    t[1][j]->ack_tx[3](*bool_dummy_signal);
-	    t[1][j]->buffer_full_status_tx[3](*tbufferfullstatus_dummy_signal);
+	    t[1][j]->buffer_cap_status_tx[3](*tbufferfullstatus_dummy_signal);
 
 	    t[0][2*(j-r)]->flit_tx[d](flit[0][2*(j-r)].east);
 	    t[0][2*(j-r)]->req_tx[d](req[0][2*(j-r)].east);
 	    t[0][2*(j-r)]->ack_tx[d](ack[0][2*(j-r)].east);
-	    t[0][2*(j-r)]->buffer_full_status_tx[d](buffer_full_status[0][2*(j-r)].east);
+	    t[0][2*(j-r)]->buffer_cap_status_tx[d](buffer_cap_status[0][2*(j-r)].east);
 	    //rx signals not required for delta topologies
 	    t[0][2*(j-r)]->flit_rx[d](*flit_dummy_signal);
 	    t[0][2*(j-r)]->req_rx[d](*bool_dummy_signal);
 	    t[0][2*(j-r)]->ack_rx[d](*bool_dummy_signal);
-	    t[0][2*(j-r)]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+	    t[0][2*(j-r)]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 
 
 	    //*****Direction 2 *****
@@ -1016,22 +1016,22 @@ void NoC::buildBaseline()
 	    t[1][j]->flit_rx[2](flit[0][(2*(j-r))+1].east);
 	    t[1][j]->req_rx[2](req[0][(2*(j-r))+1].east);
 	    t[1][j]->ack_rx[2](ack[0][(2*(j-r))+1].east);
-	    t[1][j]->buffer_full_status_rx[2](buffer_full_status[0][(2*(j-r))+1].east);
+	    t[1][j]->buffer_cap_status_rx[2](buffer_cap_status[0][(2*(j-r))+1].east);
 	    //tx signals not required for delta topologies
 	    t[1][j]->flit_tx[2](*flit_dummy_signal);
 	    t[1][j]->req_tx[2](*bool_dummy_signal);
 	    t[1][j]->ack_tx[2](*bool_dummy_signal);
-	    t[1][j]->buffer_full_status_tx[2](*tbufferfullstatus_dummy_signal);
+	    t[1][j]->buffer_cap_status_tx[2](*tbufferfullstatus_dummy_signal);
 
 	    t[0][2*(j-r)+1]->flit_tx[d](flit[0][(2*(j-r))+1].east);
 	    t[0][2*(j-r)+1]->req_tx[d](req[0][(2*(j-r))+1].east);
 	    t[0][2*(j-r)+1]->ack_tx[d](ack[0][(2*(j-r))+1].east);
-	    t[0][2*(j-r)+1]->buffer_full_status_tx[d](buffer_full_status[0][(2*(j-r))+1].east);
+	    t[0][2*(j-r)+1]->buffer_cap_status_tx[d](buffer_cap_status[0][(2*(j-r))+1].east);
 	    //rx signals not required for delta topologies
 	    t[0][2*(j-r)+1]->flit_rx[d](*flit_dummy_signal);
 	    t[0][2*(j-r)+1]->req_rx[d](*bool_dummy_signal);
 	    t[0][2*(j-r)+1]->ack_rx[d](*bool_dummy_signal);
-	    t[0][2*(j-r)+1]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+	    t[0][2*(j-r)+1]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 
 	}
     }
@@ -1054,46 +1054,46 @@ void NoC::buildBaseline()
 		    t[i][j]->flit_rx[3](flit[i][j].west);
 		    t[i][j]->req_rx[3](req[i][j].west);
 		    t[i][j]->ack_rx[3](ack[i][j].west);
-		    t[i][j]->buffer_full_status_rx[3](buffer_full_status[i][j].west);
+		    t[i][j]->buffer_cap_status_rx[3](buffer_cap_status[i][j].west);
 		    //tx signals not required for delta topologies
 		    t[i][j]->flit_tx[3](*flit_dummy_signal);
 		    t[i][j]->req_tx[3](*bool_dummy_signal);
 		    t[i][j]->ack_tx[3](*bool_dummy_signal);
-		    t[i][j]->buffer_full_status_tx[3](*tbufferfullstatus_dummy_signal);
+		    t[i][j]->buffer_cap_status_tx[3](*tbufferfullstatus_dummy_signal);
 
 
 		    t[i-1][j]->flit_tx[d](flit[i][j].west);
 		    t[i-1][j]->req_tx[d](req[i][j].west);
 		    t[i-1][j]->ack_tx[d](ack[i][j].west);
-		    t[i-1][j]->buffer_full_status_tx[d](buffer_full_status[i][j].west);
+		    t[i-1][j]->buffer_cap_status_tx[d](buffer_cap_status[i][j].west);
 		    //tx signals not required for delta topologies
 		    t[i-1][j]->flit_rx[d](*flit_dummy_signal);
 		    t[i-1][j]->req_rx[d](*bool_dummy_signal);
 		    t[i-1][j]->ack_rx[d](*bool_dummy_signal);
-		    t[i-1][j]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+		    t[i-1][j]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 
 
 		    //*** Direction 2 ****
 		    t[i][j]->flit_rx[2](flit[i][j].south);
 		    t[i][j]->req_rx[2](req[i][j].south);
 		    t[i][j]->ack_rx[2](ack[i][j].south);
-		    t[i][j]->buffer_full_status_rx[2](buffer_full_status[i][j].south);
+		    t[i][j]->buffer_cap_status_rx[2](buffer_cap_status[i][j].south);
 		    //tx signals not required for delta topologies
 		    t[i][j]->flit_tx[2](*flit_dummy_signal);
 		    t[i][j]->req_tx[2](*bool_dummy_signal);
 		    t[i][j]->ack_tx[2](*bool_dummy_signal);
-		    t[i][j]->buffer_full_status_tx[2](*tbufferfullstatus_dummy_signal);
+		    t[i][j]->buffer_cap_status_tx[2](*tbufferfullstatus_dummy_signal);
 
 
 		    t[i-1][m]->flit_tx[d](flit[i][j].south);
 		    t[i-1][m]->req_tx[d](req[i][j].south);
 		    t[i-1][m]->ack_tx[d](ack[i][j].south);
-		    t[i-1][m]->buffer_full_status_tx[d](buffer_full_status[i][j].south);
+		    t[i-1][m]->buffer_cap_status_tx[d](buffer_cap_status[i][j].south);
 		    //tx signals not required for delta topologies
 		    t[i-1][m]->flit_rx[d](*flit_dummy_signal);
 		    t[i-1][m]->req_rx[d](*bool_dummy_signal);
 		    t[i-1][m]->ack_rx[d](*bool_dummy_signal);
-		    t[i-1][m]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+		    t[i-1][m]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 		}
 
 		else 
@@ -1102,46 +1102,46 @@ void NoC::buildBaseline()
 		    t[i][j]->flit_rx[3](flit[i-1][j].north);
 		    t[i][j]->req_rx[3](req[i-1][j].north);
 		    t[i][j]->ack_rx[3](ack[i-1][j].north);
-		    t[i][j]->buffer_full_status_rx[3](buffer_full_status[i-1][j].north);
+		    t[i][j]->buffer_cap_status_rx[3](buffer_cap_status[i-1][j].north);
 		    //tx signals not required for delta topologies
 		    t[i][j]->flit_tx[3](*flit_dummy_signal);
 		    t[i][j]->req_tx[3](*bool_dummy_signal);
 		    t[i][j]->ack_tx[3](*bool_dummy_signal);
-		    t[i][j]->buffer_full_status_tx[3](*tbufferfullstatus_dummy_signal);
+		    t[i][j]->buffer_cap_status_tx[3](*tbufferfullstatus_dummy_signal);
 
 
 		    t[i-1][j]->flit_tx[d](flit[i-1][j].north);
 		    t[i-1][j]->req_tx[d](req[i-1][j].north);
 		    t[i-1][j]->ack_tx[d](ack[i-1][j].north);
-		    t[i-1][j]->buffer_full_status_tx[d](buffer_full_status[i-1][j].north);
+		    t[i-1][j]->buffer_cap_status_tx[d](buffer_cap_status[i-1][j].north);
 		    //tx signals not required for delta topologies
 		    t[i-1][j]->flit_rx[d](*flit_dummy_signal);
 		    t[i-1][j]->req_rx[d](*bool_dummy_signal);
 		    t[i-1][j]->ack_rx[d](*bool_dummy_signal);
-		    t[i-1][j]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+		    t[i-1][j]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 
 
 		    //*** Direction 2 ****
 		    t[i][j]->flit_rx[2](flit[i-1][m].north);
 		    t[i][j]->req_rx[2](req[i-1][m].north);
 		    t[i][j]->ack_rx[2](ack[i-1][m].north);
-		    t[i][j]->buffer_full_status_rx[2](buffer_full_status[i-1][m].north);
+		    t[i][j]->buffer_cap_status_rx[2](buffer_cap_status[i-1][m].north);
 		    //tx signals not required for delta topologies
 		    t[i][j]->flit_tx[2](*flit_dummy_signal);
 		    t[i][j]->req_tx[2](*bool_dummy_signal);
 		    t[i][j]->ack_tx[2](*bool_dummy_signal);
-		    t[i][j]->buffer_full_status_tx[2](*tbufferfullstatus_dummy_signal);
+		    t[i][j]->buffer_cap_status_tx[2](*tbufferfullstatus_dummy_signal);
 
 
 		    t[i-1][m]->flit_tx[d](flit[i-1][m].north);
 		    t[i-1][m]->req_tx[d](req[i-1][m].north);
 		    t[i-1][m]->ack_tx[d](ack[i-1][m].north);
-		    t[i-1][m]->buffer_full_status_tx[d](buffer_full_status[i-1][m].north);
+		    t[i-1][m]->buffer_cap_status_tx[d](buffer_cap_status[i-1][m].north);
 		    //tx signals not required for delta topologies
 		    t[i-1][m]->flit_rx[d](*flit_dummy_signal);
 		    t[i-1][m]->req_rx[d](*bool_dummy_signal);
 		    t[i-1][m]->ack_rx[d](*bool_dummy_signal);
-		    t[i-1][m]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+		    t[i-1][m]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 		}
 
 	    } 
@@ -1153,44 +1153,44 @@ void NoC::buildBaseline()
 		    t[i][j]->flit_rx[2](flit[i][j].south);
 		    t[i][j]->req_rx[2](req[i][j].south);
 		    t[i][j]->ack_rx[2](ack[i][j].south);
-		    t[i][j]->buffer_full_status_rx[2](buffer_full_status[i][j].south);
+		    t[i][j]->buffer_cap_status_rx[2](buffer_cap_status[i][j].south);
 		    //tx signals not required for delta topologies
 		    t[i][j]->flit_tx[2](*flit_dummy_signal);
 		    t[i][j]->req_tx[2](*bool_dummy_signal);
 		    t[i][j]->ack_tx[2](*bool_dummy_signal);
-		    t[i][j]->buffer_full_status_tx[2](*tbufferfullstatus_dummy_signal);
+		    t[i][j]->buffer_cap_status_tx[2](*tbufferfullstatus_dummy_signal);
 
 		    t[i-1][j]->flit_tx[d](flit[i][j].south);
 		    t[i-1][j]->req_tx[d](req[i][j].south);
 		    t[i-1][j]->ack_tx[d](ack[i][j].south);
-		    t[i-1][j]->buffer_full_status_tx[d](buffer_full_status[i][j].south);
+		    t[i-1][j]->buffer_cap_status_tx[d](buffer_cap_status[i][j].south);
 		    //rx signals not required for delta topologies
 		    t[i-1][j]->flit_rx[d](*flit_dummy_signal);
 		    t[i-1][j]->req_rx[d](*bool_dummy_signal);
 		    t[i-1][j]->ack_rx[d](*bool_dummy_signal);
-		    t[i-1][j]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+		    t[i-1][j]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 
 		    //*****Direction 3 *****
 
 		    t[i][j]->flit_rx[3](flit[i][j].west);
 		    t[i][j]->req_rx[3](req[i][j].west);
 		    t[i][j]->ack_rx[3](ack[i][j].west);
-		    t[i][j]->buffer_full_status_rx[3](buffer_full_status[i][j].west);
+		    t[i][j]->buffer_cap_status_rx[3](buffer_cap_status[i][j].west);
 		    //tx signals not required for delta topologies
 		    t[i][j]->flit_tx[3](*flit_dummy_signal);
 		    t[i][j]->req_tx[3](*bool_dummy_signal);
 		    t[i][j]->ack_tx[3](*bool_dummy_signal);
-		    t[i][j]->buffer_full_status_tx[3](*tbufferfullstatus_dummy_signal);
+		    t[i][j]->buffer_cap_status_tx[3](*tbufferfullstatus_dummy_signal);
 
 		    t[i-1][m]->flit_tx[d](flit[i][j].west);
 		    t[i-1][m]->req_tx[d](req[i][j].west);
 		    t[i-1][m]->ack_tx[d](ack[i][j].west);
-		    t[i-1][m]->buffer_full_status_tx[d](buffer_full_status[i][j].west);
+		    t[i-1][m]->buffer_cap_status_tx[d](buffer_cap_status[i][j].west);
 		    //rx signals not required for delta topologies
 		    t[i-1][m]->flit_rx[d](*flit_dummy_signal);
 		    t[i-1][m]->req_rx[d](*bool_dummy_signal);
 		    t[i-1][m]->ack_rx[d](*bool_dummy_signal);
-		    t[i-1][m]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+		    t[i-1][m]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 		}
 		else // stage not even
 		{
@@ -1198,43 +1198,43 @@ void NoC::buildBaseline()
 		    t[i][j]->flit_rx[2](flit[i-1][j].east);
 		    t[i][j]->req_rx[2](req[i-1][j].east);
 		    t[i][j]->ack_rx[2](ack[i-1][j].east);
-		    t[i][j]->buffer_full_status_rx[2](buffer_full_status[i-1][j].east);
+		    t[i][j]->buffer_cap_status_rx[2](buffer_cap_status[i-1][j].east);
 		    //tx signals not required for delta topologies
 		    t[i][j]->flit_tx[2](*flit_dummy_signal);
 		    t[i][j]->req_tx[2](*bool_dummy_signal);
 		    t[i][j]->ack_tx[2](*bool_dummy_signal);
-		    t[i][j]->buffer_full_status_tx[2](*tbufferfullstatus_dummy_signal);
+		    t[i][j]->buffer_cap_status_tx[2](*tbufferfullstatus_dummy_signal);
 
 		    t[i-1][j]->flit_tx[d](flit[i-1][j].east);
 		    t[i-1][j]->req_tx[d](req[i-1][j].east);
 		    t[i-1][j]->ack_tx[d](ack[i-1][j].east);
-		    t[i-1][j]->buffer_full_status_tx[d](buffer_full_status[i-1][j].east);
+		    t[i-1][j]->buffer_cap_status_tx[d](buffer_cap_status[i-1][j].east);
 		    //rx signals not required for delta topologies
 		    t[i-1][j]->flit_rx[d](*flit_dummy_signal);
 		    t[i-1][j]->req_rx[d](*bool_dummy_signal);
 		    t[i-1][j]->ack_rx[d](*bool_dummy_signal);
-		    t[i-1][j]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+		    t[i-1][j]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 
 		    //*****Direction 3 ****
 		    t[i][j]->flit_rx[3](flit[i-1][m].east);
 		    t[i][j]->req_rx[3](req[i-1][m].east);
 		    t[i][j]->ack_rx[3](ack[i-1][m].east);
-		    t[i][j]->buffer_full_status_rx[3](buffer_full_status[i-1][m].east);
+		    t[i][j]->buffer_cap_status_rx[3](buffer_cap_status[i-1][m].east);
 		    //tx signals not required for delta topologies
 		    t[i][j]->flit_tx[3](*flit_dummy_signal);
 		    t[i][j]->req_tx[3](*bool_dummy_signal);
 		    t[i][j]->ack_tx[3](*bool_dummy_signal);
-		    t[i][j]->buffer_full_status_tx[3](*tbufferfullstatus_dummy_signal);
+		    t[i][j]->buffer_cap_status_tx[3](*tbufferfullstatus_dummy_signal);
 
 		    t[i-1][m]->flit_tx[d](flit[i-1][m].east);
 		    t[i-1][m]->req_tx[d](req[i-1][m].east);
 		    t[i-1][m]->ack_tx[d](ack[i-1][m].east);
-		    t[i-1][m]->buffer_full_status_tx[d](buffer_full_status[i-1][m].east);
+		    t[i-1][m]->buffer_cap_status_tx[d](buffer_cap_status[i-1][m].east);
 		    //rx signals not required for delta topologies
 		    t[i-1][m]->flit_rx[d](*flit_dummy_signal);
 		    t[i-1][m]->req_rx[d](*bool_dummy_signal);
 		    t[i-1][m]->ack_rx[d](*bool_dummy_signal);
-		    t[i-1][m]->buffer_full_status_rx[d](*tbufferfullstatus_dummy_signal);
+		    t[i-1][m]->buffer_cap_status_rx[d](*tbufferfullstatus_dummy_signal);
 		}
 
 	    }
@@ -1264,8 +1264,8 @@ void NoC::buildBaseline()
 	ack_from_hub = new sc_signal<bool>[n];
 	ack_to_hub = new sc_signal<bool>[n];
 
-	buffer_full_status_from_hub = new sc_signal<TBufferFullStatus>[n];
-	buffer_full_status_to_hub = new sc_signal<TBufferFullStatus>[n];
+	buffer_cap_status_from_hub = new sc_signal<TBufferCapStatus>[n];
+	buffer_cap_status_to_hub = new sc_signal<TBufferCapStatus>[n];
 
 
     // Create the Core bloc 
@@ -1322,12 +1322,12 @@ void NoC::buildBaseline()
 			hub[hub_id]->req_rx[port](req_to_hub[core_id]);
 			hub[hub_id]->flit_rx[port](flit_to_hub[core_id]);
 			hub[hub_id]->ack_rx[port](ack_from_hub[core_id]);
-			hub[hub_id]->buffer_full_status_rx[port](buffer_full_status_from_hub[core_id]);
+			hub[hub_id]->buffer_cap_status_rx[port](buffer_cap_status_from_hub[core_id]);
 
 			hub[hub_id]->flit_tx[port](flit_from_hub[core_id]);
 			hub[hub_id]->req_tx[port](req_from_hub[core_id]);
 			hub[hub_id]->ack_tx[port](ack_to_hub[core_id]);
-			hub[hub_id]->buffer_full_status_tx[port](buffer_full_status_to_hub[core_id]);
+			hub[hub_id]->buffer_cap_status_tx[port](buffer_cap_status_to_hub[core_id]);
 
 		}
 
@@ -1341,43 +1341,43 @@ void NoC::buildBaseline()
 	t[0][i]->flit_rx[3](flit[0][i].west); 
 	t[0][i]->req_rx[3](req[0][i].west);
 	t[0][i]->ack_rx[3](ack[0][i].west);
-	t[0][i]->buffer_full_status_rx[3](buffer_full_status[0][i].west);
+	t[0][i]->buffer_cap_status_rx[3](buffer_cap_status[0][i].west);
 	//tx is not required in delta topologies
 	t[0][i]->flit_tx[3](*flit_dummy_signal); 
 	t[0][i]->req_tx[3](*bool_dummy_signal);
 	t[0][i]->ack_tx[3](*bool_dummy_signal);
-	t[0][i]->buffer_full_status_tx[3](*tbufferfullstatus_dummy_signal);
+	t[0][i]->buffer_cap_status_tx[3](*tbufferfullstatus_dummy_signal);
 
 	core[i*2]->flit_tx[0](flit[0][i].west);
 	core[i*2]->req_tx[0](req[0][i].west);
 	core[i*2]->ack_tx[0](ack[0][i].west);
-	core[i*2]->buffer_full_status_tx[0](buffer_full_status[0][i].west);
+	core[i*2]->buffer_cap_status_tx[0](buffer_cap_status[0][i].west);
 	//rx is not required in delta topologies
 	core[i*2]->flit_rx[0](*flit_dummy_signal);
 	core[i*2]->req_rx[0](*bool_dummy_signal);
 	core[i*2]->ack_rx[0](*bool_dummy_signal);
-	core[i*2]->buffer_full_status_rx[0](*tbufferfullstatus_dummy_signal);
+	core[i*2]->buffer_cap_status_rx[0](*tbufferfullstatus_dummy_signal);
 
 
 	t[0][i]->flit_rx[2](flit[0][i].south); 
 	t[0][i]->req_rx[2](req[0][i].south);
 	t[0][i]->ack_rx[2](ack[0][i].south); 
-	t[0][i]->buffer_full_status_rx[2](buffer_full_status[0][i].south);
+	t[0][i]->buffer_cap_status_rx[2](buffer_cap_status[0][i].south);
 	//tx is not required in delta topologies
 	t[0][i]->flit_tx[2](*flit_dummy_signal); 
 	t[0][i]->req_tx[2](*bool_dummy_signal);
 	t[0][i]->ack_tx[2](*bool_dummy_signal); 
-	t[0][i]->buffer_full_status_tx[2](*tbufferfullstatus_dummy_signal);
+	t[0][i]->buffer_cap_status_tx[2](*tbufferfullstatus_dummy_signal);
 
 	core[(i*2)+1]->flit_tx[0](flit[0][i].south);
 	core[(i*2)+1]->req_tx[0](req[0][i].south);
 	core[(i*2)+1]->ack_tx[0](ack[0][i].south);
-	core[(i*2)+1]->buffer_full_status_tx[0](buffer_full_status[0][i].south);
+	core[(i*2)+1]->buffer_cap_status_tx[0](buffer_cap_status[0][i].south);
 	//rx is not required in delta topologies
 	core[(i*2)+1]->flit_rx[0](*flit_dummy_signal);
 	core[(i*2)+1]->req_rx[0](*bool_dummy_signal);
 	core[(i*2)+1]->ack_rx[0](*bool_dummy_signal);
-	core[(i*2)+1]->buffer_full_status_rx[0](*tbufferfullstatus_dummy_signal);
+	core[(i*2)+1]->buffer_cap_status_rx[0](*tbufferfullstatus_dummy_signal);
     }
 
     // ... Last Stage
@@ -1386,44 +1386,44 @@ void NoC::buildBaseline()
 	t[stg-1][i]->flit_tx[0](flit[stg-1][i].north); 
 	t[stg-1][i]->req_tx[0](req[stg-1][i].north);
 	t[stg-1][i]->ack_tx[0](ack[stg-1][i].north);
-	t[stg-1][i]->buffer_full_status_tx[0](buffer_full_status[stg-1][i].north);
+	t[stg-1][i]->buffer_cap_status_tx[0](buffer_cap_status[stg-1][i].north);
 	//rx is not required in delta topologies
 	t[stg-1][i]->flit_rx[0](*flit_dummy_signal); 
 	t[stg-1][i]->req_rx[0](*bool_dummy_signal);
 	t[stg-1][i]->ack_rx[0](*bool_dummy_signal);
-	t[stg-1][i]->buffer_full_status_rx[0](*tbufferfullstatus_dummy_signal);
+	t[stg-1][i]->buffer_cap_status_rx[0](*tbufferfullstatus_dummy_signal);
 
 
 	core[i*2]->flit_rx[1](flit[stg-1][i].north);
 	core[i*2]->req_rx[1](req[stg-1][i].north);
 	core[i*2]->ack_rx[1](ack[stg-1][i].north);
-	core[i*2]->buffer_full_status_rx[1](buffer_full_status[stg-1][i].north);
+	core[i*2]->buffer_cap_status_rx[1](buffer_cap_status[stg-1][i].north);
 	//tx is not required in delta topologies
 	core[i*2]->flit_tx[1](*flit_dummy_signal);
 	core[i*2]->req_tx[1](*bool_dummy_signal);
 	core[i*2]->ack_tx[1](*bool_dummy_signal);
-	core[i*2]->buffer_full_status_tx[1](*tbufferfullstatus_dummy_signal);
+	core[i*2]->buffer_cap_status_tx[1](*tbufferfullstatus_dummy_signal);
 
 
 	t[stg-1][i]->flit_tx[1](flit[stg-1][i].east);  
 	t[stg-1][i]->req_tx[1](req[stg-1][i].east);
 	t[stg-1][i]->ack_tx[1](ack[stg-1][i].east);
-	t[stg-1][i]->buffer_full_status_tx[1](buffer_full_status[stg-1][i].east);
+	t[stg-1][i]->buffer_cap_status_tx[1](buffer_cap_status[stg-1][i].east);
 	//rx is not required in delta topologies
 	t[stg-1][i]->flit_rx[1](*flit_dummy_signal);  
 	t[stg-1][i]->req_rx[1](*bool_dummy_signal);
 	t[stg-1][i]->ack_rx[1](*bool_dummy_signal);
-	t[stg-1][i]->buffer_full_status_rx[1](*tbufferfullstatus_dummy_signal);
+	t[stg-1][i]->buffer_cap_status_rx[1](*tbufferfullstatus_dummy_signal);
 
 	core[(i*2)+1]->flit_rx[1](flit[stg-1][i].east);
 	core[(i*2)+1]->req_rx[1](req[stg-1][i].east);	
 	core[(i*2)+1]->ack_rx[1](ack[stg-1][i].east); 
-	core[(i*2)+1]->buffer_full_status_rx[1](buffer_full_status[stg-1][i].east);   
+	core[(i*2)+1]->buffer_cap_status_rx[1](buffer_cap_status[stg-1][i].east);   
 	//tx is not required in delta topologies 
 	core[(i*2)+1]->flit_tx[1](*flit_dummy_signal);
 	core[(i*2)+1]->req_tx[1](*bool_dummy_signal);	
 	core[(i*2)+1]->ack_tx[1](*bool_dummy_signal); 
-	core[(i*2)+1]->buffer_full_status_tx[1](*tbufferfullstatus_dummy_signal); 
+	core[(i*2)+1]->buffer_cap_status_tx[1](*tbufferfullstatus_dummy_signal); 
     }
 
 
@@ -1448,32 +1448,32 @@ void NoC::buildBaseline()
 	    core[c]->flit_tx[k](*flit_dummy_signal);
 	    core[c]->req_tx[k](*bool_dummy_signal);
 	    core[c]->ack_tx[k](*bool_dummy_signal);
-	    core[c]->buffer_full_status_tx[k](*tbufferfullstatus_dummy_signal);
+	    core[c]->buffer_cap_status_tx[k](*tbufferfullstatus_dummy_signal);
 
 	    core[c]->flit_rx[k](*flit_dummy_signal);
 	    core[c]->req_rx[k](*bool_dummy_signal);
 	    core[c]->ack_rx[k](*bool_dummy_signal);
-	    core[c]->buffer_full_status_rx[k](*tbufferfullstatus_dummy_signal);
+	    core[c]->buffer_cap_status_rx[k](*tbufferfullstatus_dummy_signal);
 	}
 		core[c]->hub_flit_rx(flit_from_hub[c]);
 		core[c]->hub_req_rx(req_from_hub[c]);
 		core[c]->hub_ack_rx(ack_to_hub[c]);
-		core[c]->hub_buffer_full_status_rx(buffer_full_status_to_hub[c]);
+		core[c]->hub_buffer_cap_status_rx(buffer_cap_status_to_hub[c]);
 
 		core[c]->hub_flit_tx(flit_to_hub[c]);
 		core[c]->hub_req_tx(req_to_hub[c]);
 		core[c]->hub_ack_tx(ack_from_hub[c]);
-		core[c]->hub_buffer_full_status_tx(buffer_full_status_from_hub[c]);
+		core[c]->hub_buffer_cap_status_tx(buffer_cap_status_from_hub[c]);
 	/*
 	core[c]->hub_flit_tx(*flit_dummy_signal);
 	core[c]->hub_req_tx(*bool_dummy_signal);
 	core[c]->hub_ack_tx(*bool_dummy_signal);
-	core[c]->hub_buffer_full_status_tx(*tbufferfullstatus_dummy_signal);
+	core[c]->hub_buffer_cap_status_tx(*tbufferfullstatus_dummy_signal);
 
 	core[c]->hub_flit_rx(*flit_dummy_signal);
 	core[c]->hub_req_rx(*bool_dummy_signal);
 	core[c]->hub_ack_rx(*bool_dummy_signal);
-	core[c]->hub_buffer_full_status_rx(*tbufferfullstatus_dummy_signal);*/
+	core[c]->hub_buffer_cap_status_rx(*tbufferfullstatus_dummy_signal);*/
     }
 
     // ... and for switches
@@ -1528,7 +1528,7 @@ void NoC::buildOmega()
 	cout <<"dimX_stg= "<< dimX << "  " << "dimY_sw= " << dimY << endl ;
 	req = new sc_signal_NSWEH<bool>*[dimX];
 	ack = new sc_signal_NSWEH<bool>*[dimX];
-	buffer_full_status = new sc_signal_NSWEH<TBufferFullStatus>*[dimX];
+	buffer_cap_status = new sc_signal_NSWEH<TBufferCapStatus>*[dimX];
 	flit = new sc_signal_NSWEH<Flit>*[dimX];
 
 	// not used in delta topologies
@@ -1540,7 +1540,7 @@ void NoC::buildOmega()
 	for (int i=0; i < dimX; i++) {
 		req[i] = new sc_signal_NSWEH<bool>[dimY];
 		ack[i] = new sc_signal_NSWEH<bool>[dimY];
-		buffer_full_status[i] = new sc_signal_NSWEH<TBufferFullStatus>[dimY];
+		buffer_cap_status[i] = new sc_signal_NSWEH<TBufferCapStatus>[dimY];
 		flit[i] = new sc_signal_NSWEH<Flit>[dimY];
 
 		free_slots[i] = new sc_signal_NSWE<int>[dimY];
@@ -1596,13 +1596,13 @@ void NoC::buildOmega()
 			t[i][j]->hub_req_rx(req[i][j].from_hub);
 			t[i][j]->hub_flit_rx(flit[i][j].from_hub);
 			t[i][j]->hub_ack_rx(ack[i][j].to_hub);
-			t[i][j]->hub_buffer_full_status_rx(buffer_full_status[i][j].to_hub);
+			t[i][j]->hub_buffer_cap_status_rx(buffer_cap_status[i][j].to_hub);
 
 			// signals/port when tile transmits(tx) to hub
 			t[i][j]->hub_req_tx(req[i][j].to_hub); // 7, sc_out
 			t[i][j]->hub_flit_tx(flit[i][j].to_hub);
 			t[i][j]->hub_ack_tx(ack[i][j].from_hub);
-			t[i][j]->hub_buffer_full_status_tx(buffer_full_status[i][j].from_hub);
+			t[i][j]->hub_buffer_cap_status_tx(buffer_cap_status[i][j].from_hub);
 
 			// TODO: Review port index. Connect each Hub to all its Channels
 			map<int, int>::iterator it = GlobalParams::hub_for_tile.find(tile_id);
@@ -1619,12 +1619,12 @@ void NoC::buildOmega()
 				hub[hub_id]->req_rx[port](req[i][j].to_hub);
 				hub[hub_id]->flit_rx[port](flit[i][j].to_hub);
 				hub[hub_id]->ack_rx[port](ack[i][j].from_hub);
-				hub[hub_id]->buffer_full_status_rx[port](buffer_full_status[i][j].from_hub);
+				hub[hub_id]->buffer_cap_status_rx[port](buffer_cap_status[i][j].from_hub);
 
 				hub[hub_id]->flit_tx[port](flit[i][j].from_hub);
 				hub[hub_id]->req_tx[port](req[i][j].from_hub);
 				hub[hub_id]->ack_tx[port](ack[i][j].to_hub);
-				hub[hub_id]->buffer_full_status_tx[port](buffer_full_status[i][j].to_hub);
+				hub[hub_id]->buffer_cap_status_tx[port](buffer_cap_status[i][j].to_hub);
 
 			}
 
@@ -1638,7 +1638,7 @@ void NoC::buildOmega()
 	sc_signal<int> *int_dummy_signal= new sc_signal<int>;
 	sc_signal<Flit> *flit_dummy_signal= new sc_signal<Flit>;
 	sc_signal<NoP_data> *nop_data_dummy_signal = new sc_signal<NoP_data>;
-	sc_signal<TBufferFullStatus> *tbufferfullstatus_dummy_signal = new sc_signal<TBufferFullStatus>;
+	sc_signal<TBufferCapStatus> *tbufferfullstatus_dummy_signal = new sc_signal<TBufferCapStatus>;
 
 
 	int n = GlobalParams::n_delta_tiles;
@@ -1663,23 +1663,23 @@ void NoC::buildOmega()
 					t[i][j]->flit_rx[3](flit[i][j].west);
 					t[i][j]->req_rx[3](req[i][j].west);
 					t[i][j]->ack_rx[3](ack[i][j].west);
-					t[i][j]->buffer_full_status_rx[3](buffer_full_status[i][j].west);
+					t[i][j]->buffer_cap_status_rx[3](buffer_cap_status[i][j].west);
 					//tx signals not required for delta topologies
 					t[i][j]->flit_tx[3](*flit_dummy_signal);
 					t[i][j]->req_tx[3](*bool_dummy_signal);
 					t[i][j]->ack_tx[3](*bool_dummy_signal);
-					t[i][j]->buffer_full_status_tx[3](*tbufferfullstatus_dummy_signal);
+					t[i][j]->buffer_cap_status_tx[3](*tbufferfullstatus_dummy_signal);
 
 
 					t[i-1][j/2]->flit_tx[0](flit[i][j].west);
 					t[i-1][j/2]->req_tx[0](req[i][j].west);
 					t[i-1][j/2]->ack_tx[0](ack[i][j].west);
-					t[i-1][j/2]->buffer_full_status_tx[0](buffer_full_status[i][j].west);
+					t[i-1][j/2]->buffer_cap_status_tx[0](buffer_cap_status[i][j].west);
 					//tx signals not required for delta topologies
 					t[i-1][j/2]->flit_rx[0](*flit_dummy_signal);
 					t[i-1][j/2]->req_rx[0](*bool_dummy_signal);
 					t[i-1][j/2]->ack_rx[0](*bool_dummy_signal);
-					t[i-1][j/2]->buffer_full_status_rx[0](*tbufferfullstatus_dummy_signal);
+					t[i-1][j/2]->buffer_cap_status_rx[0](*tbufferfullstatus_dummy_signal);
 
 
 					//*** Direction 2 ****
@@ -1693,23 +1693,23 @@ void NoC::buildOmega()
 					t[i][j]->flit_rx[2](flit[i][j].south);
 					t[i][j]->req_rx[2](req[i][j].south);
 					t[i][j]->ack_rx[2](ack[i][j].south);
-					t[i][j]->buffer_full_status_rx[2](buffer_full_status[i][j].south);
+					t[i][j]->buffer_cap_status_rx[2](buffer_cap_status[i][j].south);
 					//tx signals not required for delta topologies
 					t[i][j]->flit_tx[2](*flit_dummy_signal);
 					t[i][j]->req_tx[2](*bool_dummy_signal);
 					t[i][j]->ack_tx[2](*bool_dummy_signal);
-					t[i][j]->buffer_full_status_tx[2](*tbufferfullstatus_dummy_signal);
+					t[i][j]->buffer_cap_status_tx[2](*tbufferfullstatus_dummy_signal);
 
 
 					t[i-1][(n/4)+(j/2)]->flit_tx[0](flit[i][j].south);
 					t[i-1][(n/4)+(j/2)]->req_tx[0](req[i][j].south);
 					t[i-1][(n/4)+(j/2)]->ack_tx[0](ack[i][j].south);
-					t[i-1][(n/4)+(j/2)]->buffer_full_status_tx[0](buffer_full_status[i][j].south);
+					t[i-1][(n/4)+(j/2)]->buffer_cap_status_tx[0](buffer_cap_status[i][j].south);
 					//tx signals not required for delta topologies
 					t[i-1][(n/4)+(j/2)]->flit_rx[0](*flit_dummy_signal);
 					t[i-1][(n/4)+(j/2)]->req_rx[0](*bool_dummy_signal);
 					t[i-1][(n/4)+(j/2)]->ack_rx[0](*bool_dummy_signal);
-					t[i-1][(n/4)+(j/2)]->buffer_full_status_rx[0](*tbufferfullstatus_dummy_signal);
+					t[i-1][(n/4)+(j/2)]->buffer_cap_status_rx[0](*tbufferfullstatus_dummy_signal);
 				}
 
 				else
@@ -1720,23 +1720,23 @@ void NoC::buildOmega()
 					t[i][j]->flit_rx[3](flit[i][j].west);
 					t[i][j]->req_rx[3](req[i][j].west);
 					t[i][j]->ack_rx[3](ack[i][j].west);
-					t[i][j]->buffer_full_status_rx[3](buffer_full_status[i][j].west);
+					t[i][j]->buffer_cap_status_rx[3](buffer_cap_status[i][j].west);
 					//tx signals not required for delta topologies
 					t[i][j]->flit_tx[3](*flit_dummy_signal);
 					t[i][j]->req_tx[3](*bool_dummy_signal);
 					t[i][j]->ack_tx[3](*bool_dummy_signal);
-					t[i][j]->buffer_full_status_tx[3](*tbufferfullstatus_dummy_signal);
+					t[i][j]->buffer_cap_status_tx[3](*tbufferfullstatus_dummy_signal);
 
 
 					t[i-1][j/2]->flit_tx[1](flit[i][j].west);
 					t[i-1][j/2]->req_tx[1](req[i][j].west);
 					t[i-1][j/2]->ack_tx[1](ack[i][j].west);
-					t[i-1][j/2]->buffer_full_status_tx[d](buffer_full_status[i][j].west);
+					t[i-1][j/2]->buffer_cap_status_tx[d](buffer_cap_status[i][j].west);
 					//tx signals not required for delta topologies
 					t[i-1][j/2]->flit_rx[1](*flit_dummy_signal);
 					t[i-1][j/2]->req_rx[1](*bool_dummy_signal);
 					t[i-1][j/2]->ack_rx[1](*bool_dummy_signal);
-					t[i-1][j/2]->buffer_full_status_rx[1](*tbufferfullstatus_dummy_signal);
+					t[i-1][j/2]->buffer_cap_status_rx[1](*tbufferfullstatus_dummy_signal);
 
 
 					//*** Direction 2 ****
@@ -1744,23 +1744,23 @@ void NoC::buildOmega()
 					t[i][j]->flit_rx[2](flit[i][j].south);
 					t[i][j]->req_rx[2](req[i][j].south);
 					t[i][j]->ack_rx[2](ack[i][j].south);
-					t[i][j]->buffer_full_status_rx[2](buffer_full_status[i][j].south);
+					t[i][j]->buffer_cap_status_rx[2](buffer_cap_status[i][j].south);
 					//tx signals not required for delta topologies
 					t[i][j]->flit_tx[2](*flit_dummy_signal);
 					t[i][j]->req_tx[2](*bool_dummy_signal);
 					t[i][j]->ack_tx[2](*bool_dummy_signal);
-					t[i][j]->buffer_full_status_tx[2](*tbufferfullstatus_dummy_signal);
+					t[i][j]->buffer_cap_status_tx[2](*tbufferfullstatus_dummy_signal);
 
 
 					t[i-1][(n/4)+(j/2)]->flit_tx[1](flit[i][j].south);
 					t[i-1][(n/4)+(j/2)]->req_tx[1](req[i][j].south);
 					t[i-1][(n/4)+(j/2)]->ack_tx[1](ack[i][j].south);
-					t[i-1][(n/4)+(j/2)]->buffer_full_status_tx[1](buffer_full_status[i][j].south);
+					t[i-1][(n/4)+(j/2)]->buffer_cap_status_tx[1](buffer_cap_status[i][j].south);
 					//tx signals not required for delta topologies
 					t[i-1][(n/4)+(j/2)]->flit_rx[1](*flit_dummy_signal);
 					t[i-1][(n/4)+(j/2)]->req_rx[1](*bool_dummy_signal);
 					t[i-1][(n/4)+(j/2)]->ack_rx[1](*bool_dummy_signal);
-					t[i-1][(n/4)+(j/2)]->buffer_full_status_rx[1](*tbufferfullstatus_dummy_signal);
+					t[i-1][(n/4)+(j/2)]->buffer_cap_status_rx[1](*tbufferfullstatus_dummy_signal);
 				}
 
 			}
@@ -1774,22 +1774,22 @@ void NoC::buildOmega()
 					t[i][j]->flit_rx[3](flit[i-1][j/2].north);
 					t[i][j]->req_rx[3](req[i-1][j/2].north);
 					t[i][j]->ack_rx[3](ack[i-1][j/2].north);
-					t[i][j]->buffer_full_status_rx[3](buffer_full_status[i-1][j/2].north);
+					t[i][j]->buffer_cap_status_rx[3](buffer_cap_status[i-1][j/2].north);
 					//tx signals not required for delta topologies
 					t[i][j]->flit_tx[3](*flit_dummy_signal);
 					t[i][j]->req_tx[3](*bool_dummy_signal);
 					t[i][j]->ack_tx[3](*bool_dummy_signal);
-					t[i][j]->buffer_full_status_tx[3](*tbufferfullstatus_dummy_signal);
+					t[i][j]->buffer_cap_status_tx[3](*tbufferfullstatus_dummy_signal);
 
 					t[i-1][j/2]->flit_tx[0](flit[i-1][j/2].north);
 					t[i-1][j/2]->req_tx[0](req[i-1][j/2].north);
 					t[i-1][j/2]->ack_tx[0](ack[i-1][j/2].north);
-					t[i-1][j/2]->buffer_full_status_tx[0](buffer_full_status[i-1][j/2].north);
+					t[i-1][j/2]->buffer_cap_status_tx[0](buffer_cap_status[i-1][j/2].north);
 					//rx signals not required for delta topologies
 					t[i-1][j/2]->flit_rx[0](*flit_dummy_signal);
 					t[i-1][j/2]->req_rx[0](*bool_dummy_signal);
 					t[i-1][j/2]->ack_rx[0](*bool_dummy_signal);
-					t[i-1][j/2]->buffer_full_status_rx[0](*tbufferfullstatus_dummy_signal);
+					t[i-1][j/2]->buffer_cap_status_rx[0](*tbufferfullstatus_dummy_signal);
 
 					//*****Direction 2 *****
 					//sw(i,j) get connected to the direction 0 of sw(i-1,(n/4)+(j/2))--> dir2
@@ -1797,22 +1797,22 @@ void NoC::buildOmega()
 					t[i][j]->flit_rx[2](flit[i-1][(n/4)+(j/2)].north);
 					t[i][j]->req_rx[2](req[i-1][(n/4)+(j/2)].north);
 					t[i][j]->ack_rx[2](ack[i-1][(n/4)+(j/2)].north);
-					t[i][j]->buffer_full_status_rx[2](buffer_full_status[i-1][(n/4)+(j/2)].north);
+					t[i][j]->buffer_cap_status_rx[2](buffer_cap_status[i-1][(n/4)+(j/2)].north);
 					//tx signals not required for delta topologies
 					t[i][j]->flit_tx[2](*flit_dummy_signal);
 					t[i][j]->req_tx[2](*bool_dummy_signal);
 					t[i][j]->ack_tx[2](*bool_dummy_signal);
-					t[i][j]->buffer_full_status_tx[2](*tbufferfullstatus_dummy_signal);
+					t[i][j]->buffer_cap_status_tx[2](*tbufferfullstatus_dummy_signal);
 
 					t[i-1][(n/4)+(j/2)]->flit_tx[0](flit[i-1][(n/4)+(j/2)].north);
 					t[i-1][(n/4)+(j/2)]->req_tx[0](req[i-1][(n/4)+(j/2)].north);
 					t[i-1][(n/4)+(j/2)]->ack_tx[0](ack[i-1][(n/4)+(j/2)].north);
-					t[i-1][(n/4)+(j/2)]->buffer_full_status_tx[0](buffer_full_status[i-1][(n/4)+(j/2)].north);
+					t[i-1][(n/4)+(j/2)]->buffer_cap_status_tx[0](buffer_cap_status[i-1][(n/4)+(j/2)].north);
 					//rx signals not required for delta topologies
 					t[i-1][(n/4)+(j/2)]->flit_rx[0](*flit_dummy_signal);
 					t[i-1][(n/4)+(j/2)]->req_rx[0](*bool_dummy_signal);
 					t[i-1][(n/4)+(j/2)]->ack_rx[0](*bool_dummy_signal);
-					t[i-1][(n/4)+(j/2)]->buffer_full_status_rx[0](*tbufferfullstatus_dummy_signal);
+					t[i-1][(n/4)+(j/2)]->buffer_cap_status_rx[0](*tbufferfullstatus_dummy_signal);
 
 
 				}
@@ -1824,44 +1824,44 @@ void NoC::buildOmega()
 					t[i][j]->flit_rx[3](flit[i-1][j/2].east);
 					t[i][j]->req_rx[3](req[i-1][j/2].east);
 					t[i][j]->ack_rx[3](ack[i-1][j/2].east);
-					t[i][j]->buffer_full_status_rx[3](buffer_full_status[i-1][j/2].east);
+					t[i][j]->buffer_cap_status_rx[3](buffer_cap_status[i-1][j/2].east);
 					//tx signals not required for delta topologies
 					t[i][j]->flit_tx[3](*flit_dummy_signal);
 					t[i][j]->req_tx[3](*bool_dummy_signal);
 					t[i][j]->ack_tx[3](*bool_dummy_signal);
-					t[i][j]->buffer_full_status_tx[3](*tbufferfullstatus_dummy_signal);
+					t[i][j]->buffer_cap_status_tx[3](*tbufferfullstatus_dummy_signal);
 
 					t[i-1][j/2]->flit_tx[1](flit[i-1][j/2].east);
 					t[i-1][j/2]->req_tx[1](req[i-1][j/2].east);
 					t[i-1][j/2]->ack_tx[1](ack[i-1][j/2].east);
-					t[i-1][j/2]->buffer_full_status_tx[1](buffer_full_status[i-1][j/2].east);
+					t[i-1][j/2]->buffer_cap_status_tx[1](buffer_cap_status[i-1][j/2].east);
 					//rx signals not required for delta topologies
 					t[i-1][j/2]->flit_rx[1](*flit_dummy_signal);
 					t[i-1][j/2]->req_rx[1](*bool_dummy_signal);
 					t[i-1][j/2]->ack_rx[1](*bool_dummy_signal);
-					t[i-1][j/2]->buffer_full_status_rx[1](*tbufferfullstatus_dummy_signal);
+					t[i-1][j/2]->buffer_cap_status_rx[1](*tbufferfullstatus_dummy_signal);
 
 					//*****Direction 2 *****
 					//sw(i,j) get connected to the direction 1 of sw( i-1,(n/4)+(j/2))-->dir2
 					t[i][j]->flit_rx[2](flit[i-1][(n/4)+(j/2)].east);
 					t[i][j]->req_rx[2](req[i-1][(n/4)+(j/2)].east);
 					t[i][j]->ack_rx[2](ack[i-1][(n/4)+(j/2)].east);
-					t[i][j]->buffer_full_status_rx[2](buffer_full_status[i-1][(n/4)+(j/2)].east);
+					t[i][j]->buffer_cap_status_rx[2](buffer_cap_status[i-1][(n/4)+(j/2)].east);
 					//tx signals not required for delta topologies
 					t[i][j]->flit_tx[2](*flit_dummy_signal);
 					t[i][j]->req_tx[2](*bool_dummy_signal);
 					t[i][j]->ack_tx[2](*bool_dummy_signal);
-					t[i][j]->buffer_full_status_tx[2](*tbufferfullstatus_dummy_signal);
+					t[i][j]->buffer_cap_status_tx[2](*tbufferfullstatus_dummy_signal);
 
 					t[i-1][(n/4)+(j/2)]->flit_tx[1](flit[i-1][(n/4)+(j/2)].east);
 					t[i-1][(n/4)+(j/2)]->req_tx[1](req[i-1][(n/4)+(j/2)].east);
 					t[i-1][(n/4)+(j/2)]->ack_tx[1](ack[i-1][(n/4)+(j/2)].east);
-					t[i-1][(n/4)+(j/2)]->buffer_full_status_tx[1](buffer_full_status[i-1][(n/4)+(j/2)].east);
+					t[i-1][(n/4)+(j/2)]->buffer_cap_status_tx[1](buffer_cap_status[i-1][(n/4)+(j/2)].east);
 					//rx signals not required for delta topologies
 					t[i-1][(n/4)+(j/2)]->flit_rx[1](*flit_dummy_signal);
 					t[i-1][(n/4)+(j/2)]->req_rx[1](*bool_dummy_signal);
 					t[i-1][(n/4)+(j/2)]->ack_rx[1](*bool_dummy_signal);
-					t[i-1][(n/4)+(j/2)]->buffer_full_status_rx[1](*tbufferfullstatus_dummy_signal);
+					t[i-1][(n/4)+(j/2)]->buffer_cap_status_rx[1](*tbufferfullstatus_dummy_signal);
 
 				}
 
@@ -1893,8 +1893,8 @@ void NoC::buildOmega()
 	ack_from_hub = new sc_signal<bool>[n];
 	ack_to_hub = new sc_signal<bool>[n];
 
-	buffer_full_status_from_hub = new sc_signal<TBufferFullStatus>[n];
-	buffer_full_status_to_hub = new sc_signal<TBufferFullStatus>[n];
+	buffer_cap_status_from_hub = new sc_signal<TBufferCapStatus>[n];
+	buffer_cap_status_to_hub = new sc_signal<TBufferCapStatus>[n];
 
 
 	// Create the Core bloc
@@ -1952,12 +1952,12 @@ void NoC::buildOmega()
 			hub[hub_id]->req_rx[port](req_to_hub[core_id]);
 			hub[hub_id]->flit_rx[port](flit_to_hub[core_id]);
 			hub[hub_id]->ack_rx[port](ack_from_hub[core_id]);
-			hub[hub_id]->buffer_full_status_rx[port](buffer_full_status_from_hub[core_id]);
+			hub[hub_id]->buffer_cap_status_rx[port](buffer_cap_status_from_hub[core_id]);
 
 			hub[hub_id]->flit_tx[port](flit_from_hub[core_id]);
 			hub[hub_id]->req_tx[port](req_from_hub[core_id]);
 			hub[hub_id]->ack_tx[port](ack_to_hub[core_id]);
-			hub[hub_id]->buffer_full_status_tx[port](buffer_full_status_to_hub[core_id]);
+			hub[hub_id]->buffer_cap_status_tx[port](buffer_cap_status_to_hub[core_id]);
 
 		}
 		
@@ -1971,43 +1971,43 @@ void NoC::buildOmega()
 		t[0][i]->flit_rx[3](flit[0][i].west); // ack .west
 		t[0][i]->req_rx[3](req[0][i].west);
 		t[0][i]->ack_rx[3](ack[0][i].west);
-		t[0][i]->buffer_full_status_rx[3](buffer_full_status[0][i].west);
+		t[0][i]->buffer_cap_status_rx[3](buffer_cap_status[0][i].west);
 		//tx is not required in delta topologies
 		t[0][i]->flit_tx[3](*flit_dummy_signal);
 		t[0][i]->req_tx[3](*bool_dummy_signal);
 		t[0][i]->ack_tx[3](*bool_dummy_signal);
-		t[0][i]->buffer_full_status_tx[3](*tbufferfullstatus_dummy_signal);
+		t[0][i]->buffer_cap_status_tx[3](*tbufferfullstatus_dummy_signal);
 
 		core[i*2]->flit_tx[0](flit[0][i].west);
 		core[i*2]->req_tx[0](req[0][i].west);
 		core[i*2]->ack_tx[0](ack[0][i].west);
-		core[i*2]->buffer_full_status_tx[0](buffer_full_status[0][i].west);
+		core[i*2]->buffer_cap_status_tx[0](buffer_cap_status[0][i].west);
 		//rx is not required in delta topologies
 		core[i*2]->flit_rx[0](*flit_dummy_signal);
 		core[i*2]->req_rx[0](*bool_dummy_signal);
 		core[i*2]->ack_rx[0](*bool_dummy_signal);
-		core[i*2]->buffer_full_status_rx[0](*tbufferfullstatus_dummy_signal);
+		core[i*2]->buffer_cap_status_rx[0](*tbufferfullstatus_dummy_signal);
 
 
 		t[0][i]->flit_rx[2](flit[0][i].south); // ack .south
 		t[0][i]->req_rx[2](req[0][i].south);
 		t[0][i]->ack_rx[2](ack[0][i].south);
-		t[0][i]->buffer_full_status_rx[2](buffer_full_status[0][i].south);
+		t[0][i]->buffer_cap_status_rx[2](buffer_cap_status[0][i].south);
 		//tx is not required in delta topologies
 		t[0][i]->flit_tx[2](*flit_dummy_signal);
 		t[0][i]->req_tx[2](*bool_dummy_signal);
 		t[0][i]->ack_tx[2](*bool_dummy_signal);
-		t[0][i]->buffer_full_status_tx[2](*tbufferfullstatus_dummy_signal);
+		t[0][i]->buffer_cap_status_tx[2](*tbufferfullstatus_dummy_signal);
 
 		core[(i*2)+1]->flit_tx[0](flit[0][i].south);
 		core[(i*2)+1]->req_tx[0](req[0][i].south);
 		core[(i*2)+1]->ack_tx[0](ack[0][i].south);
-		core[(i*2)+1]->buffer_full_status_tx[0](buffer_full_status[0][i].south);
+		core[(i*2)+1]->buffer_cap_status_tx[0](buffer_cap_status[0][i].south);
 		//rx is not required in delta topologies
 		core[(i*2)+1]->flit_rx[0](*flit_dummy_signal);
 		core[(i*2)+1]->req_rx[0](*bool_dummy_signal);
 		core[(i*2)+1]->ack_rx[0](*bool_dummy_signal);
-		core[(i*2)+1]->buffer_full_status_rx[0](*tbufferfullstatus_dummy_signal);
+		core[(i*2)+1]->buffer_cap_status_rx[0](*tbufferfullstatus_dummy_signal);
 	}
 
 	// ... Last Stage
@@ -2016,44 +2016,44 @@ void NoC::buildOmega()
 		t[stg-1][i]->flit_tx[0](flit[stg-1][i].north);
 		t[stg-1][i]->req_tx[0](req[stg-1][i].north);
 		t[stg-1][i]->ack_tx[0](ack[stg-1][i].north);
-		t[stg-1][i]->buffer_full_status_tx[0](buffer_full_status[stg-1][i].north);
+		t[stg-1][i]->buffer_cap_status_tx[0](buffer_cap_status[stg-1][i].north);
 		//rx is not required in delta topologies
 		t[stg-1][i]->flit_rx[0](*flit_dummy_signal);
 		t[stg-1][i]->req_rx[0](*bool_dummy_signal);
 		t[stg-1][i]->ack_rx[0](*bool_dummy_signal);
-		t[stg-1][i]->buffer_full_status_rx[0](*tbufferfullstatus_dummy_signal);
+		t[stg-1][i]->buffer_cap_status_rx[0](*tbufferfullstatus_dummy_signal);
 
 
 		core[i*2]->flit_rx[1](flit[stg-1][i].north);
 		core[i*2]->req_rx[1](req[stg-1][i].north);
 		core[i*2]->ack_rx[1](ack[stg-1][i].north);
-		core[i*2]->buffer_full_status_rx[1](buffer_full_status[stg-1][i].north);
+		core[i*2]->buffer_cap_status_rx[1](buffer_cap_status[stg-1][i].north);
 		//tx is not required in delta topologies
 		core[i*2]->flit_tx[1](*flit_dummy_signal);
 		core[i*2]->req_tx[1](*bool_dummy_signal);
 		core[i*2]->ack_tx[1](*bool_dummy_signal);
-		core[i*2]->buffer_full_status_tx[1](*tbufferfullstatus_dummy_signal);
+		core[i*2]->buffer_cap_status_tx[1](*tbufferfullstatus_dummy_signal);
 
 
 		t[stg-1][i]->flit_tx[1](flit[stg-1][i].east);
 		t[stg-1][i]->req_tx[1](req[stg-1][i].east);
 		t[stg-1][i]->ack_tx[1](ack[stg-1][i].east);
-		t[stg-1][i]->buffer_full_status_tx[1](buffer_full_status[stg-1][i].east);
+		t[stg-1][i]->buffer_cap_status_tx[1](buffer_cap_status[stg-1][i].east);
 		//rx is not required in delta topologies
 		t[stg-1][i]->flit_rx[1](*flit_dummy_signal);
 		t[stg-1][i]->req_rx[1](*bool_dummy_signal);
 		t[stg-1][i]->ack_rx[1](*bool_dummy_signal);
-		t[stg-1][i]->buffer_full_status_rx[1](*tbufferfullstatus_dummy_signal);
+		t[stg-1][i]->buffer_cap_status_rx[1](*tbufferfullstatus_dummy_signal);
 
 		core[(i*2)+1]->flit_rx[1](flit[stg-1][i].east);
 		core[(i*2)+1]->req_rx[1](req[stg-1][i].east);
 		core[(i*2)+1]->ack_rx[1](ack[stg-1][i].east);
-		core[(i*2)+1]->buffer_full_status_rx[1](buffer_full_status[stg-1][i].east);
+		core[(i*2)+1]->buffer_cap_status_rx[1](buffer_cap_status[stg-1][i].east);
 		//tx is not required in delta topologies
 		core[(i*2)+1]->flit_tx[1](*flit_dummy_signal);
 		core[(i*2)+1]->req_tx[1](*bool_dummy_signal);
 		core[(i*2)+1]->ack_tx[1](*bool_dummy_signal);
-		core[(i*2)+1]->buffer_full_status_tx[1](*tbufferfullstatus_dummy_signal);
+		core[(i*2)+1]->buffer_cap_status_tx[1](*tbufferfullstatus_dummy_signal);
 	}// ---------------------------------end mapping code-----------------
 
 
@@ -2079,34 +2079,34 @@ void NoC::buildOmega()
 			core[c]->flit_tx[k](*flit_dummy_signal);
 			core[c]->req_tx[k](*bool_dummy_signal);
 			core[c]->ack_tx[k](*bool_dummy_signal);
-			core[c]->buffer_full_status_tx[k](*tbufferfullstatus_dummy_signal);
+			core[c]->buffer_cap_status_tx[k](*tbufferfullstatus_dummy_signal);
 
 			core[c]->flit_rx[k](*flit_dummy_signal);
 			core[c]->req_rx[k](*bool_dummy_signal);
 			core[c]->ack_rx[k](*bool_dummy_signal);
-			core[c]->buffer_full_status_rx[k](*tbufferfullstatus_dummy_signal);
+			core[c]->buffer_cap_status_rx[k](*tbufferfullstatus_dummy_signal);
 		}
 
 		core[c]->hub_flit_rx(flit_from_hub[c]);
 		core[c]->hub_req_rx(req_from_hub[c]);
 		core[c]->hub_ack_rx(ack_to_hub[c]);
-		core[c]->hub_buffer_full_status_rx(buffer_full_status_to_hub[c]);
+		core[c]->hub_buffer_cap_status_rx(buffer_cap_status_to_hub[c]);
 
 		core[c]->hub_flit_tx(flit_to_hub[c]);
 		core[c]->hub_req_tx(req_to_hub[c]);
 		core[c]->hub_ack_tx(ack_from_hub[c]);
-		core[c]->hub_buffer_full_status_tx(buffer_full_status_from_hub[c]);
+		core[c]->hub_buffer_cap_status_tx(buffer_cap_status_from_hub[c]);
 
 		/*
 		core[c]->hub_flit_tx(*flit_dummy_signal);
 		core[c]->hub_req_tx(*bool_dummy_signal);
 		core[c]->hub_ack_tx(*bool_dummy_signal);
-		core[c]->hub_buffer_full_status_tx(*tbufferfullstatus_dummy_signal);
+		core[c]->hub_buffer_cap_status_tx(*tbufferfullstatus_dummy_signal);
 
 		core[c]->hub_flit_rx(*flit_dummy_signal);
 		core[c]->hub_req_rx(*bool_dummy_signal);
 		core[c]->hub_ack_rx(*bool_dummy_signal);
-		core[c]->hub_buffer_full_status_rx(*tbufferfullstatus_dummy_signal);
+		core[c]->hub_buffer_cap_status_rx(*tbufferfullstatus_dummy_signal);
 		*/
 	}
 
@@ -2151,7 +2151,7 @@ void NoC::buildMesh()
     
     req = new sc_signal_NSWEH<bool>*[dimX];
     ack = new sc_signal_NSWEH<bool>*[dimX];
-    buffer_full_status = new sc_signal_NSWEH<TBufferFullStatus>*[dimX];
+    buffer_cap_status = new sc_signal_NSWEH<TBufferCapStatus>*[dimX];
     flit = new sc_signal_NSWEH<Flit>*[dimX];
 
     free_slots = new sc_signal_NSWE<int>*[dimX];
@@ -2160,7 +2160,7 @@ void NoC::buildMesh()
     for (int i=0; i < dimX; i++) {
         req[i] = new sc_signal_NSWEH<bool>[dimY];
         ack[i] = new sc_signal_NSWEH<bool>[dimY];
-	buffer_full_status[i] = new sc_signal_NSWEH<TBufferFullStatus>[dimY];
+	buffer_cap_status[i] = new sc_signal_NSWEH<TBufferCapStatus>[dimY];
         flit[i] = new sc_signal_NSWEH<Flit>[dimY];
 
         free_slots[i] = new sc_signal_NSWE<int>[dimY];
@@ -2218,56 +2218,56 @@ void NoC::buildMesh()
 	    t[i][j]->req_rx[DIRECTION_NORTH] (req[i][j].south);
 	    t[i][j]->flit_rx[DIRECTION_NORTH] (flit[i][j].south);
 	    t[i][j]->ack_rx[DIRECTION_NORTH] (ack[i][j].north);
-	    t[i][j]->buffer_full_status_rx[DIRECTION_NORTH] (buffer_full_status[i][j].north);
+	    t[i][j]->buffer_cap_status_rx[DIRECTION_NORTH] (buffer_cap_status[i][j].north);
 
 	    t[i][j]->req_rx[DIRECTION_EAST] (req[i + 1][j].west);
 	    t[i][j]->flit_rx[DIRECTION_EAST] (flit[i + 1][j].west);
 	    t[i][j]->ack_rx[DIRECTION_EAST] (ack[i + 1][j].east);
-	    t[i][j]->buffer_full_status_rx[DIRECTION_EAST] (buffer_full_status[i+1][j].east);
+	    t[i][j]->buffer_cap_status_rx[DIRECTION_EAST] (buffer_cap_status[i+1][j].east);
 
 	    t[i][j]->req_rx[DIRECTION_SOUTH] (req[i][j + 1].north);
 	    t[i][j]->flit_rx[DIRECTION_SOUTH] (flit[i][j + 1].north);
 	    t[i][j]->ack_rx[DIRECTION_SOUTH] (ack[i][j + 1].south);
-	    t[i][j]->buffer_full_status_rx[DIRECTION_SOUTH] (buffer_full_status[i][j+1].south);
+	    t[i][j]->buffer_cap_status_rx[DIRECTION_SOUTH] (buffer_cap_status[i][j+1].south);
 
 	    t[i][j]->req_rx[DIRECTION_WEST] (req[i][j].east);
 	    t[i][j]->flit_rx[DIRECTION_WEST] (flit[i][j].east);
 	    t[i][j]->ack_rx[DIRECTION_WEST] (ack[i][j].west);
-	    t[i][j]->buffer_full_status_rx[DIRECTION_WEST] (buffer_full_status[i][j].west);
+	    t[i][j]->buffer_cap_status_rx[DIRECTION_WEST] (buffer_cap_status[i][j].west);
 
 	    // Map Tx signals
 	    t[i][j]->req_tx[DIRECTION_NORTH] (req[i][j].north);
 	    t[i][j]->flit_tx[DIRECTION_NORTH] (flit[i][j].north);
 	    t[i][j]->ack_tx[DIRECTION_NORTH] (ack[i][j].south);
-	    t[i][j]->buffer_full_status_tx[DIRECTION_NORTH] (buffer_full_status[i][j].south);
+	    t[i][j]->buffer_cap_status_tx[DIRECTION_NORTH] (buffer_cap_status[i][j].south);
 
 	    t[i][j]->req_tx[DIRECTION_EAST] (req[i + 1][j].east);
 	    t[i][j]->flit_tx[DIRECTION_EAST] (flit[i + 1][j].east);
 	    t[i][j]->ack_tx[DIRECTION_EAST] (ack[i + 1][j].west);
-	    t[i][j]->buffer_full_status_tx[DIRECTION_EAST] (buffer_full_status[i + 1][j].west);
+	    t[i][j]->buffer_cap_status_tx[DIRECTION_EAST] (buffer_cap_status[i + 1][j].west);
 
 	    t[i][j]->req_tx[DIRECTION_SOUTH] (req[i][j + 1].south);
 	    t[i][j]->flit_tx[DIRECTION_SOUTH] (flit[i][j + 1].south);
 	    t[i][j]->ack_tx[DIRECTION_SOUTH] (ack[i][j + 1].north);
-	    t[i][j]->buffer_full_status_tx[DIRECTION_SOUTH] (buffer_full_status[i][j + 1].north);
+	    t[i][j]->buffer_cap_status_tx[DIRECTION_SOUTH] (buffer_cap_status[i][j + 1].north);
 
 	    t[i][j]->req_tx[DIRECTION_WEST] (req[i][j].west);
 	    t[i][j]->flit_tx[DIRECTION_WEST] (flit[i][j].west);
 	    t[i][j]->ack_tx[DIRECTION_WEST] (ack[i][j].east);
-	    t[i][j]->buffer_full_status_tx[DIRECTION_WEST] (buffer_full_status[i][j].east);
+	    t[i][j]->buffer_cap_status_tx[DIRECTION_WEST] (buffer_cap_status[i][j].east);
 
 	    // TODO: check if hub signal is always required
 	    // signals/port when tile receives(rx) from hub
 	    t[i][j]->hub_req_rx(req[i][j].from_hub);
 	    t[i][j]->hub_flit_rx(flit[i][j].from_hub);
 	    t[i][j]->hub_ack_rx(ack[i][j].to_hub);
-	    t[i][j]->hub_buffer_full_status_rx(buffer_full_status[i][j].to_hub);
+	    t[i][j]->hub_buffer_cap_status_rx(buffer_cap_status[i][j].to_hub);
 
 	    // signals/port when tile transmits(tx) to hub
 	    t[i][j]->hub_req_tx(req[i][j].to_hub); // 7, sc_out
 	    t[i][j]->hub_flit_tx(flit[i][j].to_hub);
 	    t[i][j]->hub_ack_tx(ack[i][j].from_hub);
-	    t[i][j]->hub_buffer_full_status_tx(buffer_full_status[i][j].from_hub);
+	    t[i][j]->hub_buffer_cap_status_tx(buffer_cap_status[i][j].from_hub);
 
         // TODO: Review port index. Connect each Hub to all its Channels 
         map<int, int>::iterator it = GlobalParams::hub_for_tile.find(tile_id);
@@ -2284,12 +2284,12 @@ void NoC::buildMesh()
             hub[hub_id]->req_rx[port](req[i][j].to_hub);
             hub[hub_id]->flit_rx[port](flit[i][j].to_hub);
             hub[hub_id]->ack_rx[port](ack[i][j].from_hub);
-            hub[hub_id]->buffer_full_status_rx[port](buffer_full_status[i][j].from_hub);
+            hub[hub_id]->buffer_cap_status_rx[port](buffer_cap_status[i][j].from_hub);
 
             hub[hub_id]->flit_tx[port](flit[i][j].from_hub);
             hub[hub_id]->req_tx[port](req[i][j].from_hub);
             hub[hub_id]->ack_tx[port](ack[i][j].to_hub);
-            hub[hub_id]->buffer_full_status_tx[port](buffer_full_status[i][j].to_hub);
+            hub[hub_id]->buffer_cap_status_tx[port](buffer_cap_status[i][j].to_hub);
         }
 
         // Map buffer level signals (analogy with req_tx/rx port mapping)

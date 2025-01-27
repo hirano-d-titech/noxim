@@ -29,12 +29,12 @@ void Router::process()
 void Router::rxProcess()
 {
     if (reset.read()) {
-	TBufferFullStatus bfs;
+	TBufferCapStatus bfs;
 	// Clear outputs and indexes of receiving protocol
 	for (int i = 0; i < DIRECTIONS + 2; i++) {
 	    ack_rx[i].write(0);
 	    current_level_rx[i] = 0;
-	    buffer_full_status_rx[i].write(bfs);
+	    buffer_cap_status_rx[i].write(bfs);
 	}
 	routed_flits = 0;
 	local_drained = 0;
@@ -99,10 +99,10 @@ void Router::rxProcess()
 	    }
 	    ack_rx[i].write(current_level_rx[i]);
 	    // updates the mask of VCs to prevent incoming data on full buffers
-	    TBufferFullStatus bfs;
+	    TBufferCapStatus bfs;
 	    for (int vc=0;vc<GlobalParams::n_virtual_channels;vc++)
-		bfs.mask[vc] = buffer[i][vc].IsFull();
-	    buffer_full_status_rx[i].write(bfs);
+		bfs.mask[vc] = buffer[i][vc].getCurrentFreeSlots();
+	    buffer_cap_status_rx[i].write(bfs);
 	}
     }
 }
@@ -153,6 +153,9 @@ void Router::txProcess()
 		      // TODO: see PER POSTERI (adaptive routing should not recompute route if already reserved)
 		      int o = route(route_data);
 
+			  // if output port is not empty, flit cannot reserving the output port
+			  if (tx_buffer[o].IsEmpty())
+			  {
 		      // manage special case of target hub not directly connected to destination
 		      if (o>=DIRECTION_HUB_RELAY)
 			  {
@@ -238,6 +241,8 @@ void Router::txProcess()
 		      }
 		      else assert(false); // no meaningful status here
 		    }
+			}
+
 		}
 	  }
 	    start_from_vc[i] = (start_from_vc[i]+1)%GlobalParams::n_virtual_channels;
@@ -248,6 +253,9 @@ void Router::txProcess()
 	// 2nd phase: Forwarding
 	//if (local_id==6) LOG<<"*TX*****local_id="<<local_id<<"__ack_tx[0]= "<<ack_tx[0].read()<<endl;
 	for (int out = 0; out < DIRECTIONS + 2; out++)
+	{
+		Flit flit;
+		if (tx_buffer[out].IsEmpty())
 	{
 		vector<const TReservation> reservations;
 		bool nc_enabled;
@@ -274,7 +282,7 @@ void Router::txProcess()
 		{
 			LOG << " Cannot forward any tx-flit to direction output to " << out << "."<< endl;
 			//LOG << " **DEBUG APB: current_level_tx: " << current_level_tx[out] << " ack_tx: " << ack_tx[out].read() << endl;
-			//LOG << " **DEBUG buffer_full_status_tx " << buffer_full_status_tx[out].read().mask[vc] << endl;
+			//LOG << " **DEBUG buffer_cap_status_tx " << buffer_cap_status_tx[out].read().mask[vc] << endl;
 			//LOG<<"END_NO_cl_tx="<<current_level_tx[out]<<"_req_tx="<<req_tx[out].read()<<" _ack= "<<ack_tx[out].read()<< endl;
 
 			// if removed flit's type is head, it should be released from reservationTable?
@@ -294,11 +302,10 @@ void Router::txProcess()
 			buffer[in][vc].Pop();
 			return tmpf;
 		};
-		std::function<bool(int vc)> isVcValid = [this,out](int vc){
-			return current_level_tx[out] == ack_tx[out].read() && !buffer_full_status_tx[out].read().mask[vc];
+		std::function<bool(int vc, int size)> isVcValid = [this,out](int vc, int size = 1){
+			return current_level_tx[out] == ack_tx[out].read() && buffer_cap_status_tx[out].read().mask[vc] >= size;
 		};
 
-		Flit flit;
 		if (!nc_enabled)
 		{
 			auto resv = reservations[size == 1 ? 0 : rand()%reservations.size()];
@@ -320,6 +327,7 @@ void Router::txProcess()
 				auto tr2 = reservations[1];
 				nc_xor->mergeNew(popFlit(tr1.input, tr1.vc), popFlit(tr2.input, tr2.vc), flit);
 				break;
+			
 			default:
 				break;
 			}
@@ -327,6 +335,12 @@ void Router::txProcess()
 
 		//if (GlobalParams::verbose_mode > VERBOSE_OFF) 
 		LOG << "Input[x][vc] forwarded to Output[" << out << "], flit: " << flit << endl;
+		}
+		else
+		{
+		flit = tx_buffer[out].Pop();
+		LOG << "tx_buffer[" << out << "] forwarded to Output[" << out << "], flit: " << flit << endl;
+		}
 
 		flit.meta.hop_no++;
 		flit_tx[out].write(flit);

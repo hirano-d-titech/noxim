@@ -120,7 +120,7 @@ inline ostream & operator <<(ostream & os, const NoP_data & NoP_data)
     os << "]" << endl;
     return os;
 }
-inline ostream & operator <<(ostream & os, const TBufferFullStatus & bfs)
+inline ostream & operator <<(ostream & os, const TBufferCapStatus & bfs)
 {
     os << "[" ;
     for (int j = 0; j < GlobalParams::n_virtual_channels; j++)
@@ -152,7 +152,7 @@ inline void sc_trace(sc_trace_file * &tf, const NoP_data & NoP_data, string & na
 {
     sc_trace(tf, NoP_data.sender_id, name + ".sender_id");
 }
-inline void sc_trace(sc_trace_file * &tf, const TBufferFullStatus & bfs, string & name)
+inline void sc_trace(sc_trace_file * &tf, const TBufferCapStatus & bfs, string & name)
 {
     for (int j = 0; j < GlobalParams::n_virtual_channels; j++)
 	sc_trace(tf, bfs.mask[j], name + "VC "+to_string(j));
