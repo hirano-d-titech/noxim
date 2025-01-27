@@ -9,7 +9,6 @@ struct Flit;
 
 class NC_XOR {
     public:
-    bool merge(Flit &src, const Flit &fm);
     bool mergeNew(const Flit &f1, const Flit &f2, Flit &fo);
 
     bool detachAll(Flit &src, const std::vector<Flit> &dst);

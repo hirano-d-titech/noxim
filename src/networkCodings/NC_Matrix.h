@@ -11,7 +11,8 @@ struct Flit;
 
 class NC_Matrix {
     public:
-    bool mergeNew(const Flit &f1, const Flit &f2, Flit &fo);
+    bool mergeNew(const Flit &f1, const Flit &f2, vector<Flit> &merged);
+    bool detach(const std::vector<Flit> &merged, Flit &f1, Flit &f2);
 
     static NC_Matrix * getInstance();
 

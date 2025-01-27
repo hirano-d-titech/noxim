@@ -165,7 +165,7 @@ void Router::txProcess()
 		      TReservation r;
 		      r.input = i;
 		      r.vc = vc;
-			  r.mult = 1 + buffer[i][vc].Front().nc_meta.size();
+			  r.mult = 1 + buffer[i][vc].Front().metaSize();
 			  r.nc_state = buffer[i][vc].Front().meta.nc_state;
 
 		      LOG << " checking availability of Output[" << o << "] for Input[" << i << "][" << vc << "] flit " << flit << endl;
@@ -288,7 +288,7 @@ void Router::txProcess()
 				routed_flits++;
 			}
 			if (tmpf.meta.flit_type == FLIT_TYPE_TAIL) {
-				int mult = 1 + tmpf.nc_meta.size();
+				int mult = 1 + tmpf.metaSize();
 				reservation_table.release(TReservation{in, vc, mult}, out);
 			}
 			buffer[in][vc].Pop();
@@ -316,10 +316,9 @@ void Router::txProcess()
 			{
 			case NC_TYPE_XOR:
 				auto nc_xor = NC_XOR::getInstance();
-				for (auto &&tr : reservations)
-				{
-					nc_xor->merge(flit, popFlit(tr.input, tr.vc));
-				}
+				auto tr1 = reservations[0];
+				auto tr2 = reservations[1];
+				nc_xor->mergeNew(popFlit(tr1.input, tr1.vc), popFlit(tr2.input, tr2.vc), flit);
 				break;
 			default:
 				break;
