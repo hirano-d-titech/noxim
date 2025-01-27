@@ -194,7 +194,7 @@ void Router::txProcess()
 					auto resv0 = reservations.first[0];
 					int dirPrev = reflexDirection(resv0.input) == o ? i : reflexDirection(resv0.input);
 					int dirNext = reflexDirection(i) == o ? resv0.input : reflexDirection(i);
-		
+
 					TReservation trPrev;
 					trPrev.input = resv0.input;
 					trPrev.vc = resv0.vc;

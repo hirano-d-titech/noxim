@@ -30,10 +30,10 @@ enum FlitType {
 };
 
 enum NCState {
-    NC_ORIGIN, // non Network Coding encoded
-    NC_MERGED, // NC: one of mixed destination
-    NC_UNIQUE, // NC: unique destination
-    NC_REMAIN, // NC: have to removed by decode (in only XOR)
+    NC_NORMAL, // not Network Coding encoded
+    NC_ORIGIN, // has original destination
+    NC_MERGED, // has other flit's destination merged by Network Coding
+    NC_MULTIC, // needs to be multicasted towards children's destination
     NC_OPTION, // NC: other flit for decoding
 };
 
@@ -259,22 +259,14 @@ struct NCHistory {
         return metas.find(children.first) == metas.end() && metas.find(children.second) == metas.end();
     }
 
-    void stepDepth(FlitMetadata leftTop, NCHistory rightHist, FlitMetadata rightTop){
-        assert(mergeable(rightHist));
-        assert(depth >= rightHist.depth);
-
-        depth++;
-        // make current tree as left tree, and set leftTop as top metadata of left tree
-        auto offset = getTreeMax(depth);
-        metas.emplace(offset-1, leftTop);
-        // create right tree with id offsetted, and deepened by diff
-        auto diff = depth - rightHist.depth;
-        for (auto &&meta : rightHist.metas)
+    void stepDepth(){
+        std::map<int, FlitMetadata> other;
+        for (auto &&pair : metas)
         {
-            metas.emplace(offset + nextTreeIdx(meta.first, diff), meta.second);
+            other.emplace(nextTreeIdx(pair.first), pair.second);
         }
-        // make rightTop as top metadata of right tree
-        metas.emplace(2*offset-1, rightTop);
+        metas.swap(other);
+        depth++;
     }
 
     bool inline hasAnyLeaf()const {
@@ -319,6 +311,27 @@ struct NCHistory {
             }
         }
         return ret;
+    }
+
+    void mergeHistory(FlitMetadata leftTop, NCHistory rightHist, FlitMetadata rightTop){
+        assert(mergeable(rightHist));
+        // make current tree depth large or equal to right tree.
+        while (depth < rightHist.depth)
+        {
+            stepDepth();
+        }
+        depth++;
+        // make current tree as left tree, and set leftTop as top metadata of left tree
+        auto offset = getTreeMax(depth);
+        metas.emplace(offset-1, leftTop);
+        // create right tree with id offsetted, and deepened by diff
+        auto diff = depth - rightHist.depth;
+        for (auto &&meta : rightHist.metas)
+        {
+            metas.emplace(offset + nextTreeIdx(meta.first, diff), meta.second);
+        }
+        // make rightTop as top metadata of right tree
+        metas.emplace(2*offset-1, rightTop);
     }
 
     bool removeHistory(int id, bool force = false){
@@ -386,13 +399,8 @@ struct Flit {
     }
 
     bool import_tree(const Flit& f1, const Flit& f2){
-        if (f1.nc_meta.depth >= f2.nc_meta.depth) {
-            nc_meta = f1.nc_meta;
-            nc_meta.stepDepth(f1.meta, f2.nc_meta, f2.meta);
-        } else {
-            nc_meta = f2.nc_meta;
-            nc_meta.stepDepth(f2.meta, f1.nc_meta, f1.meta);
-        }
+        nc_meta = f1.nc_meta;
+        nc_meta.mergeHistory(f1.meta, f2.nc_meta, f2.meta);
     }
 
     bool branch_tree(Flit &f1, Flit &f2){
@@ -403,7 +411,7 @@ struct Flit {
         auto f1_it = nc_meta.metas.find(tree-1);
         auto f2_it = nc_meta.metas.find(2*tree-1);
         if (f1_it == nc_meta.metas.end() || f2_it == nc_meta.metas.end()) return false;
-        
+
         for (auto &&meta : nc_meta.metas)
         {
             if (meta.first < tree) {
