@@ -346,6 +346,17 @@ struct NCHistory {
             }
         }
     }
+
+    inline bool operator ==(const NCHistory & hist) {
+        if (depth != hist.depth) return false;
+        if (metas.size() != hist.metas.size()) return false;
+        for (auto &&meta : metas)
+        {
+            if (hist.metas.find(meta.first) == hist.metas.end()) return false;
+            if (!(hist.metas.at(meta.first) == meta.second)) return false;
+        }
+        return true;
+    }
 };
 
 // Flit -- Flit definition

@@ -18,21 +18,20 @@ bool NC_Matrix::mergeNew(const Flit &f1, const Flit &f2, vector<Flit> &merged)
     merged.resize(2);
 
     Flit merge;
-    
-    // 構造体をコピー
+
+    // copy struct
     merged[0] = merge;
     merged[1] = merge;
 
+    // possibillity overflow
+    // G = | 1 1 |
+    //     | 1 2 |
     // c1 = p1 + p2 (mod 2^32)
-    // c2 = p1 + 2*p2 (mod 2^32)
-    sc_uint<32> c1 = f1.payload.data + f2.payload.data;
-    sc_uint<32> c2 = f1.payload.data + (f2.payload.data << 1);
+    // c2 = p1 (mod 2^32)
+    merged[0].payload.data = f1.payload.data ^ f2.payload.data;
+    merged[1].payload.data = f1.payload.data; // ^ (f2.payload.data << 1);
 
-    // 生成した2つのFlitにpayloadをセット
-    merged[0].payload.data = c1;
-    merged[1].payload.data = c2;
-    
-    // 木構造を導入
+    // create merged history tree
     merged[0].import_tree(f1, f2);
     merged[1].import_tree(f1, f2);
 
@@ -41,13 +40,26 @@ bool NC_Matrix::mergeNew(const Flit &f1, const Flit &f2, vector<Flit> &merged)
 
 bool NC_Matrix::detach(const std::vector<Flit> &merged, Flit &f1, Flit &f2)
 {
-    // TODO: this is auto-completed code, check later
     if (merged.size() != 2) return false;
 
-    if (!Flit::mergeable(f1, f2)) return false;
+    auto m1 = merged[0];
+    auto m2 = merged[1];
 
-    // 木構造を分解
+    if (!(m1.nc_meta == m2.nc_meta)) return false;
+
+    // detach history tree
     f1.branch_tree(f1, f2);
+
+    // possibillity overflow
+    // G^-1 = |  2 -1 |
+    //        | -1  1 |
+    // f1 = e2 (mod 2^32)
+    // f2 = e1 + e2 (mod 2^32)
+    auto encoded1 = merged[0].payload.data;
+    auto encoded2 = merged[1].payload.data;
+
+    f1.payload.data = encoded2;
+    f2.payload.data = encoded1 ^ encoded2;
 
     return true;
 }
