@@ -23,7 +23,6 @@ bool Encoding_REPEAT::encode(Packet &packet, queue < Flit > &sending_flits) {
         Flit flit(packet, type);
         flit.meta.sequence_no = i;
         flit.payload = payloads[i % packet.flit_left];
-        flit.meta.virtual_encoding = false;
 
         sending_flits.push(flit);
     }
@@ -33,6 +32,10 @@ bool Encoding_REPEAT::encode(Packet &packet, queue < Flit > &sending_flits) {
 
 bool Encoding_REPEAT::decode(vector < Flit > &received_flits, Packet &packet) {
     vector < Payload > received, predicted;
+
+    auto target_meta = received_flits[0].meta;
+    simulate_hops(received_flits, target_meta.hop_no, target_meta.hub_hop_no);
+
     if (!predictPayloadsOver(received_flits, received, predicted))
     {
         onDecodeFailure();

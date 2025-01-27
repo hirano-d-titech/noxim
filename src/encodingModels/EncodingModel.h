@@ -27,6 +27,9 @@ class EncodingModel
     bool predictPayloadsOver(const vector < Flit > &flits, vector< Payload > &received, vector< Payload > &payloads);
     bool verifyPayloads(const vector < Payload > decoded, const vector < Payload > predicted);
 
+    // flip bit / loss flit
+    static void simulate_hops(vector < Flit > &flits, int hop_no, int hub_hop_no);
+
     // with virtual
     static double pesudo_prob_poisson(int n, int k, double p);
     static double pseudo_prob_repeat(double p, int n);

@@ -84,6 +84,48 @@ bool EncodingModel::verifyPayloads(const vector < Payload > decoded, const vecto
     return true;
 }
 
+void EncodingModel::simulate_hops(vector < Flit > &flits, int hop_no, int hub_hop_no)
+{
+    double flit_loss_rate = 1.0 - GlobalParams::wired_flit_loss_rate;
+    double bit_error_rate = 1.0 - GlobalParams::wired_bit_error_rate;
+
+    for (int i = 0; i < hop_no; i++)
+    {
+        vector < Flit > after;
+
+        for (auto &&flit : flits)
+        {
+            if (rand() / (RAND_MAX + 1.0) < GlobalParams::wired_flit_loss_rate) {
+                continue;
+            }
+            if (rand() / (RAND_MAX + 1.0) < GlobalParams::wired_bit_error_rate) {
+                flit.payload.data ^= (1 << (rand() % 32));
+            }
+            after.push_back(flit);
+        }
+        
+        flits.swap(after);
+    }
+    
+    for (int i = 0; i < hub_hop_no; i++)
+    {
+        vector < Flit > after;
+
+        for (auto &&flit : flits)
+        {
+            if (rand() / (RAND_MAX + 1.0) < GlobalParams::wireless_flit_loss_rate) {
+                continue;
+            }
+            if (rand() / (RAND_MAX + 1.0) < GlobalParams::wireless_bit_error_rate) {
+                flit.payload.data ^= (1 << (rand() % 32));
+            }
+            after.push_back(flit);
+        }
+        
+        flits.swap(after);
+    }
+}
+
 double EncodingModel::pesudo_prob_poisson(int n, int k, double p){
     assert(p >= 0.0 && p <= 1.0);
     assert(n >= 0 && k >= 0 && n >= k);

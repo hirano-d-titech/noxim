@@ -394,23 +394,10 @@ void Hub::antennaToTileProcess()
 				Flit received_flit = target[channel]->buffer_rx.Front();
 				power.antennaBufferFront();
 
-				received_flit.meta.hub_hop_no++;
-				if (!received_flit.meta.virtual_encoding)
-				{
-					// prob of flit loss
-					if (rand() / (RAND_MAX + 1.0) < GlobalParams::wireless_flit_loss_rate) {
-						target[channel]->buffer_rx.Pop();
-						continue;
-					}
-
-					// prob of bit error in payload
-					if (rand() / (RAND_MAX + 1.0) < GlobalParams::wireless_bit_error_rate) {
-						received_flit.payload.data ^= (1 << (rand() % 32));
-					}
-				}
-
 				if ( !buffer_to_tile[port][vc].IsFull() )
 				{
+					received_flit.meta.hub_hop_no++;
+
 					target[channel]->buffer_rx.Pop();
 					power.antennaBufferPop();
 					LOG << "*** [Ch" << channel << "] Moving flit  " << received_flit << " from buffer_rx to buffer_to_tile[" << port <<"][" << vc << "]" << endl;
@@ -584,20 +571,6 @@ void Hub::tileToAntennaProcess()
 				Flit flit = buffer_from_tile[i][vc].Front();
 				// powerFront already accounted in 1st phase
 
-				flit.meta.hub_hop_no++;
-				if (!flit.meta.virtual_encoding)
-				{
-					// prob of flit loss
-					if (rand() / (RAND_MAX + 1.0) < GlobalParams::wireless_flit_loss_rate) {
-						buffer_from_tile[i][vc].Pop();
-						continue;
-					}
-					// prob of bit error in payload
-					if (rand() / (RAND_MAX + 1.0) < GlobalParams::wireless_bit_error_rate) {
-						flit.payload.data ^= (1 << (rand() % 32));
-					}
-				}
-
 				assert(r_from_tile[i][vc] == DIRECTION_WIRELESS);
 
 				int channel =  o;
@@ -606,6 +579,8 @@ void Hub::tileToAntennaProcess()
 				{
 					if (!(init[channel]->buffer_tx.IsFull()) )
 					{
+						flit.meta.hub_hop_no++;
+
 						buffer_from_tile[i][vc].Pop();
 						power.bufferFromTilePop();
 

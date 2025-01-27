@@ -134,7 +134,6 @@ struct FlitMetadata {
     int hop_no;		// Current number of hops from source to destination
     int hub_hop_no;     // Current number of passed wireless-hops
     bool use_low_voltage_path;
-    bool virtual_encoding;
 
     int hub_relay_node;
     NCState nc_state;
@@ -149,7 +148,6 @@ struct FlitMetadata {
         sequence_length = packet.size;
         use_low_voltage_path = packet.use_low_voltage_path;
         hub_relay_node = NOT_VALID;
-        virtual_encoding = true;
         nc_state = NC_ORIGIN;
     }
 
@@ -160,8 +158,7 @@ struct FlitMetadata {
 		&& meta.sequence_no == sequence_no
 		&& meta.sequence_length == sequence_length
 		&& meta.timestamp == timestamp
-		&& meta.use_low_voltage_path == use_low_voltage_path
-        && meta.virtual_encoding == virtual_encoding);
+		&& meta.use_low_voltage_path == use_low_voltage_path);
     }
 };
 

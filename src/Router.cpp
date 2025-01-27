@@ -55,19 +55,6 @@ void Router::rxProcess()
 		Flit received_flit = flit_rx[i].read();
 		//LOG<<"request opposite to the current_level, reading flit "<<received_flit<<endl;
 
-		received_flit.meta.hop_no++;
-		if (!received_flit.meta.virtual_encoding)
-		{
-			// prob of Flit loss
-			if (rand() / (RAND_MAX + 1.0) < GlobalParams::wired_flit_loss_rate) {
-				continue;
-			}
-			// prob of bit error
-			if (rand() / (RAND_MAX + 1.0) < GlobalParams::wired_bit_error_rate) {
-				received_flit.payload.data ^= (1 << (rand() % 32));
-			}
-		}
-
 		int vc = received_flit.meta.vc_id;
 
 		if (!buffer[i][vc].IsFull()) 
