@@ -110,7 +110,7 @@ int ReservationTable::checkReservation(const TReservation r, const int port_out)
 	else /* GlobalParams::network_coding_type != NC_TYPE_NONE */
 	{
 	// if addition of multiplicity exceed MAX_NC_META, it cant be merged...
-	if (rtable[port_out].out_multiplicity + r.mult > Flit::MAX_NC_META)
+	if (rtable[port_out].out_multiplicity + r.mult > NCHistory::MAX_META)
 	{
 		return RT_OUTVC_BUSY;
 	}

@@ -14,6 +14,7 @@
 #include <functional>
 #include "Router.h"
 #include "networkCodings/NC_XOR.h"
+#include "networkCodings/NC_Matrix.h"
 
 inline int toggleKthBit(int n, int k)
 {
@@ -155,7 +156,7 @@ void Router::txProcess()
 		      TReservation r;
 		      r.input = i;
 		      r.vc = vc;
-			  r.mult = 1 + buffer[i][vc].Front().metaSize();
+			  r.mult = buffer[i][vc].Front().metaSize();
 			  r.nc_state = buffer[i][vc].Front().meta.nc_state;
 
 		      LOG << " checking availability of Output[" << o << "] for Input[" << i << "][" << vc << "] flit " << flit << endl;
@@ -177,7 +178,7 @@ void Router::txProcess()
 			  case NC_TYPE_XOR:{
 			    auto reservations = reservation_table.getReservationsTo(o);
 				assert(reservations.first.size() != 0);
-				// avoid excessive complexity
+				// if reservations already exists over 1, it needs to be merged 3 flits simultaneously. skip due to complexity.
 				if (reservations.first.size() > 1) continue;
 			  	// send other flit for decoding
 				{
@@ -204,10 +205,19 @@ void Router::txProcess()
 					prevOptMeta.flit_type = FLIT_TYPE_HEAD;
 					prevOptMeta.nc_state = NC_OPTION;
 					prevOptMeta.sequence_length = prevOptMeta.sequence_length - prevOptMeta.sequence_no;
+					// reserve flits to decode each other.
 					reservation_table.reserve(r, selfOptMeta, dirNext);
 					reservation_table.reserve(trPrev, prevOptMeta, dirPrev);
+					// reserve flits to be decoded.
+			  		reservation_table.reserve(r, flit.meta, o);
 				}
 				break;}
+			  case NC_TYPE_MATRIX:{
+			    auto reservations = reservation_table.getReservationsTo(o);
+				assert(reservations.first.size() != 0);
+				if (reservations.first.size() > 1) continue;
+			  	reservation_table.reserve(r, flit.meta, o);
+			    break;}
 			  default:
 				break;
 			  }
@@ -227,7 +237,7 @@ void Router::txProcess()
 			  LOG  << "RT_ALREADY_OTHER_OUT: another output previously reserved for the same flit " << endl;
 		      }
 		      else assert(false); // no meaningful status here
-		    }
+		    }	
 			}
 
 		}
@@ -243,7 +253,7 @@ void Router::txProcess()
 	{
 		Flit flit;
 		if (tx_buffer[out].IsEmpty())
-	{
+		{
 		vector<const TReservation> reservations;
 		bool nc_enabled;
 		std::tie(reservations, nc_enabled) = reservation_table.getReservationsTo(out);
@@ -296,7 +306,7 @@ void Router::txProcess()
 		if (!nc_enabled)
 		{
 			auto resv = reservations[size == 1 ? 0 : rand()%reservations.size()];
-			if (!isVcValid(resv.vc)) continue;
+			if (!isVcValid(resv.vc, 1)) continue;
 			flit = popFlit(resv.input, resv.vc);
 		}
 		else
@@ -304,11 +314,11 @@ void Router::txProcess()
 			assert(GlobalParams::network_coding_type != NC_TYPE_NONE);
 
 			flit.meta = reservation_table.getInitialFlitMetadataTo(out);
-			if (!isVcValid(flit.meta.vc_id)) continue;
 
 			switch (GlobalParams::network_coding_type)
 			{
 			case NC_TYPE_XOR:
+				if (!isVcValid(flit.meta.vc_id, 1)) continue;
 				auto nc_xor = NC_XOR::getInstance();
 				auto tr1 = reservations[0];
 				auto tr2 = reservations[1];
@@ -316,6 +326,12 @@ void Router::txProcess()
 				break;
 			
 			default:
+				if (!isVcValid(flit.meta.vc_id, 2)) continue;
+				auto nc_matrix = NC_Matrix::getInstance();
+				vector<Flit> flits;
+				nc_matrix->mergeNew(popFlit(reservations[0].input, reservations[0].vc), popFlit(reservations[1].input, reservations[1].vc), flits);
+				flit = flits[0];
+				tx_buffer[out].Push(flits[1]);
 				break;
 			}
 		}
@@ -326,6 +342,8 @@ void Router::txProcess()
 		else
 		{
 		flit = tx_buffer[out].Pop();
+		auto vc = flit.meta.vc_id;
+		if (current_level_tx[out] != ack_tx[out].read() || buffer_cap_status_tx[out].read().mask[vc] == 0) continue;
 		LOG << "tx_buffer[" << out << "] forwarded to Output[" << out << "], flit: " << flit << endl;
 		}
 
