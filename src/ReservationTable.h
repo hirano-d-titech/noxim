@@ -79,7 +79,8 @@ class ReservationTable {
     // Returns the pairs of output port and virtual channel reserved by port_in
     vector<pair<int,int> > getReservationsFrom(const int port_int);
 
-    pair<vector<const TReservation>, bool> getReservationsTo(const int port_out);
+    pair<size_t, bool> getReservationStatusTo(const int port_out);
+    vector<const TReservation> getReservationsTo(const int port_out);
 
     FlitMetadata getInitialFlitMetadataTo(const int port_out);
 

@@ -177,12 +177,12 @@ void Router::txProcess()
 				break;
 			  case NC_TYPE_XOR:{
 			    auto reservations = reservation_table.getReservationsTo(o);
-				assert(reservations.first.size() != 0);
+				assert(reservations.size() != 0);
 				// if reservations already exists over 1, it needs to be merged 3 flits simultaneously. skip due to complexity.
-				if (reservations.first.size() > 1) continue;
+				if (reservations.size() > 1) continue;
 			  	// send other flit for decoding
 				{
-					auto resv0 = reservations.first[0];
+					auto resv0 = reservations[0];
 					int dirPrev = reflexDirection(resv0.input) == o ? i : reflexDirection(resv0.input);
 					int dirNext = reflexDirection(i) == o ? resv0.input : reflexDirection(i);
 
@@ -214,8 +214,8 @@ void Router::txProcess()
 				break;}
 			  case NC_TYPE_MATRIX:{
 			    auto reservations = reservation_table.getReservationsTo(o);
-				assert(reservations.first.size() != 0);
-				if (reservations.first.size() > 1) continue;
+				assert(reservations.size() != 0);
+				if (reservations.size() > 1) continue;
 			  	reservation_table.reserve(r, flit.meta, o);
 			    break;}
 			  default:
@@ -254,12 +254,12 @@ void Router::txProcess()
 		Flit flit;
 		if (tx_buffer[out].IsEmpty())
 		{
-		vector<const TReservation> reservations;
+		size_t resvSize;
 		bool nc_enabled;
-		std::tie(reservations, nc_enabled) = reservation_table.getReservationsTo(out);
+		std::tie(resvSize, nc_enabled) = reservation_table.getReservationStatusTo(out);
+		vector<const TReservation> reservations = reservation_table.getReservationsTo(out);
 
-		auto size = reservations.size();
-		if (size==0)
+		if (resvSize==0)
 		{
 			// LOG<<"we have no reservation for direction "<<i<< endl;
 			continue;
@@ -267,7 +267,7 @@ void Router::txProcess()
 
 		// all flit must be in cycle
 		bool inCycle = true;
-		for (auto i = 0; i < reservations.size();){
+		for (auto i = 0; i < resvSize;){
 			auto it = reservations.begin() + i;
 			if (buffer[it->input][it->vc].IsEmpty()){
 				inCycle = false;
@@ -305,7 +305,7 @@ void Router::txProcess()
 
 		if (!nc_enabled)
 		{
-			auto resv = reservations[size == 1 ? 0 : rand()%reservations.size()];
+			auto resv = reservations[resvSize == 1 ? 0 : rand()%resvSize];
 			if (!isVcValid(resv.vc, 1)) continue;
 			flit = popFlit(resv.input, resv.vc);
 		}

@@ -165,17 +165,17 @@ struct FlitMetadata {
 struct NCHistory {
     // make tree to store metadata merge history
     static constexpr int MAX_META = 4;
-    
+
     // The ID indicates where the node is located in a particular tree structure.
     std::map<int /* id */, FlitMetadata /* node data */> metas;
-    
+
     // depth represents the depth of the tree, but does not change the ID when it increases due to the structure of the tree.
     int depth;
 
     NCHistory(){
         depth = 0;
     }
-    
+
     /**
      * returns whether merging is possible.
      */
@@ -271,7 +271,7 @@ struct NCHistory {
         {
             if (isGround(pair.first)) return true;
         }
-        
+
         return false;
     }
 
@@ -291,7 +291,7 @@ struct NCHistory {
                 other.emplace(after, meta.second);
             }
             if (error) {
-                LOG << "Error: NCHistory::cutDepth() failed" << endl;
+                std::cerr << "Error: cutDepth failed" << std::endl;
                 break;
             }
             metas.swap(other);

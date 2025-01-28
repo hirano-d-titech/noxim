@@ -52,7 +52,12 @@ vector<pair<int,int> > ReservationTable::getReservationsFrom(const int port_in)
     return reservations;
 }
 
-pair<vector<const TReservation>, bool> ReservationTable::getReservationsTo(const int port_out)
+pair<size_t, bool> ReservationTable::getReservationStatusTo(const int port_out)
+{
+	return {rtable[port_out].reservations.size(), rtable[port_out].nc_enabled};
+}
+
+vector<const TReservation> ReservationTable::getReservationsTo(const int port_out)
 {
     vector<const TReservation> reservations;
 
@@ -75,7 +80,7 @@ pair<vector<const TReservation>, bool> ReservationTable::getReservationsTo(const
 		break;
 	}
 
-	return {reservations, rtable[port_out].nc_enabled};
+	return reservations;
 }
 
 FlitMetadata ReservationTable::getInitialFlitMetadataTo(const int port_out)
