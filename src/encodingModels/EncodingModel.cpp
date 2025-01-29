@@ -86,19 +86,16 @@ bool EncodingModel::verifyPayloads(const vector < Payload > decoded, const vecto
 
 void EncodingModel::simulate_hops(vector < Flit > &flits, int hop_no, int hub_hop_no)
 {
-    double flit_loss_rate = 1.0 - GlobalParams::wired_flit_loss_rate;
-    double bit_error_rate = 1.0 - GlobalParams::wired_bit_error_rate;
-
     for (int i = 0; i < hop_no; i++)
     {
         vector < Flit > after;
 
         for (auto &&flit : flits)
         {
-            if (rand() / (RAND_MAX + 1.0) < GlobalParams::wired_flit_loss_rate) {
+            if (rand01() < GlobalParams::wired_flit_loss_rate) {
                 continue;
             }
-            if (rand() / (RAND_MAX + 1.0) < GlobalParams::wired_bit_error_rate) {
+            if (rand01() < GlobalParams::wired_bit_error_rate) {
                 flit.payload.data ^= (1 << (rand() % 32));
             }
             after.push_back(flit);
@@ -113,10 +110,10 @@ void EncodingModel::simulate_hops(vector < Flit > &flits, int hop_no, int hub_ho
 
         for (auto &&flit : flits)
         {
-            if (rand() / (RAND_MAX + 1.0) < GlobalParams::wireless_flit_loss_rate) {
+            if (rand01() < GlobalParams::wireless_flit_loss_rate) {
                 continue;
             }
-            if (rand() / (RAND_MAX + 1.0) < GlobalParams::wireless_bit_error_rate) {
+            if (rand01() < GlobalParams::wireless_bit_error_rate) {
                 flit.payload.data ^= (1 << (rand() % 32));
             }
             after.push_back(flit);

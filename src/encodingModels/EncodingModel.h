@@ -31,6 +31,7 @@ class EncodingModel
     static void simulate_hops(vector < Flit > &flits, int hop_no, int hub_hop_no);
 
     // with virtual
+    static double rand01() { return rand() / (RAND_MAX + 1.0); }
     static double pesudo_prob_poisson(int n, int k, double p);
     static double pseudo_prob_repeat(double p, int n);
 

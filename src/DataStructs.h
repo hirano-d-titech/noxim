@@ -146,6 +146,8 @@ struct FlitMetadata {
         vc_id = packet.vc_id;
         timestamp = packet.timestamp;
         sequence_length = packet.size;
+        hop_no = 0;
+        hub_hop_no = 0;
         use_low_voltage_path = packet.use_low_voltage_path;
         hub_relay_node = NOT_VALID;
         nc_state = NC_ORIGIN;
@@ -395,7 +397,7 @@ struct Flit {
         return f1.nc_meta.mergeable(f2.nc_meta);
     }
 
-    bool import_tree(const Flit& f1, const Flit& f2){
+    void import_tree(const Flit& f1, const Flit& f2){
         nc_meta = f1.nc_meta;
         nc_meta.mergeHistory(f1.meta, f2.nc_meta, f2.meta);
     }

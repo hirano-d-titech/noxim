@@ -11,7 +11,7 @@ Encoding_RAW * Encoding_RAW::getInstance() {
 }
 
 bool Encoding_RAW::encode(Packet &packet, queue < Flit > &sending_flits) {
-    for (size_t i = 0; i < packet.size; i++)
+    for (int i = 0; i < packet.size; i++)
     {
         auto type = i == 0 ? FLIT_TYPE_HEAD :
                     i == packet.size-1 ? FLIT_TYPE_TAIL :
@@ -29,12 +29,12 @@ bool Encoding_RAW::encode(Packet &packet, queue < Flit > &sending_flits) {
 
 bool Encoding_RAW::decode(vector < Flit > &received_flits, Packet &packet) {
     double flit_keep_rate = 1.0 - GlobalParams::wired_flit_loss_rate;
-    int wired_fl = 0, wired_be = 0, wireless_fl, wireless_be;
+    int wired_fl = 0, wired_be = 0, wireless_fl = 0, wireless_be = 0;
 
     for (auto &&flit : received_flits)
     {
         // calculate flit loss rate
-        if (pow(flit_keep_rate, flit.meta.hop_no) < rand() / (RAND_MAX + 1.0))
+        if (pow(flit_keep_rate, flit.meta.hop_no) < rand01())
         {
             // if at least one flit loss, it cant be decode.
             onDecodeFailure();
@@ -48,25 +48,25 @@ bool Encoding_RAW::decode(vector < Flit > &received_flits, Packet &packet) {
         wireless_be += flit.meta.hub_hop_no * flit.payload.data.length();
     }
 
-    if (wired_fl > 0 && pseudo_prob_repeat(GlobalParams::wired_flit_loss_rate, wired_fl) > rand())
+    if (wired_fl > 0 && pseudo_prob_repeat(GlobalParams::wired_flit_loss_rate, wired_fl) > rand01())
     {
         onDecodeFailure();
         return false;
     }
 
-    if (wireless_fl > 0 && pseudo_prob_repeat(GlobalParams::wireless_flit_loss_rate, wireless_fl) > rand())
+    if (wireless_fl > 0 && pseudo_prob_repeat(GlobalParams::wireless_flit_loss_rate, wireless_fl) > rand01())
     {
         onDecodeFailure();
         return false;
     }
     
-    if (wired_be > 0 && pseudo_prob_repeat(GlobalParams::wired_bit_error_rate, wired_be) > rand())
+    if (wired_be > 0 && pseudo_prob_repeat(GlobalParams::wired_bit_error_rate, wired_be) > rand01())
     {
         onDecodeSuccess(false);
         return true;
     }
     
-    if (wireless_be > 0 && pseudo_prob_repeat(GlobalParams::wireless_bit_error_rate, wireless_be) > rand())
+    if (wireless_be > 0 && pseudo_prob_repeat(GlobalParams::wireless_bit_error_rate, wireless_be) > rand01())
     {
         onDecodeSuccess(false);
         return true;
