@@ -57,9 +57,9 @@ pair<size_t, bool> ReservationTable::getReservationStatusTo(const int port_out)
 	return {rtable[port_out].reservations.size(), rtable[port_out].nc_enabled};
 }
 
-vector<const TReservation> ReservationTable::getReservationsTo(const int port_out)
+vector<TReservation> ReservationTable::getReservationsTo(const int port_out)
 {
-    vector<const TReservation> reservations;
+    vector<TReservation> reservations;
 
 	switch (rtable[port_out].reservations.size())
 	{
@@ -99,17 +99,19 @@ int ReservationTable::checkReservation(const TReservation r, const int port_out)
 	{
 		for (vector<TReservation>::size_type i=0;i<rtable[o].reservations.size(); i++)
 		{
-			// In the current implementation this should never happen
-			if (o!=port_out && rtable[o].reservations[i] == r)
+			if (o == port_out)
 			{
-			return RT_ALREADY_OTHER_OUT;
+				// the same VC for that output has been reserved by another input
+				if (rtable[port_out].reservations[i].input != r.input &&
+					rtable[port_out].reservations[i].vc == r.vc)
+					return RT_OUTVC_BUSY;
+			}
+			else if (rtable[o].reservations[i] == r)
+			{
+				// In the current implementation this should never happen
+				return RT_ALREADY_OTHER_OUT;
 			}
 		}
-
-		// the same VC for that output has been reserved by another input
-		if (rtable[port_out].reservations[o].input != r.input &&
-		   	rtable[port_out].reservations[o].vc == r.vc)
-		       return RT_OUTVC_BUSY;
 	}
 	}
 	else /* GlobalParams::network_coding_type != NC_TYPE_NONE */
@@ -206,11 +208,13 @@ void ReservationTable::release(const TReservation r, const int port_out)
 	    rtable[port_out].reservations.erase(i);
 	    vector<TReservation>::size_type removed_index = i - rtable[port_out].reservations.begin();
 
-	    if (removed_index < rtable[port_out].index)
+	    if (removed_index < rtable[port_out].index){
 		rtable[port_out].index--;
-	    else
+		}
+	    else{
 		if (rtable[port_out].index >= rtable[port_out].reservations.size())
 		    rtable[port_out].index = 0;
+		}
 
 		// initialize network coding options
 		rtable[port_out].nc_enabled = false;

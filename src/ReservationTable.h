@@ -26,7 +26,7 @@ struct TReservation
     NCState nc_state;
     inline bool operator ==(const TReservation & r) const
     {
-	return (r.input==input && r.vc == vc && r.nc_state == nc_state);
+	return (r.input==input && r.vc == vc);
     }
 };
 
@@ -80,7 +80,7 @@ class ReservationTable {
     vector<pair<int,int> > getReservationsFrom(const int port_int);
 
     pair<size_t, bool> getReservationStatusTo(const int port_out);
-    vector<const TReservation> getReservationsTo(const int port_out);
+    vector<TReservation> getReservationsTo(const int port_out);
 
     FlitMetadata getInitialFlitMetadataTo(const int port_out);
 

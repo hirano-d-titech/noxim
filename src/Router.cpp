@@ -257,7 +257,7 @@ void Router::txProcess()
 		size_t resvSize;
 		bool nc_enabled;
 		std::tie(resvSize, nc_enabled) = reservation_table.getReservationStatusTo(out);
-		vector<const TReservation> reservations = reservation_table.getReservationsTo(out);
+		vector<TReservation> reservations = reservation_table.getReservationsTo(out);
 
 		if (resvSize==0)
 		{
@@ -267,7 +267,7 @@ void Router::txProcess()
 
 		// all flit must be in cycle
 		bool inCycle = true;
-		for (auto i = 0; i < resvSize;){
+		for (auto i = 0; i < resvSize; i++){
 			auto it = reservations.begin() + i;
 			if (buffer[it->input][it->vc].IsEmpty()){
 				inCycle = false;
@@ -293,7 +293,7 @@ void Router::txProcess()
 				routed_flits++;
 			}
 			if (tmpf.meta.flit_type == FLIT_TYPE_TAIL) {
-				int mult = 1 + tmpf.metaSize();
+				int mult = tmpf.metaSize();
 				reservation_table.release(TReservation{in, vc, mult}, out);
 			}
 			buffer[in][vc].Pop();
@@ -318,20 +318,25 @@ void Router::txProcess()
 			switch (GlobalParams::network_coding_type)
 			{
 			case NC_TYPE_XOR:
+			{
 				if (!isVcValid(flit.meta.vc_id, 1)) continue;
 				auto nc_xor = NC_XOR::getInstance();
 				auto tr1 = reservations[0];
 				auto tr2 = reservations[1];
 				nc_xor->mergeNew(popFlit(tr1.input, tr1.vc), popFlit(tr2.input, tr2.vc), flit);
 				break;
-			
-			default:
+			}
+			case NC_TYPE_MATRIX:
+			{
 				if (!isVcValid(flit.meta.vc_id, 2)) continue;
 				auto nc_matrix = NC_Matrix::getInstance();
 				vector<Flit> flits;
 				nc_matrix->mergeNew(popFlit(reservations[0].input, reservations[0].vc), popFlit(reservations[1].input, reservations[1].vc), flits);
 				flit = flits[0];
 				tx_buffer[out].Push(flits[1]);
+				break;
+			}
+			default:
 				break;
 			}
 		}
