@@ -170,28 +170,34 @@ void ReservationTable::reserve(const TReservation r, FlitMetadata meta, const in
     //
     // reservation of reserved/not valid ports is illegal. Correctness
     // should be assured by ReservationTable users
-    assert(checkReservation(r, port_out)==RT_AVAILABLE);
+	auto status = checkReservation(r, port_out);
+    assert(reservable(status));
 
 	if (GlobalParams::network_coding_type != NC_TYPE_NONE)
 	{
 		if (rtable[port_out].reservations.size() == 0) {
+			// save the first flit metadata for network coding
 			rtable[port_out].head_meta = meta;
-			// reset hop_no because it is added to the embedded-meta when decoding
 			rtable[port_out].head_meta.hop_no = 0;
 			rtable[port_out].head_meta.hub_hop_no = 0;
-			rtable[port_out].head_meta.timestamp = sc_time_stamp().to_double();
-			rtable[port_out].head_meta.nc_state = NC_ORIGIN;
-		} else {
+		} else if (!rtable[port_out].nc_enabled) {
+			// enable network coding
+			assert(rtable[port_out].reservations.size() == 1);
 			rtable[port_out].nc_enabled = true;
-			auto current = rtable[port_out].head_meta;
-			rtable[port_out].head_meta.sequence_length += meta.sequence_length - (current.sequence_length - current.sequence_no);
-			rtable[port_out].head_meta.nc_state = NC_MERGED;
+			rtable[port_out].head_meta.nc_state = NC_MULTIC;
+			rtable[port_out].head_meta.timestamp = sc_time_stamp().to_double();
+		} else {
+			// nothing to do
 		}
+		rtable[port_out].reservations.push_back(r);
 	}
-
-    // TODO: a better policy could insert in a specific position as far a possible
-    // from the current index
-    rtable[port_out].reservations.push_back(r);
+	else
+	{
+		// TODO: a better policy could insert in a specific position as far a possible
+		// from the current index
+		rtable[port_out].reservations.push_back(r);
+	}
+	
 	rtable[port_out].out_multiplicity += r.mult;
 }
 
@@ -216,9 +222,15 @@ void ReservationTable::release(const TReservation r, const int port_out)
 		    rtable[port_out].index = 0;
 		}
 
-		// initialize network coding options
-		rtable[port_out].nc_enabled = false;
-		rtable[port_out].head_meta = FlitMetadata{};
+		/**
+		 * If the reservation table is empty, disable network coding
+		 * Flits must remain in order, so if one or more reservation is present, it must be keeped
+		 */
+		if (rtable[port_out].reservations.size() == 0)
+		{
+			rtable[port_out].nc_enabled = false;
+			rtable[port_out].head_meta = FlitMetadata{};
+		}
 
 	    return;
 	}

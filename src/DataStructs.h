@@ -30,11 +30,41 @@ enum FlitType {
 };
 
 enum NCState {
-    NC_NORMAL, // not Network Coding encoded
-    NC_ORIGIN, // has original destination
-    NC_MERGED, // has other flit's destination merged by Network Coding
-    NC_MULTIC, // needs to be multicasted towards children's destination
-    NC_OPTION, // NC: other flit for decoding
+    /**
+     * NC_MULTIC: needs to be multicasted towards children's destination. (stands for Multicast)
+     * If any flit metadata of nc_meta has NC_MULTIC, the parent metadata must have it.
+     * In all router at reservation phase, it MUST search for child routes that are not NC_OPTION.
+     * If one of the child wants to route other side of parent, flit must be multicasted.
+     * On multicasting, some of the ncstate of flit in nc_meta should be changed.
+     */
+    NC_MULTIC,
+
+    /**
+     * NC_NORMAL: the most ordinary state of flit. just the data, or not network coding encoded.
+     * Flit in this state should never have child meta.
+     */
+    NC_NORMAL,
+
+    /**
+     * NC_MERGED: flit does not have multiple destinations in its children, but is encoded
+     * Flit in this state should never be leaf meta.
+     */
+    NC_MERGED,
+
+    /**
+     * NC_ORIGIN: the metadata has unique original destination of whole flit.
+     * This indicates that this is the only destination among nc_meta,
+     *  so the flit in this state should never have child meta.
+     * If one of the child is in this state, the other leaf meta must be in NC_OPTION,
+     *  and branch or parent meta must be in NC_MERGED.
+     */
+    NC_ORIGIN,
+
+    /**
+     * NC_OPTION: this metadata is stored for decoding and will be removed at decoding.
+     * Flit in this state should never have child meta.
+     */
+    NC_OPTION,
 };
 
 // Payload -- Payload definition

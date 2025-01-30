@@ -175,11 +175,16 @@ void Router::txProcess()
 			  case NC_TYPE_NONE:
 				assert(false);
 				break;
-			  case NC_TYPE_XOR:{
+			  case NC_TYPE_XOR:
+			  {
+			  	LOG << " begin XOR Network Coding reserving" << endl;
 			    auto reservations = reservation_table.getReservationsTo(o);
 				assert(reservations.size() != 0);
 				// if reservations already exists over 1, it needs to be merged 3 flits simultaneously. skip due to complexity.
-				if (reservations.size() > 1) continue;
+				if (reservations.size() > 1) {
+			  		LOG << " failed to reserving to [" << o << "] due to higher complexity." << endl;
+					continue;
+				}
 			  	// send other flit for decoding
 				{
 					auto resv0 = reservations[0];
@@ -194,6 +199,7 @@ void Router::txProcess()
 					// initial optional flit must have sent without network-coded
 					if (reservation_table.checkReservation(trPrev, dirPrev) != RT_AVAILABLE ||
 						reservation_table.checkReservation(r, dirNext) != RT_AVAILABLE) {
+			  			LOG << " failed to reserving due to crowding for decoder flit: " << dirPrev << " or " << dirNext << "." << endl;
 						continue;
 					}
 					// create option flits data for XOR decoding
@@ -205,24 +211,34 @@ void Router::txProcess()
 					prevOptMeta.flit_type = FLIT_TYPE_HEAD;
 					prevOptMeta.nc_state = NC_OPTION;
 					prevOptMeta.sequence_length = prevOptMeta.sequence_length - prevOptMeta.sequence_no;
+					// reserve flits to be decoded.
+			  		LOG << " XOR encoded flit reserved to direction: " << o << " from input: " << r.input << " and vc: " << r.vc << "." << endl;
+			  		reservation_table.reserve(r, flit.meta, o);
 					// reserve flits to decode each other.
+			  		LOG << " for decoding NC_XOR, decoder flit reserved to first direction: " << dirNext << ", and next direction: " << dirPrev << "." << endl;
 					reservation_table.reserve(r, selfOptMeta, dirNext);
 					reservation_table.reserve(trPrev, prevOptMeta, dirPrev);
-					// reserve flits to be decoded.
-			  		reservation_table.reserve(r, flit.meta, o);
 				}
-				break;}
-			  case NC_TYPE_MATRIX:{
+				break;
+			  }
+			  case NC_TYPE_MATRIX:
+			  {
+			  	LOG << " begin Matrix Network Coding reserving" << endl;
 			    auto reservations = reservation_table.getReservationsTo(o);
 				assert(reservations.size() != 0);
-				if (reservations.size() > 1) continue;
+				// if reservations already exists over 1, it needs to be merged 3 flits simultaneously. skip due to complexity.
+				if (reservations.size() > 1) {
+			  		LOG << " failed to reserving to [" << o << "] due to higher complexity." << endl;
+					continue;
+				}
+			  	LOG << " Matrix encoded flit reserved to direction: " << o << " from input: " << r.input << " and vc: " << r.vc << "." << endl;
 			  	reservation_table.reserve(r, flit.meta, o);
-			    break;}
+			    break;
+			  }
 			  default:
 				break;
 			  }
-			  LOG << " reserving direction " << o << " for flit " << flit << "with network coding" << endl;
-			  reservation_table.reserve(r, flit.meta, o);
+			  LOG << " reserving completed for flit " << flit << " with network coding" << endl;
 			  }
 		      else if (rt_status == RT_ALREADY_SAME)
 		      {
@@ -277,7 +293,7 @@ void Router::txProcess()
 
 		if (!inCycle)
 		{
-			LOG << " Cannot forward any tx-flit to direction output to " << out << "."<< endl;
+			LOG << " Cannot forward any tx-flit to direction output to " << out << " due to a delay in a reservation."<< endl;
 			//LOG << " **DEBUG APB: current_level_tx: " << current_level_tx[out] << " ack_tx: " << ack_tx[out].read() << endl;
 			//LOG << " **DEBUG buffer_cap_status_tx " << buffer_cap_status_tx[out].read().mask[vc] << endl;
 			//LOG<<"END_NO_cl_tx="<<current_level_tx[out]<<"_req_tx="<<req_tx[out].read()<<" _ack= "<<ack_tx[out].read()<< endl;

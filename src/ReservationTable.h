@@ -72,6 +72,8 @@ class ReservationTable {
     // Connects port_in with port_out. Asserts if port_out is reserved
     void reserve(const TReservation r, FlitMetadata meta, const int port_out);
 
+    bool reservable(int status) {return status == RT_AVAILABLE || (GlobalParams::network_coding_type != NC_TYPE_NONE && status == RT_ENCODABLE);}
+
     // Releases port_out connection. 
     // Asserts if port_out is not reserved or not valid
     void release(const TReservation r, const int port_out);
