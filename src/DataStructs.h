@@ -280,6 +280,13 @@ struct NCHistory {
         return LEAF[id];
     }
 
+    bool hasMeta(int id, FlitMetadata & meta)const {
+        auto it = metas.find(id);
+        if (it == metas.end()) return false;
+        meta = it->second;
+        return true;
+    }
+
     bool isLeaf(int id)const {
         if (metas.find(id) == metas.end()) return false;
         if (isGround(id)) return true;
@@ -298,7 +305,7 @@ struct NCHistory {
         depth++;
     }
 
-    bool inline hasAnyLeaf()const {
+    bool inline hasAnyGroundedLeaf()const {
         for (auto &&pair : metas)
         {
             if (isGround(pair.first)) return true;
@@ -309,7 +316,7 @@ struct NCHistory {
 
     void cutDepth(){
         // if any leaf not found, history tree must be cut
-        while (!hasAnyLeaf()) {
+        while (!hasAnyGroundedLeaf()) {
             std::map<int, FlitMetadata> other;
             bool error = false;
             for (auto &&meta : metas)
