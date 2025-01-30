@@ -74,7 +74,7 @@ bool Encoding_REPEAT::decode(vector < Flit > &received_flits, Packet &packet) {
             if (all == ones * 2)
             {
                 onDecodeFailure();
-                return;
+                return false;
             }
 
             corrected.data[bit] = ones > (all / 2) ? 1 : 0;

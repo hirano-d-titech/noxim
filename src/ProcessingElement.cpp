@@ -24,7 +24,13 @@ void ProcessingElement::rxProcess()
     } else {
 	if (req_rx.read() == 1 - current_level_rx) {
 	    Flit flit_next = flit_rx.read();
+        if (flit_buffer.size() > 0 && flit_next.meta.flit_type == FLIT_TYPE_HEAD) {
+            Packet packet_tmp;
+            encodingModel->decode(flit_buffer, packet_tmp);
+            flit_buffer.clear();
+        }
         flit_buffer.push_back(flit_next);
+        LOG << "received " << flit_next << endl;
         if (flit_next.meta.flit_type == FLIT_TYPE_TAIL) {
             Packet packet_tmp;
             encodingModel->decode(flit_buffer, packet_tmp);

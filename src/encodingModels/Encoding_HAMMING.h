@@ -18,9 +18,6 @@ class Encoding_HAMMING : public EncodingModel {
         Encoding_HAMMING(){};
         ~Encoding_HAMMING(){};
 
-        static sc_uint<7> hamming_encode(sc_uint<4> data);
-        static sc_uint<4> hamming_decode(sc_uint<7> data);
-
         static Encoding_HAMMING * encoding_HAMMING;
         static EncodingModelsRegister encodingModelsRegister;
 };
