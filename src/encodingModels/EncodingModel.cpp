@@ -3,14 +3,14 @@
 vector < Payload > EncodingModel::generatePayloads(const Packet &packet)
 {
     vector < Payload > payloads;
-    payloads.reserve(packet.flit_left);
+    payloads.reserve(packet.size);
 
     size_t base_hash = 0;
     hash_combine(base_hash, hash<int>()(packet.src_id));
     hash_combine(base_hash, hash<int>()(packet.dst_id));
     hash_combine(base_hash, hash<uint64_t>()(reinterpret_cast<const uint64_t&>(packet.timestamp)));
 
-    for (int i = 0; i < packet.flit_left; ++i) {
+    for (int i = 0; i < packet.size; ++i) {
         std::size_t seed = base_hash;
         hash_combine(seed, std::hash<int>()(i));
         uint32_t data_value = static_cast<uint32_t>(seed & 0xffffffff);
