@@ -56,13 +56,13 @@ enum NCState {
      * This indicates that this is the only destination among nc_meta,
      *  so the flit in this state should never have child meta.
      * If one of the child is in this state, the other leaf meta must be in NC_OPTION,
-     *  and branch or parent meta must be in NC_MERGED.
+     *  and branch or parent meta must be in NC_MERGED or NC_OPTION.
      */
     NC_ORIGIN,
 
     /**
      * NC_OPTION: this metadata is stored for decoding and will be removed at decoding.
-     * Flit in this state should never have child meta.
+     * Flit in this state should never have child meta without NC_OPTION.
      */
     NC_OPTION,
 };
@@ -272,6 +272,10 @@ struct NCHistory {
         return ret;
     }
 
+    inline pair<int, int> getTopIds()const {
+        return {getTreeMax(depth-1)-1, 2*getTreeMax(depth-1)-1};
+    }
+
     // 0, 1, 3, 4, 7, 8, 10, 11, 15, 16, 18, 19, 22, 23, 25, 26, 31, 32, ... => https://oeis.org/A005187
     static inline bool isGround(int id) {
         // static const int A005187[] = {0,1,3,4,7,8,10,11,15,16,18,19,22,23,25,26,31,32,34,35,38,39,41,42,46,47,49,50,53,54,56,57,63,64,66,67,70,71,73,74,78,79,81,82,85,86,88,89,94,95,97,98,101,102,104,105,109,110,112,113,116,117,119,120};
@@ -338,7 +342,18 @@ struct NCHistory {
         }
     }
 
-    vector<pair<int, FlitMetadata>> getLeafNodes()const {
+    vector<pair<int, FlitMetadata>> getTopMetas()const {
+        vector<pair<int, FlitMetadata>> ret;
+        for (auto &&pair : metas)
+        {
+            if (pair.first == getTreeMax(depth)-1 || pair.first == 2*getTreeMax(depth)-1) {
+                ret.push_back({pair.first, pair.second});
+            }
+        }
+        return ret;
+    }
+
+    vector<pair<int, FlitMetadata>> getLeafMetas()const {
         vector<pair<int, FlitMetadata>> ret;
         for (auto &&pair : metas)
         {

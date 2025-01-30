@@ -136,7 +136,7 @@ int ReservationTable::checkReservation(const TReservation r, const int port_out)
 	if (rtable[port_out].reservations.size() > 0)
 	{
 	// do not encode next at local
-	if (port_out == DIRECTION_LOCAL)
+	if (port_out == DIRECTION_LOCAL || rtable[port_out].head_meta.nc_state != NC_NORMAL)
 	{
 	return RT_OUTVC_BUSY;
 	}

@@ -79,6 +79,11 @@ SC_MODULE(Router)
     void process();
     void rxProcess();		// The receiving process
     void txProcess();		// The transmitting process
+
+    // txProcess support function
+    Flit popFlit(int in, int vc, int out);
+    bool isVcValid(int vc, int out, int size = 1);
+
     void perCycleUpdate();
     void configure(const int _id, const double _warm_up_time,
 		   const unsigned int _max_buffer_size,

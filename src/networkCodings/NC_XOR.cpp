@@ -24,7 +24,7 @@ bool NC_XOR::mergeNew(const Flit &f1, const Flit &f2, Flit &fo)
 bool NC_XOR::detachAll(Flit &src, const std::vector<Flit> &dst)
 {
     if (!containsAll(src, dst)) return false;
-    for (auto &&pair : src.nc_meta.getLeafNodes())
+    for (auto &&pair : src.nc_meta.getLeafMetas())
     {
         bool found = false;
         for (auto &&flit : dst)
@@ -46,7 +46,7 @@ bool NC_XOR::detachAll(Flit &src, const std::vector<Flit> &dst)
 
 bool NC_XOR::detach(Flit &src, const Flit &dst)
 {
-    for (auto &&pair : src.nc_meta.getLeafNodes())
+    for (auto &&pair : src.nc_meta.getLeafMetas())
     {
         if (pair.second == dst.meta) {
             src.payload = {src.payload.data ^ dst.payload.data};

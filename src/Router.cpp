@@ -98,31 +98,205 @@ void Router::rxProcess()
 void Router::txProcess()
 {
 
-  if (reset.read()) 
+  if (reset.read())
     {
       // Clear outputs and indexes of transmitting protocol
-      for (int i = 0; i < DIRECTIONS + 2; i++) 
+      for (int i = 0; i < DIRECTIONS + 2; i++)
+	  {
+	    req_tx[i].write(0);
+	    current_level_tx[i] = 0;
+	  }
+	return;
+    }
+
+	// 1st phase: Branch Routing
+	TReservation multicastR = {-1, -1, 0, NC_NORMAL};
+	FlitMetadata multicastMeta;
+	set<int> cast_outputs[DIRECTIONS + 2];
+	if (GlobalParams::network_coding_type != NC_TYPE_NONE)
 	{
-	  req_tx[i].write(0);
-	  current_level_tx[i] = 0;
-	}
-    } 
-  else 
-    { 
-      // 1st phase: Reservation
-      for (int j = 0; j < DIRECTIONS + 2; j++) 
+	for (int j = 0; j < DIRECTIONS + 2; j++)
 	{
 	  int i = (start_from_port + j) % (DIRECTIONS + 2);
 
 	  for (int k = 0;k < GlobalParams::n_virtual_channels; k++)
 	  {
 	      int vc = (start_from_vc[i]+k)%(GlobalParams::n_virtual_channels);
-	      
+
+	      if (buffer[i][vc].IsEmpty()) continue;
+
+		  Flit flit = buffer[i][vc].Front();
+
+		  switch (flit.meta.nc_state)
+		  {
+			case NC_MULTIC:
+			  // go through
+			  break;
+			case NC_NORMAL:
+			case NC_MERGED:
+			case NC_OPTION:
+			  // nothing to do
+			  continue;
+			default:
+			  // ORIGIN is only for nc-leaf meta
+			  assert(false);
+			  return;
+		  }
+		  // assert(flit.meta.nc_state == NC_MULTIC);
+		  assert(flit.nc_meta.depth > 0);
+
+		  vector<pair<int, FlitMetadata>> metas_have_dest;
+		  for (auto& pair : flit.nc_meta.metas)
+		  {
+			if (flit.nc_meta.isLeaf(pair.first) && pair.second.flit_type == FLIT_TYPE_HEAD && pair.second.nc_state == NC_NORMAL)
+			{
+			  metas_have_dest.push_back(pair);
+			}
+		  }
+
+		  // if there is no HEAD flit, it can't be branched
+		  if (metas_have_dest.size() == 0) continue;
+
+		  switch (flit.meta.flit_type)
+		  {
+			case FLIT_TYPE_HEAD:
+			{
+			  // prepare all output ports
+			  bool crowded = false;
+			  for (auto &&pair : metas_have_dest)
+			  {
+				RouteData route_data;
+				route_data.current_id = local_id;
+				route_data.src_id = pair.second.src_id;
+				route_data.dst_id = pair.second.dst_id;
+				route_data.dir_in = i;
+				route_data.vc_id = pair.second.vc_id;
+
+				auto o = route(route_data);
+
+				TReservation r = {i, pair.second.vc_id, flit.metaSize(), NC_MULTIC};
+				if (reservation_table.checkReservation(r, o) != RT_AVAILABLE)
+				{
+					LOG << " too crowded output ports at reservation table for flit branching " << flit << endl;
+					crowded = true;
+					break;
+				}
+
+				if (!isVcValid(vc, o))
+				{
+					LOG << " too crowded output ports buffer size for flit branching " << flit << endl;
+					crowded = true;
+					break;
+				}
+
+				cast_outputs[o].emplace(pair.first);
+			  }
+
+			  if (crowded) continue;
+			  break;
+			}
+			case FLIT_TYPE_BODY:
+			{
+			  // vector<pair<int out_port, int vc>>
+			  auto reservations = reservation_table.getReservationsFrom(i);
+			  // get reserved output port
+			  int out_reserved = -1;
+			  for (auto &&resv : reservations)
+			  {
+				if (resv.second == vc)
+				{
+				  out_reserved = resv.first;
+				  break;
+				}
+			  }
+			  if (out_reserved == -1)
+			  {
+				LOG << " failed to find reserved output port for flit " << flit << endl;
+				continue;
+			  }
+
+			  // check other flits output port
+			  auto out_diff = 0;
+			  bool crowded = false;
+			  for (auto &&pair : metas_have_dest)
+			  {
+				RouteData route_data;
+				route_data.current_id = local_id;
+				route_data.src_id = pair.second.src_id;
+				route_data.dst_id = pair.second.dst_id;
+				route_data.dir_in = i;
+				route_data.vc_id = pair.second.vc_id;
+
+				auto o = route(route_data);
+
+				TReservation r = {i, pair.second.vc_id, flit.metaSize(), NC_MULTIC};
+				if (reservation_table.checkReservation(r, o) != RT_AVAILABLE)
+				{
+					crowded = true;
+					continue;
+				}
+
+				if (o != out_reserved) {
+					cast_outputs[o].emplace(pair.first);
+					out_diff++;
+				}
+			  }
+
+			  if (crowded) {
+				LOG << " too crowded output ports for flit branching " << flit << endl;
+				continue;
+			  }
+
+			  // if all flits have same output port, it can't be branched
+			  if (out_diff == 0) continue;
+
+			  break;
+			}
+			case FLIT_TYPE_TAIL:
+			{
+			  // never, TAIL + HEAD should be BODY,
+			  assert(false);
+			  continue;
+			}
+
+			// reserve branch flits
+			LOG << "flit from rx_buffer[" << i << "][" << vc << "] starting multicasting!" << endl;
+			multicastR = {i, vc, flit.metaSize(), NC_MULTIC};
+			multicastMeta = flit.meta;
+		  }
+	  }
+
+	  // one flit decided to be branched, other can't be branched
+	  if (multicastR.nc_state == NC_MULTIC) break;
+	}
+
+	if (multicastR.nc_state == NC_MULTIC)
+	{
+	  for (int o = 0; o < DIRECTIONS + 2; o++)
+	  {
+		auto outputs = cast_outputs[o];
+		if (outputs.size() == 0) continue;
+
+		reservation_table.reserve(multicastR, multicastMeta, o);
+	  }
+	}
+	}
+
+    // 2nd phase: Reservation
+    for (int j = 0; j < DIRECTIONS + 2; j++)
+	{
+	  // j is for randomizing the order of the ports
+	  int i = (start_from_port + j) % (DIRECTIONS + 2);
+
+	  for (int k = 0;k < GlobalParams::n_virtual_channels; k++)
+	  {
+	      int vc = (start_from_vc[i]+k)%(GlobalParams::n_virtual_channels);
+
 	      // Uncomment to enable deadlock checking on buffers. 
 	      // Please also set the appropriate threshold.
 	      // buffer[i].deadlockCheck();
 
-	      if (!buffer[i][vc].IsEmpty()) 
+	      if (!buffer[i][vc].IsEmpty())
 	      {
 		  Flit flit = buffer[i][vc].Front();
 		  power.bufferRouterFront();
@@ -253,7 +427,7 @@ void Router::txProcess()
 			  LOG  << "RT_ALREADY_OTHER_OUT: another output previously reserved for the same flit " << endl;
 		      }
 		      else assert(false); // no meaningful status here
-		    }	
+		    }
 			}
 
 		}
@@ -263,7 +437,7 @@ void Router::txProcess()
 
 	start_from_port = (start_from_port + 1) % (DIRECTIONS + 2);
 
-	// 2nd phase: Forwarding
+	// 3rd phase: Forwarding
 	//if (local_id==6) LOG<<"*TX*****local_id="<<local_id<<"__ack_tx[0]= "<<ack_tx[0].read()<<endl;
 	for (int out = 0; out < DIRECTIONS + 2; out++)
 	{
@@ -302,28 +476,16 @@ void Router::txProcess()
 			continue;
 		}
 
-		// local functions
-		std::function<Flit(int, int)> popFlit = [this, out](int in, int vc){
-			Flit tmpf = buffer[in][vc].Front();
-			if (out != DIRECTION_LOCAL && in != DIRECTION_LOCAL) {
-				routed_flits++;
-			}
-			if (tmpf.meta.flit_type == FLIT_TYPE_TAIL) {
-				int mult = tmpf.metaSize();
-				reservation_table.release(TReservation{in, vc, mult}, out);
-			}
-			buffer[in][vc].Pop();
-			return tmpf;
-		};
-		std::function<bool(int vc, int size)> isVcValid = [this,out](int vc, int size = 1){
-			return current_level_tx[out] == ack_tx[out].read() && buffer_cap_status_tx[out].read().mask[vc] >= size;
-		};
-
-		if (!nc_enabled)
+		if (multicastR.nc_state == NC_MULTIC)
+		{
+			// in flit branching, reservation size must be 1
+			assert(resvSize == 1);
+		}
+		else if (!nc_enabled)
 		{
 			auto resv = reservations[resvSize == 1 ? 0 : rand()%resvSize];
-			if (!isVcValid(resv.vc, 1)) continue;
-			flit = popFlit(resv.input, resv.vc);
+			if (!isVcValid(resv.vc, out)) continue;
+			flit = popFlit(resv.input, resv.vc, out);
 		}
 		else
 		{
@@ -335,19 +497,19 @@ void Router::txProcess()
 			{
 			case NC_TYPE_XOR:
 			{
-				if (!isVcValid(flit.meta.vc_id, 1)) continue;
+				if (!isVcValid(flit.meta.vc_id, out)) continue;
 				auto nc_xor = NC_XOR::getInstance();
 				auto tr1 = reservations[0];
 				auto tr2 = reservations[1];
-				nc_xor->mergeNew(popFlit(tr1.input, tr1.vc), popFlit(tr2.input, tr2.vc), flit);
+				nc_xor->mergeNew(popFlit(tr1.input, tr1.vc, out), popFlit(tr2.input, tr2.vc, out), flit);
 				break;
 			}
 			case NC_TYPE_MATRIX:
 			{
-				if (!isVcValid(flit.meta.vc_id, 2)) continue;
+				if (!isVcValid(flit.meta.vc_id, out, 2)) continue;
 				auto nc_matrix = NC_Matrix::getInstance();
 				vector<Flit> flits;
-				nc_matrix->mergeNew(popFlit(reservations[0].input, reservations[0].vc), popFlit(reservations[1].input, reservations[1].vc), flits);
+				nc_matrix->mergeNew(popFlit(reservations[0].input, reservations[0].vc, out), popFlit(reservations[1].input, reservations[1].vc, out), flits);
 				flit = flits[0];
 				tx_buffer[out].Push(flits[1]);
 				break;
@@ -399,11 +561,29 @@ void Router::txProcess()
 		}
 		/* End Power & Stats ------------------------------------------------- */
 		//LOG<<"END_OK_cl_tx="<<current_level_tx[o]<<"_req_tx="<<req_tx[o].read()<<" _ack= "<<ack_tx[o].read()<< endl;
-      } // for loop directions
+    } // for loop directions
 
-      if ((int)(sc_time_stamp().to_double() / GlobalParams::clock_period_ps)%2==0)
-	  reservation_table.updateIndex();
-    }
+    if ((int)(sc_time_stamp().to_double() / GlobalParams::clock_period_ps)%2==0)
+	reservation_table.updateIndex();
+}
+
+Flit Router::popFlit(int in, int vc, int out)
+{
+	Flit tmpf = buffer[in][vc].Front();
+	if (out != DIRECTION_LOCAL && in != DIRECTION_LOCAL) {
+		routed_flits++;
+	}
+	if (tmpf.meta.flit_type == FLIT_TYPE_TAIL) {
+		int mult = tmpf.metaSize();
+		reservation_table.release(TReservation{in, vc, mult}, out);
+	}
+	buffer[in][vc].Pop();
+	return tmpf;
+}
+
+bool Router::isVcValid(int vc, int out, int size)
+{
+	return current_level_tx[out] == ack_tx[out].read() && buffer_cap_status_tx[out].read().mask[vc] >= size;
 }
 
 NoP_data Router::getCurrentNoPData()
