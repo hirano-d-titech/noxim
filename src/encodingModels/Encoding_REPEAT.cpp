@@ -21,6 +21,7 @@ bool Encoding_REPEAT::encode(Packet &packet, queue < Flit > &sending_flits) {
                     FLIT_TYPE_BODY;
 
         Flit flit(packet, type);
+        flit.meta.sequence_length = repeated;
         flit.meta.sequence_no = i;
         flit.payload = payloads[i % packet.flit_left];
 
@@ -31,10 +32,8 @@ bool Encoding_REPEAT::encode(Packet &packet, queue < Flit > &sending_flits) {
 }
 
 bool Encoding_REPEAT::decode(vector < Flit > &received_flits, Packet &packet) {
-    vector < Payload > received, predicted;
-
-    auto target_meta = received_flits[0].meta;
-    simulate_hops(received_flits, target_meta.hop_no, target_meta.hub_hop_no);
+    vector < Payload > received, predicted, decoded;
+    simulate_hops(received_flits);
 
     if (!predictPayloadsOver(received_flits, received, predicted))
     {
@@ -42,15 +41,16 @@ bool Encoding_REPEAT::decode(vector < Flit > &received_flits, Packet &packet) {
         return false;
     }
 
-    size_t length = received.size();
-    if (length % REPETITION != 0)
+    size_t length = received_flits[0].meta.sequence_length;
+
+    map < int , Payload > filled;
+    for (size_t i = 0; i < received_flits.size(); i++)
     {
-        onDecodeFailure();
-        return false;
+        filled.emplace(received_flits[i].meta.sequence_no, received[i]);
     }
 
+    assert(length % REPETITION == 0);
     size_t size = length / REPETITION;
-    vector < Payload > decoded;
     decoded.reserve(size);
 
     for (size_t i = 0; i < size; i++)
@@ -59,16 +59,25 @@ bool Encoding_REPEAT::decode(vector < Flit > &received_flits, Packet &packet) {
 
         for (int bit = 0; bit < corrected.data.length(); bit++)
         {
-            int ones = 0;
+            int all = 0, ones = 0;
 
             for (size_t j = 0; j < REPETITION; j++)
             {
-                if (received[i + j * REPETITION].data[bit].to_bool()) {
-                    ones++;
+                auto it = filled.find(i + j * REPETITION);
+                if (it != filled.end())
+                {
+                    all++;
+                    ones += it->second.data[bit].to_bool() ? 1 : 0;
                 }
             }
 
-            corrected.data[bit] = ones > (REPETITION / 2) ? 1 : 0;
+            if (all == ones * 2)
+            {
+                onDecodeFailure();
+                return;
+            }
+
+            corrected.data[bit] = ones > (all / 2) ? 1 : 0;
         }
 
         decoded[i] = corrected;

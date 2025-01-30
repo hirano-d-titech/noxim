@@ -84,43 +84,43 @@ bool EncodingModel::verifyPayloads(const vector < Payload > decoded, const vecto
     return true;
 }
 
-void EncodingModel::simulate_hops(vector < Flit > &flits, int hop_no, int hub_hop_no)
+void EncodingModel::simulate_hops(vector < Flit > &flits)
 {
-    for (int i = 0; i < hop_no; i++)
+    vector < Flit > after;
+    for (auto &&flit : flits)
     {
-        vector < Flit > after;
-
-        for (auto &&flit : flits)
+        bool lost = false;
+        for (int i = 0; i < flit.meta.hop_no; i++)
         {
             if (rand01() < GlobalParams::wired_flit_loss_rate) {
-                continue;
+                lost = true;
+                break;
             }
             if (rand01() < GlobalParams::wired_bit_error_rate) {
                 flit.payload.data ^= (1 << (rand() % 32));
             }
-            after.push_back(flit);
         }
-        
-        flits.swap(after);
+        if (!lost) after.push_back(flit);
     }
-    
-    for (int i = 0; i < hub_hop_no; i++)
-    {
-        vector < Flit > after;
+    flits.swap(after);
 
-        for (auto &&flit : flits)
+    after.clear();
+    for (auto &&flit : flits)
+    {
+        bool lost = false;
+        for (int i = 0; i < flit.meta.hub_hop_no; i++)
         {
             if (rand01() < GlobalParams::wireless_flit_loss_rate) {
-                continue;
+                lost = true;
+                break;
             }
             if (rand01() < GlobalParams::wireless_bit_error_rate) {
                 flit.payload.data ^= (1 << (rand() % 32));
             }
-            after.push_back(flit);
         }
-        
-        flits.swap(after);
+        if (!lost) after.push_back(flit);
     }
+    flits.swap(after);
 }
 
 double EncodingModel::pesudo_prob_poisson(int n, int k, double p){

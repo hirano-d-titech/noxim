@@ -28,7 +28,7 @@ class EncodingModel
     bool verifyPayloads(const vector < Payload > decoded, const vector < Payload > predicted);
 
     // flip bit / loss flit
-    static void simulate_hops(vector < Flit > &flits, int hop_no, int hub_hop_no);
+    static void simulate_hops(vector < Flit > &flits);
 
     // with virtual
     static double rand01() { return rand() / (RAND_MAX + 1.0); }
