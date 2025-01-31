@@ -73,6 +73,9 @@ inline ostream & operator <<(ostream & os, const Flit & flit)
 	case FLIT_TYPE_TAIL:
 	    os << "Flit Type is TAIL" << endl;
 	    break;
+    case FLIT_TYPE_TRAIL:
+        os << "Flit Type is TRAIL";
+        break;
 	}
 	os << "Sequence no. " << flit.meta.sequence_no << endl;
 	os << "Payload printing not implemented (yet)." << endl;
@@ -90,6 +93,9 @@ inline ostream & operator <<(ostream & os, const Flit & flit)
 	case FLIT_TYPE_TAIL:
 	    os << "T";
 	    break;
+    case FLIT_TYPE_TRAIL:
+        os << "X";
+        break;
 	}
 
 	os <<  flit.meta.sequence_no << ", " << flit.meta.src_id << "->" << flit.meta.dst_id << " VC " << flit.meta.vc_id << ")";

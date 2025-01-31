@@ -30,6 +30,25 @@ using namespace std;
 
 extern unsigned int drained_volume;
 
+struct MulticastTask
+{
+  bool valid;
+  TReservation resv_main, resv_sub;
+  int out_main, out_sub;
+
+  MulticastTask(){
+    valid = false;
+    out_main = -1;
+    out_sub = -1;
+  }
+};
+
+struct NetworkCodingTask
+{
+  bool valid;
+
+};
+
 SC_MODULE(Router)
 {
     friend class Selection_NOP;
@@ -71,8 +90,9 @@ SC_MODULE(Router)
     LocalRoutingTable routing_table;		// Routing table
     ReservationTable reservation_table;		// Switch reservation table
     unsigned long routed_flits;
-    RoutingAlgorithm * routingAlgorithm; 
-    SelectionStrategy * selectionStrategy; 
+    RoutingAlgorithm * routingAlgorithm;
+    SelectionStrategy * selectionStrategy;
+    MulticastTask multicastTask;
     
     // Functions
 
@@ -133,6 +153,7 @@ SC_MODULE(Router)
     void NoP_report() const;
     int NoPScore(const NoP_data & nop_data, const vector <int> & nop_channels) const;
     int reflexDirection(int direction) const;
+    bool isOrthogonal(int direction) const;
     int getNeighborId(int _id, int direction) const;
    
     vector<int> getNextHops(int src, int dst);

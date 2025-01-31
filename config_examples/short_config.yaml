@@ -57,7 +57,7 @@ selection_strategy: RANDOM
 #   HAMMING
 # Each of the above labels should match a corresponding
 # implementation in the encodingModels source code directory
-encoding_model: HAMMING
+encoding_model: RAW
 
 #
 # WIRELESS CONFIGURATION

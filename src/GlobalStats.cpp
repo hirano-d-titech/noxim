@@ -212,7 +212,7 @@ unsigned int GlobalStats::getReceivedPackets()
 {
     unsigned int n = 0;
 
-    if (GlobalParams::topology == TOPOLOGY_MESH) 
+    if (GlobalParams::topology == TOPOLOGY_MESH)
     {
     	for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
 		for (int x = 0; x < GlobalParams::mesh_dim_x; x++)

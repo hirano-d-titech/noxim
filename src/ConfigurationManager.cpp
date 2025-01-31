@@ -71,7 +71,7 @@ void loadConfiguration() {
     GlobalParams::flit_size = readParam<int>(config, "flit_size");
     GlobalParams::min_packet_size = readParam<int>(config, "min_packet_size");
     GlobalParams::max_packet_size = readParam<int>(config, "max_packet_size");
-    auto nc_type = readParam<string>(config, "network_coding_type", "");
+    GlobalParams::enable_network_coding = readParam<bool>(config, "network_coding_type", false);
     GlobalParams::routing_algorithm = readParam<string>(config, "routing_algorithm");
     GlobalParams::routing_table_filename = readParam<string>(config, "routing_table_filename");
     GlobalParams::selection_strategy = readParam<string>(config, "selection_strategy");
@@ -98,15 +98,6 @@ void loadConfiguration() {
     GlobalParams::use_winoc = readParam<bool>(config, "use_winoc");
     GlobalParams::winoc_dst_hops = readParam<int>(config, "winoc_dst_hops",0);
     GlobalParams::use_powermanager = readParam<bool>(config, "use_wirxsleep");
-
-    // set networkCodingType by integer
-    if (nc_type == "XOR") {
-        GlobalParams::network_coding_type = NC_TYPE_XOR;
-    } else if (nc_type == "MATRIX") {
-        GlobalParams::network_coding_type = NC_TYPE_MATRIX;
-    } else {
-        GlobalParams::network_coding_type = NC_TYPE_NONE;
-    }
 
     set<int> channelSet;
 
@@ -283,7 +274,7 @@ void showConfig()
       // << "- routing_table_filename = " << GlobalParams::routing_table_filename << endl
          << "- selection_strategy = " << GlobalParams::selection_strategy << endl
          << "- encoding_model = " << GlobalParams::encoding_model << endl
-         << "- network_coding_type = " << GlobalParams::network_coding_type << endl
+         << "- enable_network_coding = " << GlobalParams::enable_network_coding << endl
          << "- packet_injection_rate = " << GlobalParams::packet_injection_rate << endl
          << "- probability_of_retransmission = " << GlobalParams::probability_of_retransmission << endl
          << "- traffic_distribution = " << GlobalParams::traffic_distribution << endl
@@ -540,6 +531,9 @@ void parseCmdLine(int arg_num, char *arg_vet[])
 	    } 
         else if (!strcmp(arg_vet[i], "-ecm")) {
         GlobalParams::encoding_model = arg_vet[++i];
+        }
+        else if (!strcmp(arg_vet[i], "-nc")) {
+            GlobalParams::enable_network_coding = true;
         }
 	    else if (!strcmp(arg_vet[i], "-pir")) 
 	    {

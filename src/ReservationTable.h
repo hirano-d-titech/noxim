@@ -22,11 +22,15 @@ struct TReservation
 {
     int input;
     int vc;
-    int mult;
     NCState nc_state;
+
     inline bool operator ==(const TReservation & r) const
     {
 	return (r.input==input && r.vc == vc);
+    }
+
+    inline bool invalid() const {
+      return input < 0 || input > DIRECTION_HUB || vc < 0 || vc > GlobalParams::n_virtual_channels;
     }
 };
 
@@ -53,10 +57,6 @@ typedef struct RTEntry
      */
     FlitMetadata head_meta;
 
-    /**
-     * allow over-reserving if out_multiplicity + incoming_flit.mult <= Flit::MAX_NC_META
-     */
-    int out_multiplicity;
 } TRTEntry;
 
 class ReservationTable {
@@ -72,7 +72,7 @@ class ReservationTable {
     // Connects port_in with port_out. Asserts if port_out is reserved
     void reserve(const TReservation r, FlitMetadata meta, const int port_out);
 
-    bool reservable(int status) {return status == RT_AVAILABLE || (GlobalParams::network_coding_type != NC_TYPE_NONE && status == RT_ENCODABLE);}
+    bool reservable(int status) {return status == RT_AVAILABLE || (GlobalParams::enable_network_coding && status == RT_ENCODABLE);}
 
     // Releases port_out connection. 
     // Asserts if port_out is not reserved or not valid

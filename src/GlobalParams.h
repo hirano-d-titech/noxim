@@ -43,9 +43,6 @@ using namespace std;
 #define RT_OUTVC_BUSY -3
 
 // Define the Network Coding Method
-#define NC_TYPE_NONE 0
-#define NC_TYPE_XOR 1
-#define NC_TYPE_MATRIX 2
 
 // Generic not reserved resource
 #define NOT_RESERVED          -2
@@ -158,7 +155,7 @@ struct GlobalParams {
     static int flit_size;
     static int min_packet_size;
     static int max_packet_size;
-    static int network_coding_type;
+    static bool enable_network_coding;
     static string routing_algorithm;
     static string routing_table_filename;
     static string selection_strategy;

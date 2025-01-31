@@ -26,7 +26,7 @@ class Coord {
 
 // FlitType -- Flit type enumeration
 enum FlitType {
-    FLIT_TYPE_HEAD, FLIT_TYPE_BODY, FLIT_TYPE_TAIL
+    FLIT_TYPE_HEAD, FLIT_TYPE_BODY, FLIT_TYPE_TAIL, FLIT_TYPE_TRAIL
 };
 
 enum NCState {
@@ -50,15 +50,6 @@ enum NCState {
      * Flit in this state should never be leaf meta.
      */
     NC_MERGED,
-
-    /**
-     * NC_ORIGIN: the metadata has unique original destination of whole flit.
-     * This indicates that this is the only destination among nc_meta,
-     *  so the flit in this state should never have child meta.
-     * If one of the child is in this state, the other leaf meta must be in NC_OPTION,
-     *  and branch or parent meta must be in NC_MERGED or NC_OPTION.
-     */
-    NC_ORIGIN,
 
     /**
      * NC_OPTION: this metadata is stored for decoding and will be removed at decoding.
@@ -166,7 +157,6 @@ struct FlitMetadata {
     bool use_low_voltage_path;
 
     int hub_relay_node;
-    NCState nc_state;
 
     FlitMetadata(){}
 
@@ -180,7 +170,6 @@ struct FlitMetadata {
         hub_hop_no = 0;
         use_low_voltage_path = packet.use_low_voltage_path;
         hub_relay_node = NOT_VALID;
-        nc_state = NC_ORIGIN;
     }
 
     inline bool operator ==(const FlitMetadata & meta) const {
@@ -202,241 +191,12 @@ struct FlitMetadata {
     }
 };
 
-struct NCHistory {
-    // make tree to store metadata merge history
-    static constexpr int MAX_META = 4;
-
-    // The ID indicates where the node is located in a particular tree structure.
-    std::map<int /* id */, FlitMetadata /* node data */> metas;
-
-    // depth represents the depth of the tree, but does not change the ID when it increases due to the structure of the tree.
-    int depth;
-
-    NCHistory(){
-        depth = 0;
-    }
-
-    /**
-     * returns whether merging is possible.
-     */
-    bool inline mergeable(const NCHistory& hist) const{
-        return 2 + metas.size() + hist.metas.size() <= NCHistory::MAX_META;
-    }
-
-    /**
-     * returns the number of elements at a particular tree depth
-     */
-    static inline int getTreeMax(int depth) {return (1 << depth) - 1;}
-
-    // 2, 5, 6, 9, 12, 13, 14, 17, 20, 21, 24, 27, 28, 29, 30, ... => https://oeis.org/A055938
-    static inline int nextTreeIdx(int id, int rep = 1) {
-        static const int A055938[] = {2,5,6,9,12,13,14,17,20,21,24,27,28,29,30,33,36,37,40,43,44,45,48,51,52,55,58,59,60,61,62,65,68,69,72,75,76,77,80,83,84,87,90,91,92,93,96,99,100,103,106,107,108,111,114,115,118,121,122,123,124,125,126,129};
-        switch (rep)
-        {
-        case 0:
-            return id;
-        case 1:
-            return A055938[id];
-        default:
-            assert(rep > 1);
-            auto ret = id;
-            for (int i = 0; i < rep; i++)
-            {
-                ret = A055938[ret];
-            }
-            return ret;
-        }
-    }
-
-    static inline int prevTreeIdx(int rev) {
-        static const int A055938[] = {2,5,6,9,12,13,14,17,20,21,24,27,28,29,30,33,36,37,40,43,44,45,48,51,52,55,58,59,60,61,62,65,68,69,72,75,76,77,80,83,84,87,90,91,92,93,96,99,100,103,106,107,108,111,114,115,118,121,122,123,124,125,126,129};
-        for(int i=0; i<64; i++){
-            if(A055938[i] == rev){
-                return i; // found
-            }
-        }
-        return -1; // not found, return invalid value
-    }
-
-    // 2, 2, 6, 5, 5, 6, 14, 9, 9, 13, 12, 12, 13, 14, 17, 17, 21, 20, 20, 21, ... => not found in OEIS
-    static inline int parentIdx(int id) {
-        static const int PARENT[] = {2,2,6,5,5,6,14,9,9,13,12,12,13,14,17,17,21,20,20,21,29,24,24,28,27,27,28,29,30,62,33,33,37,36,36,37,45,40,40,44,43,43,44,45,48,48,52,51,51,52,60,55,55,59,58,58,59,60,61,62,126,65,65,69};
-        return PARENT[id];
-    }
-
-    static inline pair<int, int> childrenIdx(int prt) {
-        static const int PARENT[] = {2,2,6,5,5,6,14,9,9,13,12,12,13,14,17,17,21,20,20,21,29,24,24,28,27,27,28,29,30,62,33,33,37,36,36,37,45,40,40,44,43,43,44,45,48,48,52,51,51,52,60,55,55,59,58,58,59,60,61,62,126,65,65,69};
-        pair<int, int> ret = {-1, -1};
-        for(int i=0; i<64; i++){
-            if(PARENT[i] == prt){
-                if (ret.first == -1) {
-                    ret.first = i;
-                } else {
-                    ret.second = i;
-                    return ret;
-                }
-            }
-        }
-        return ret;
-    }
-
-    inline pair<int, int> getTopIds()const {
-        return {getTreeMax(depth-1)-1, 2*getTreeMax(depth-1)-1};
-    }
-
-    // 0, 1, 3, 4, 7, 8, 10, 11, 15, 16, 18, 19, 22, 23, 25, 26, 31, 32, ... => https://oeis.org/A005187
-    static inline bool isGround(int id) {
-        // static const int A005187[] = {0,1,3,4,7,8,10,11,15,16,18,19,22,23,25,26,31,32,34,35,38,39,41,42,46,47,49,50,53,54,56,57,63,64,66,67,70,71,73,74,78,79,81,82,85,86,88,89,94,95,97,98,101,102,104,105,109,110,112,113,116,117,119,120};
-        static const bool LEAF[] = {1,1,0,1,1,0,0,1,1,0,1,1,0,0,0,1,1,0,1,1,0,0,1,1,0,1,1,0,0,0,0,1,1,0,1,1,0,0,1,1,0,1,1,0,0,0,1,1,0,1,1,0,0,1,1,0,1,1,0,0,0,0,0,1,1,0,1,1,0,0,1,1,0,1,1,0,0,0,1,1,0,1,1,0,0,1,1,0,1,1,0,0,0,0,1,1,0,1,1,0,0,1,1,0,1,1,0,0,0,1,1,0,1,1,0,0,1,1,0,1,1,0,0,0,0,0,0,1};
-        if (id < 0 || id >= 128) return false;
-        return LEAF[id];
-    }
-
-    bool hasMeta(int id, FlitMetadata & meta)const {
-        auto it = metas.find(id);
-        if (it == metas.end()) return false;
-        meta = it->second;
-        return true;
-    }
-
-    bool isLeaf(int id)const {
-        if (metas.find(id) == metas.end()) return false;
-        if (isGround(id)) return true;
-        auto children = childrenIdx(id);
-        if (children.first < 0 || children.second < 0) assert(false);
-        return metas.find(children.first) == metas.end() && metas.find(children.second) == metas.end();
-    }
-
-    void stepDepth(){
-        std::map<int, FlitMetadata> other;
-        for (auto &&pair : metas)
-        {
-            other.emplace(nextTreeIdx(pair.first), pair.second);
-        }
-        metas.swap(other);
-        depth++;
-    }
-
-    bool inline hasAnyGroundedLeaf()const {
-        for (auto &&pair : metas)
-        {
-            if (isGround(pair.first)) return true;
-        }
-
-        return false;
-    }
-
-    void cutDepth(){
-        // if any leaf not found, history tree must be cut
-        while (!hasAnyGroundedLeaf()) {
-            std::map<int, FlitMetadata> other;
-            bool error = false;
-            for (auto &&meta : metas)
-            {
-                // find depth-1 id
-                int after = prevTreeIdx(meta.first);
-                if (after < 0) {
-                    error = true;
-                    break;
-                }
-                other.emplace(after, meta.second);
-            }
-            if (error) {
-                std::cerr << "Error: cutDepth failed" << std::endl;
-                break;
-            }
-            metas.swap(other);
-            depth--;
-        }
-    }
-
-    vector<pair<int, FlitMetadata>> getTopMetas()const {
-        vector<pair<int, FlitMetadata>> ret;
-        for (auto &&pair : metas)
-        {
-            if (pair.first == getTreeMax(depth)-1 || pair.first == 2*getTreeMax(depth)-1) {
-                ret.push_back({pair.first, pair.second});
-            }
-        }
-        return ret;
-    }
-
-    vector<pair<int, FlitMetadata>> getLeafMetas()const {
-        vector<pair<int, FlitMetadata>> ret;
-        for (auto &&pair : metas)
-        {
-            if (isLeaf(pair.first)) {
-                ret.push_back({pair.first, pair.second});
-            }
-        }
-        return ret;
-    }
-
-    void mergeHistory(FlitMetadata leftTop, NCHistory rightHist, FlitMetadata rightTop){
-        assert(mergeable(rightHist));
-        // make current tree depth large or equal to right tree.
-        while (depth < rightHist.depth)
-        {
-            stepDepth();
-        }
-        depth++;
-        // make current tree as left tree, and set leftTop as top metadata of left tree
-        auto offset = getTreeMax(depth);
-        metas.emplace(offset-1, leftTop);
-        // create right tree with id offsetted, and deepened by diff
-        auto diff = depth - rightHist.depth;
-        for (auto &&meta : rightHist.metas)
-        {
-            metas.emplace(offset + nextTreeIdx(meta.first, diff), meta.second);
-        }
-        // make rightTop as top metadata of right tree
-        metas.emplace(2*offset-1, rightTop);
-    }
-
-    bool removeHistory(int id, bool force = false){
-        // remove node if any children doesnt exist
-        if (isGround(id)) {
-            metas.erase(id);
-            return true;
-        } else {
-            auto children = childrenIdx(id);
-            // impossible case
-            if (children.first < 0 || children.second < 0) assert(false);
-            if (force) {
-                // if force true, remove all children recursively
-                removeHistory(children.first, force);
-                removeHistory(children.second, force);
-                return true;
-            } else {
-                // if normal mode, remove only if both children doesnt exist
-                if (metas.find(children.first) != metas.end() || metas.find(children.second) != metas.end()) {
-                    return false;
-                } else {
-                    metas.erase(id);
-                    return true;
-                }
-            }
-        }
-    }
-
-    inline bool operator ==(const NCHistory & hist) {
-        if (depth != hist.depth) return false;
-        if (metas.size() != hist.metas.size()) return false;
-        for (auto &&meta : metas)
-        {
-            if (hist.metas.find(meta.first) == hist.metas.end()) return false;
-            if (!(hist.metas.at(meta.first) == meta.second)) return false;
-        }
-        return true;
-    }
-};
-
 // Flit -- Flit definition
 struct Flit {
     Payload payload;	// Optional payload
 
-    FlitMetadata meta;
-    NCHistory nc_meta;
+    FlitMetadata meta, merged;
+    NCState nc_state = NC_NORMAL;
 
     Flit(){}
 
@@ -449,51 +209,11 @@ struct Flit {
         meta = metadata;
     }
 
-    int inline metaSize()const {
-        return 1 + nc_meta.metas.size();
-    }
-
-    static bool mergeable(const Flit& f1, const Flit& f2){
-        return f1.nc_meta.mergeable(f2.nc_meta);
-    }
-
-    void import_tree(const Flit& f1, const Flit& f2){
-        nc_meta = f1.nc_meta;
-        nc_meta.mergeHistory(f1.meta, f2.nc_meta, f2.meta);
-    }
-
-    bool branch_tree(Flit &f1, Flit &f2){
-        if (nc_meta.depth == 0) return false;
-        if (nc_meta.metas.size() == 0) return false;
-
-        auto tree = NCHistory::getTreeMax(nc_meta.depth);
-        auto f1_it = nc_meta.metas.find(tree-1);
-        auto f2_it = nc_meta.metas.find(2*tree-1);
-        if (f1_it == nc_meta.metas.end() || f2_it == nc_meta.metas.end()) return false;
-
-        for (auto &&meta : nc_meta.metas)
-        {
-            if (meta.first < tree) {
-                if (meta.first == tree-1) {
-                    f1.meta = meta.second;
-                } else {
-                    f1.nc_meta.metas.emplace(meta.first, meta.second);
-                }
-            } else {
-                if (meta.first == 2*tree-1) {
-                    f2.meta = meta.second;
-                } else {
-                    f2.nc_meta.metas.emplace(meta.first-tree, meta.second);
-                }
-            }
-        }
-
-        f1.nc_meta.depth = nc_meta.depth-1;
-        f2.nc_meta.depth = nc_meta.depth-1;
-        f1.nc_meta.cutDepth();
-        f2.nc_meta.cutDepth();
-        
-        return true;
+    void swapMeta()
+    {
+        auto temp = meta;
+        meta = merged;
+        merged = temp;
     }
 
     inline bool operator ==(const Flit & flit) const {
@@ -551,7 +271,7 @@ enum
     NO_BREAKDOWN_ENTRIES_S
 };
 
-typedef struct 
+typedef struct
 {
     int size;
     PowerBreakdownEntry breakdown[NO_BREAKDOWN_ENTRIES_D+NO_BREAKDOWN_ENTRIES_S];

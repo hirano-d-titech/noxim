@@ -13,8 +13,7 @@
 #include <iostream>
 #include <functional>
 #include "Router.h"
-#include "networkCodings/NC_XOR.h"
-#include "networkCodings/NC_Matrix.h"
+#include "NetworkCoding.h"
 
 inline int toggleKthBit(int n, int k)
 {
@@ -97,7 +96,6 @@ void Router::rxProcess()
 
 void Router::txProcess()
 {
-
   if (reset.read())
     {
       // Clear outputs and indexes of transmitting protocol
@@ -110,14 +108,14 @@ void Router::txProcess()
     }
 
 	// 1st phase: Branch Routing
-	TReservation multicastR = {-1, -1, 0, NC_NORMAL};
-	FlitMetadata multicastMeta;
-	set<int> cast_outputs[DIRECTIONS + 2];
-	if (GlobalParams::network_coding_type != NC_TYPE_NONE)
+	if (GlobalParams::enable_network_coding && !multicastTask.valid)
 	{
 	for (int j = 0; j < DIRECTIONS + 2; j++)
 	{
 	  int i = (start_from_port + j) % (DIRECTIONS + 2);
+
+	  auto reservations = reservation_table.getReservationsFrom(i);
+	  if (reservations.size() > 1) continue;
 
 	  for (int k = 0;k < GlobalParams::n_virtual_channels; k++)
 	  {
@@ -127,158 +125,92 @@ void Router::txProcess()
 
 		  Flit flit = buffer[i][vc].Front();
 
-		  switch (flit.meta.nc_state)
-		  {
-			case NC_MULTIC:
-			  // go through
-			  break;
-			case NC_NORMAL:
-			case NC_MERGED:
-			case NC_OPTION:
-			  // nothing to do
-			  continue;
-			default:
-			  // ORIGIN is only for nc-leaf meta
-			  assert(false);
-			  return;
-		  }
-		  // assert(flit.meta.nc_state == NC_MULTIC);
-		  assert(flit.nc_meta.depth > 0);
-
-		  vector<pair<int, FlitMetadata>> metas_have_dest;
-		  for (auto& pair : flit.nc_meta.metas)
-		  {
-			if (flit.nc_meta.isLeaf(pair.first) && pair.second.flit_type == FLIT_TYPE_HEAD && pair.second.nc_state == NC_NORMAL)
-			{
-			  metas_have_dest.push_back(pair);
-			}
-		  }
-
-		  // if there is no HEAD flit, it can't be branched
-		  if (metas_have_dest.size() == 0) continue;
+		  if (flit.nc_state != NC_MULTIC || flit.merged.flit_type != FLIT_TYPE_HEAD) continue;
 
 		  switch (flit.meta.flit_type)
 		  {
 			case FLIT_TYPE_HEAD:
 			{
-			  // prepare all output ports
-			  bool crowded = false;
-			  for (auto &&pair : metas_have_dest)
+			  auto enable = true;
+			  RouteData route_main;
+			  route_main.current_id = local_id;
+			  route_main.src_id = flit.meta.src_id;
+			  route_main.dst_id = flit.meta.dst_id;
+			  route_main.dir_in = i;
+			  route_main.vc_id = flit.meta.vc_id;
+
+			  RouteData route_sub;
+			  route_sub.current_id = local_id;
+			  route_sub.src_id = flit.merged.src_id;
+			  route_sub.dst_id = flit.merged.dst_id;
+			  route_sub.dir_in = i;
+			  route_sub.vc_id = flit.merged.vc_id;
+
+			  multicastTask.resv_main = {i, flit.meta.vc_id, NC_MULTIC};
+			  multicastTask.resv_sub = {i, flit.merged.vc_id, NC_MULTIC};
+
+			  multicastTask.out_main = route(route_main);
+			  multicastTask.out_sub = route(route_sub);
+
+			  auto main_reservable = reservation_table.checkReservation(multicastTask.resv_main, multicastTask.out_main) == RT_AVAILABLE;
+			  auto sub_reservable = reservation_table.checkReservation(multicastTask.resv_sub, multicastTask.out_sub) == RT_AVAILABLE;
+
+			  if (multicastTask.out_main == multicastTask.out_sub)
 			  {
-				RouteData route_data;
-				route_data.current_id = local_id;
-				route_data.src_id = pair.second.src_id;
-				route_data.dst_id = pair.second.dst_id;
-				route_data.dir_in = i;
-				route_data.vc_id = pair.second.vc_id;
-
-				auto o = route(route_data);
-
-				TReservation r = {i, pair.second.vc_id, flit.metaSize(), NC_MULTIC};
-				if (reservation_table.checkReservation(r, o) != RT_AVAILABLE)
-				{
-					LOG << " too crowded output ports at reservation table for flit branching " << flit << endl;
-					crowded = true;
-					break;
-				}
-
-				if (!isVcValid(vc, o))
-				{
-					LOG << " too crowded output ports buffer size for flit branching " << flit << endl;
-					crowded = true;
-					break;
-				}
-
-				cast_outputs[o].emplace(pair.first);
+				assert(main_reservable == sub_reservable);
+				if (main_reservable) reservation_table.reserve(multicastTask.resv_main, flit.meta, multicastTask.out_main);
 			  }
-
-			  if (crowded) continue;
-			  break;
-			}
-			case FLIT_TYPE_BODY:
-			{
-			  // vector<pair<int out_port, int vc>>
-			  auto reservations = reservation_table.getReservationsFrom(i);
-			  // get reserved output port
-			  int out_reserved = -1;
-			  for (auto &&resv : reservations)
+			  else if (main_reservable && sub_reservable)
 			  {
-				if (resv.second == vc)
-				{
-				  out_reserved = resv.first;
-				  break;
-				}
+				reservation_table.reserve(multicastTask.resv_main, flit.meta, multicastTask.out_main);
+				reservation_table.reserve(multicastTask.resv_sub, flit.merged, multicastTask.out_sub);
 			  }
-			  if (out_reserved == -1)
-			  {
-				LOG << " failed to find reserved output port for flit " << flit << endl;
-				continue;
-			  }
-
-			  // check other flits output port
-			  auto out_diff = 0;
-			  bool crowded = false;
-			  for (auto &&pair : metas_have_dest)
-			  {
-				RouteData route_data;
-				route_data.current_id = local_id;
-				route_data.src_id = pair.second.src_id;
-				route_data.dst_id = pair.second.dst_id;
-				route_data.dir_in = i;
-				route_data.vc_id = pair.second.vc_id;
-
-				auto o = route(route_data);
-
-				TReservation r = {i, pair.second.vc_id, flit.metaSize(), NC_MULTIC};
-				if (reservation_table.checkReservation(r, o) != RT_AVAILABLE)
-				{
-					crowded = true;
-					continue;
-				}
-
-				if (o != out_reserved) {
-					cast_outputs[o].emplace(pair.first);
-					out_diff++;
-				}
-			  }
-
-			  if (crowded) {
-				LOG << " too crowded output ports for flit branching " << flit << endl;
-				continue;
-			  }
-
-			  // if all flits have same output port, it can't be branched
-			  if (out_diff == 0) continue;
-
 			  break;
 			}
 			case FLIT_TYPE_TAIL:
+			case FLIT_TYPE_BODY:
 			{
-			  // never, TAIL + HEAD should be BODY,
+			  int out_main, vc_main;
+			  std::tie(out_main, vc_main) = reservations[0];
+
+			  RouteData route_sub;
+			  route_sub.current_id = local_id;
+			  route_sub.src_id = flit.merged.src_id;
+			  route_sub.dst_id = flit.merged.dst_id;
+			  route_sub.dir_in = i;
+			  route_sub.vc_id = flit.merged.vc_id;
+
+			  multicastTask.out_sub = route(route_sub);
+
+			  // no need to branch
+			  if (multicastTask.out_sub == out_main) continue;
+
+			  TReservation resv_main = {i, flit.meta.vc_id, NC_MULTIC};
+			  multicastTask.resv_sub = {i, flit.merged.vc_id, NC_MULTIC};
+
+			  assert(reservation_table.checkReservation(resv_main, out_main) == RT_ALREADY_SAME);
+
+			  if (reservation_table.checkReservation(multicastTask.resv_sub, multicastTask.out_sub) == RT_AVAILABLE)
+			  {
+				reservation_table.reserve(multicastTask.resv_sub, flit.merged, multicastTask.out_sub);
+			  }
+
+			  break;
+			}
+			case FLIT_TYPE_TRAIL:
+			{
 			  assert(false);
 			  continue;
 			}
 
 			// reserve branch flits
 			LOG << "flit from rx_buffer[" << i << "][" << vc << "] starting multicasting!" << endl;
-			multicastR = {i, vc, flit.metaSize(), NC_MULTIC};
-			multicastMeta = flit.meta;
+			multicastTask.valid = true;
 		  }
 	  }
 
 	  // one flit decided to be branched, other can't be branched
-	  if (multicastR.nc_state == NC_MULTIC) break;
-	}
-
-	if (multicastR.nc_state == NC_MULTIC)
-	{
-	  for (int o = 0; o < DIRECTIONS + 2; o++)
-	  {
-		auto outputs = cast_outputs[o];
-		if (outputs.size() == 0) continue;
-
-		reservation_table.reserve(multicastR, multicastMeta, o);
-	  }
+	  if (multicastTask.valid) break;
 	}
 	}
 
@@ -301,7 +233,7 @@ void Router::txProcess()
 		  Flit flit = buffer[i][vc].Front();
 		  power.bufferRouterFront();
 
-		  if (flit.meta.flit_type == FLIT_TYPE_HEAD) 
+		  if (flit.meta.flit_type == FLIT_TYPE_HEAD)
 		    {
 		      // prepare data for routing
 		      RouteData route_data;
@@ -330,8 +262,7 @@ void Router::txProcess()
 		      TReservation r;
 		      r.input = i;
 		      r.vc = vc;
-			  r.mult = buffer[i][vc].Front().metaSize();
-			  r.nc_state = buffer[i][vc].Front().meta.nc_state;
+			  r.nc_state = buffer[i][vc].Front().nc_state;
 
 		      LOG << " checking availability of Output[" << o << "] for Input[" << i << "][" << vc << "] flit " << flit << endl;
 
@@ -344,73 +275,44 @@ void Router::txProcess()
 		      }
 			  else if (rt_status == RT_ENCODABLE)
 			  {
-			  switch (GlobalParams::network_coding_type)
+			  assert(GlobalParams::enable_network_coding);
+			  LOG << " begin XOR Network Coding reserving" << endl;
+			  auto reservations = reservation_table.getReservationsTo(o);
+			  assert(reservations.size() != 0);
+			  // if reservations already exists over 1, it needs to be merged 3 flits simultaneously. skip due to complexity.
+			  if (reservations.size() > 1) {
+				LOG << " failed to reserving to [" << o << "] due to higher complexity." << endl;
+				continue;
+			  }
+			  // send other flit for decoding
 			  {
-			  case NC_TYPE_NONE:
-				assert(false);
-				break;
-			  case NC_TYPE_XOR:
-			  {
-			  	LOG << " begin XOR Network Coding reserving" << endl;
-			    auto reservations = reservation_table.getReservationsTo(o);
-				assert(reservations.size() != 0);
-				// if reservations already exists over 1, it needs to be merged 3 flits simultaneously. skip due to complexity.
-				if (reservations.size() > 1) {
-			  		LOG << " failed to reserving to [" << o << "] due to higher complexity." << endl;
-					continue;
-				}
-			  	// send other flit for decoding
-				{
-					auto resv0 = reservations[0];
-					int dirPrev = reflexDirection(resv0.input) == o ? i : reflexDirection(resv0.input);
-					int dirNext = reflexDirection(i) == o ? resv0.input : reflexDirection(i);
+				auto resv0 = reservations[0];
+				auto rightSide = isOrthogonal(resv0.input) ? resv0.input : (o + 1) % DIRECTIONS;
+				auto leftSide = isOrthogonal(i) ? i : (o + 3) % DIRECTIONS;
+				int dirPrev = reflexDirection(rightSide) == o ? leftSide : reflexDirection(rightSide);
+				int dirNext = reflexDirection(leftSide) == o ? rightSide : reflexDirection(leftSide);
 
-					TReservation trPrev;
-					trPrev.input = resv0.input;
-					trPrev.vc = resv0.vc;
-					trPrev.mult = resv0.mult;
-					trPrev.nc_state = NC_OPTION;
-					// initial optional flit must have sent without network-coded
-					if (reservation_table.checkReservation(trPrev, dirPrev) != RT_AVAILABLE ||
-						reservation_table.checkReservation(r, dirNext) != RT_AVAILABLE) {
-			  			LOG << " failed to reserving due to crowding for decoder flit: " << dirPrev << " or " << dirNext << "." << endl;
-						continue;
-					}
-					// create option flits data for XOR decoding
-					auto prevOptMeta = reservation_table.getInitialFlitMetadataTo(o);
-					auto selfOptMeta = flit.meta;
-					selfOptMeta.dst_id = prevOptMeta.dst_id;
-					selfOptMeta.nc_state = NC_OPTION;
-					prevOptMeta.dst_id = flit.meta.dst_id;
-					prevOptMeta.flit_type = FLIT_TYPE_HEAD;
-					prevOptMeta.nc_state = NC_OPTION;
-					prevOptMeta.sequence_length = prevOptMeta.sequence_length - prevOptMeta.sequence_no;
-					// reserve flits to be decoded.
-			  		LOG << " XOR encoded flit reserved to direction: " << o << " from input: " << r.input << " and vc: " << r.vc << "." << endl;
-			  		reservation_table.reserve(r, flit.meta, o);
-					// reserve flits to decode each other.
-			  		LOG << " for decoding NC_XOR, decoder flit reserved to first direction: " << dirNext << ", and next direction: " << dirPrev << "." << endl;
-					reservation_table.reserve(r, selfOptMeta, dirNext);
-					reservation_table.reserve(trPrev, prevOptMeta, dirPrev);
-				}
-				break;
-			  }
-			  case NC_TYPE_MATRIX:
-			  {
-			  	LOG << " begin Matrix Network Coding reserving" << endl;
-			    auto reservations = reservation_table.getReservationsTo(o);
-				assert(reservations.size() != 0);
-				// if reservations already exists over 1, it needs to be merged 3 flits simultaneously. skip due to complexity.
-				if (reservations.size() > 1) {
-			  		LOG << " failed to reserving to [" << o << "] due to higher complexity." << endl;
+				TReservation trPrev = {resv0.input, resv0.vc, NC_OPTION};
+				// initial optional flit must have sent without network-coded
+				if (reservation_table.checkReservation(trPrev, dirPrev) != RT_AVAILABLE ||
+					reservation_table.checkReservation(r, dirNext) != RT_AVAILABLE) {
+					LOG << " failed to reserving due to crowding for decoder flit: " << dirPrev << " or " << dirNext << "." << endl;
 					continue;
 				}
-			  	LOG << " Matrix encoded flit reserved to direction: " << o << " from input: " << r.input << " and vc: " << r.vc << "." << endl;
-			  	reservation_table.reserve(r, flit.meta, o);
-			    break;
-			  }
-			  default:
-				break;
+				// create option flits data for XOR decoding
+				auto prevOptMeta = reservation_table.getInitialFlitMetadataTo(o);
+				auto selfOptMeta = flit.meta;
+				selfOptMeta.dst_id = prevOptMeta.dst_id;
+				prevOptMeta.dst_id = flit.meta.dst_id;
+				prevOptMeta.flit_type = FLIT_TYPE_HEAD;
+				prevOptMeta.sequence_length = prevOptMeta.sequence_length - prevOptMeta.sequence_no;
+				// reserve flits to be decoded.
+				LOG << " XOR encoded flit reserved to direction: " << o << " from input: " << r.input << " and vc: " << r.vc << "." << endl;
+				reservation_table.reserve(r, flit.meta, o);
+				// reserve flits to decode each other.
+				LOG << " for decoding NetworkCoding, decoder flit reserved to first direction: " << dirNext << ", and next direction: " << dirPrev << "." << endl;
+				reservation_table.reserve(r, selfOptMeta, dirNext);
+				reservation_table.reserve(trPrev, prevOptMeta, dirPrev);
 			  }
 			  LOG << " reserving completed for flit " << flit << " with network coding" << endl;
 			  }
@@ -476,51 +378,65 @@ void Router::txProcess()
 			continue;
 		}
 
-		if (multicastR.nc_state == NC_MULTIC)
+		if (multicastTask.valid)
 		{
+			assert(GlobalParams::enable_network_coding);
 			// in flit branching, reservation size must be 1
 			assert(resvSize == 1);
+			// both flit should be departed
+			if (!isVcValid(multicastTask.resv_main.input, multicastTask.resv_main.vc, multicastTask.out_main) ||
+			    !isVcValid(multicastTask.resv_sub.input, multicastTask.resv_sub.vc, multicastTask.out_sub)) continue;
+			auto r = reservations[0];
+			auto flit = popFlit(r.input, r.vc, out);
+			if (out == multicastTask.out_main) {
+				flit.nc_state = NC_MERGED;
+			} else if (out == multicastTask.out_sub) {
+				flit.nc_state = NC_MERGED;
+				flit.swapMeta();
+			} else {
+				assert(false);
+			}
+
+			//if (GlobalParams::verbose_mode > VERBOSE_OFF)
+			LOG << "Input[" << r.input << "][" << r.vc << "] is multicasted(state: " << r.nc_state << ") and forwarded to Output[" << out << "], flit: " << flit << endl;
 		}
 		else if (!nc_enabled)
 		{
 			auto resv = reservations[resvSize == 1 ? 0 : rand()%resvSize];
 			if (!isVcValid(resv.vc, out)) continue;
 			flit = popFlit(resv.input, resv.vc, out);
+			//if (GlobalParams::verbose_mode > VERBOSE_OFF)
+			LOG << "Input[" << resv.input << "][" << resv.vc << "] forwarded to Output[" << out << "], flit: " << flit << endl;
 		}
 		else
 		{
-			assert(GlobalParams::network_coding_type != NC_TYPE_NONE);
+			assert(GlobalParams::enable_network_coding);
 
-			flit.meta = reservation_table.getInitialFlitMetadataTo(out);
-
-			switch (GlobalParams::network_coding_type)
+			auto head_meta = reservation_table.getInitialFlitMetadataTo(out);
+			if (!isVcValid(head_meta.vc_id, out)) continue;
+			if (resvSize == 2)
 			{
-			case NC_TYPE_XOR:
-			{
-				if (!isVcValid(flit.meta.vc_id, out)) continue;
-				auto nc_xor = NC_XOR::getInstance();
 				auto tr1 = reservations[0];
+				flit = popFlit(tr1.input, tr1.vc, out);
 				auto tr2 = reservations[1];
-				nc_xor->mergeNew(popFlit(tr1.input, tr1.vc, out), popFlit(tr2.input, tr2.vc, out), flit);
-				break;
+				auto orig2 = popFlit(tr2.input, tr2.vc, out);
+				NetworkCoding::merge(flit, orig2);
+				flit.nc_state = NC_MULTIC;
+
+				//if (GlobalParams::verbose_mode > VERBOSE_OFF)
+				LOG << "XOR-Merged(Input["<<tr1.input<<"]["<<tr1.vc<<"] + Input["<<tr2.input<<"]["<<tr2.vc<<"]) forwarded to Output["<<out<<"], vc: "<<flit.meta.vc_id<<", flit: " << flit << endl;
 			}
-			case NC_TYPE_MATRIX:
+			else // (resvSize == 1)
 			{
-				if (!isVcValid(flit.meta.vc_id, out, 2)) continue;
-				auto nc_matrix = NC_Matrix::getInstance();
-				vector<Flit> flits;
-				nc_matrix->mergeNew(popFlit(reservations[0].input, reservations[0].vc, out), popFlit(reservations[1].input, reservations[1].vc, out), flits);
-				flit = flits[0];
-				tx_buffer[out].Push(flits[1]);
-				break;
-			}
-			default:
-				break;
+				auto tr1 = reservations[0];
+				auto orig = popFlit(tr1.input, tr1.vc, out);
+
+				flit = Flit(head_meta);
+				NetworkCoding::merge(flit, orig);
+				flit.nc_state = NC_MULTIC;
+				flit.meta.flit_type = FLIT_TYPE_TRAIL;
 			}
 		}
-
-		//if (GlobalParams::verbose_mode > VERBOSE_OFF) 
-		LOG << "Input[x][vc] forwarded to Output[" << out << "], flit: " << flit << endl;
 		}
 		else
 		{
@@ -574,8 +490,7 @@ Flit Router::popFlit(int in, int vc, int out)
 		routed_flits++;
 	}
 	if (tmpf.meta.flit_type == FLIT_TYPE_TAIL) {
-		int mult = tmpf.metaSize();
-		reservation_table.release(TReservation{in, vc, mult}, out);
+		reservation_table.release(TReservation{in, vc}, out);
 	}
 	buffer[in][vc].Pop();
 	return tmpf;
@@ -894,6 +809,11 @@ int Router::reflexDirection(int direction) const
     // you shouldn't be here
     assert(false);
     return NOT_VALID;
+}
+
+bool Router::isOrthogonal(int direction) const
+{
+	return direction >= 0 && direction < 4;
 }
 
 int Router::getNeighborId(int _id, int direction) const

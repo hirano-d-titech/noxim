@@ -90,8 +90,13 @@ FlitMetadata ReservationTable::getInitialFlitMetadataTo(const int port_out)
 
 int ReservationTable::checkReservation(const TReservation r, const int port_out)
 {
+	if (r.invalid())
+	{
+		assert(false);
+		return RT_OUTVC_BUSY;
+	}
 	// RT_ALREADY_OUT_OTHER is valid situation in Network Coding.
-	if (GlobalParams::network_coding_type == NC_TYPE_NONE)
+	if (!GlobalParams::enable_network_coding)
 	{
     /* Sanity Check for forbidden table status:
      * - same input/VC in a different output line */
@@ -117,10 +122,10 @@ int ReservationTable::checkReservation(const TReservation r, const int port_out)
 	else /* GlobalParams::network_coding_type != NC_TYPE_NONE */
 	{
 	// if addition of multiplicity exceed MAX_NC_META, it cant be merged...
-	if (rtable[port_out].out_multiplicity + r.mult > NCHistory::MAX_META)
-	{
-		return RT_OUTVC_BUSY;
-	}
+	// if (rtable[port_out].out_multiplicity + r.mult > NCHistory::MAX_META)
+	// {
+	// 	return RT_OUTVC_BUSY;
+	// }
 	}
 
     /* On a given output entry, reservations must differ by VC
@@ -136,7 +141,7 @@ int ReservationTable::checkReservation(const TReservation r, const int port_out)
 	if (rtable[port_out].reservations.size() > 0)
 	{
 	// do not encode next at local
-	if (port_out == DIRECTION_LOCAL || rtable[port_out].head_meta.nc_state != NC_NORMAL)
+	if (port_out == DIRECTION_LOCAL/* || rtable[port_out].head_meta.nc_state != NC_NORMAL*/)
 	{
 	return RT_OUTVC_BUSY;
 	}
@@ -173,7 +178,7 @@ void ReservationTable::reserve(const TReservation r, FlitMetadata meta, const in
 	auto status = checkReservation(r, port_out);
     assert(reservable(status));
 
-	if (GlobalParams::network_coding_type != NC_TYPE_NONE)
+	if (!GlobalParams::enable_network_coding)
 	{
 		if (rtable[port_out].reservations.size() == 0) {
 			// save the first flit metadata for network coding
@@ -184,7 +189,7 @@ void ReservationTable::reserve(const TReservation r, FlitMetadata meta, const in
 			// enable network coding
 			assert(rtable[port_out].reservations.size() == 1);
 			rtable[port_out].nc_enabled = true;
-			rtable[port_out].head_meta.nc_state = NC_MULTIC;
+			// rtable[port_out].head_meta.nc_state = NC_MULTIC;
 			rtable[port_out].head_meta.timestamp = sc_time_stamp().to_double();
 		} else {
 			// nothing to do
@@ -197,8 +202,6 @@ void ReservationTable::reserve(const TReservation r, FlitMetadata meta, const in
 		// from the current index
 		rtable[port_out].reservations.push_back(r);
 	}
-	
-	rtable[port_out].out_multiplicity += r.mult;
 }
 
 void ReservationTable::release(const TReservation r, const int port_out)
@@ -210,7 +213,6 @@ void ReservationTable::release(const TReservation r, const int port_out)
     {
 	if (*i == r)
 	{
-		rtable[port_out].out_multiplicity -= i->mult;
 	    rtable[port_out].reservations.erase(i);
 	    vector<TReservation>::size_type removed_index = i - rtable[port_out].reservations.begin();
 
@@ -245,7 +247,8 @@ void ReservationTable::updateIndex()
 	if (rtable[o].reservations.size()>0)
 	{
 		rtable[o].index = (rtable[o].index+1)%(rtable[o].reservations.size());
-		rtable[o].head_meta.sequence_no++;
+		auto no = rtable[o].head_meta.sequence_no++;
+		rtable[o].head_meta.flit_type = rtable[o].head_meta.sequence_length == no ? FLIT_TYPE_TAIL : FLIT_TYPE_BODY;
 	}
 	}
 }
