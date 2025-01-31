@@ -24,7 +24,8 @@ class EncodingModel
     protected:
     // with calc
     vector< Payload > generatePayloads(const Packet &packet);
-    bool predictPayloadsOver(const vector < Flit > &flits, vector< Payload > &received, vector< Payload > &payloads);
+    void reconstructPacket(const vector < Flit > &flits, Packet &packet);
+    bool predictPayloadsOver(const vector < Flit > &flits, vector< Payload > &received, vector< Payload > &payloads, Packet &packet);
     bool verifyPayloads(const vector < Payload > decoded, const vector < Payload > predicted);
 
     // flip bit / loss flit

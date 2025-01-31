@@ -66,7 +66,7 @@ bool Encoding_HAMMING::decode(vector < Flit > &received_flits, Packet &packet) {
     vector < Payload > received, predicted, filled, decoded;
     simulate_hops(received_flits);
 
-    if (!predictPayloadsOver(received_flits, received, predicted))
+    if (!predictPayloadsOver(received_flits, received, predicted, packet))
     {
         onDecodeFailure();
         return false;

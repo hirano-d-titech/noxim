@@ -35,7 +35,7 @@ bool Encoding_REPEAT::decode(vector < Flit > &received_flits, Packet &packet) {
     vector < Payload > received, predicted, decoded;
     simulate_hops(received_flits);
 
-    if (!predictPayloadsOver(received_flits, received, predicted))
+    if (!predictPayloadsOver(received_flits, received, predicted, packet))
     {
         onDecodeFailure();
         return false;

@@ -21,8 +21,16 @@ vector < Payload > EncodingModel::generatePayloads(const Packet &packet)
     return payloads;
 }
 
-bool EncodingModel::predictPayloadsOver(const vector < Flit > &flits, vector< Payload > &received, vector< Payload > &predicted)
+void EncodingModel::reconstructPacket(const vector < Flit > &flits, Packet &packet)
 {
+    FlitMetadata fm = flits[0].meta;
+    packet = Packet{fm.src_id, fm.dst_id, fm.vc_id, fm.timestamp, fm.sequence_length};
+}
+
+bool EncodingModel::predictPayloadsOver(const vector < Flit > &flits, vector< Payload > &received, vector< Payload > &predicted, Packet &packet)
+{
+    reconstructPacket(flits, packet);
+
     size_t size = flits.size();
     if (size < 2) return false; // flit_buffer must contains 2 or more flits. (head and tail)
     Flit flit_represents = flits[0];

@@ -28,6 +28,7 @@ bool Encoding_RAW::encode(Packet &packet, queue < Flit > &sending_flits) {
 }
 
 bool Encoding_RAW::decode(vector < Flit > &received_flits, Packet &packet) {
+    reconstructPacket(received_flits, packet);
     if (received_flits[0].meta.sequence_length != (int) received_flits.size())
     {
         onDecodeFailure();

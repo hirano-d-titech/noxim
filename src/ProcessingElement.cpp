@@ -25,15 +25,19 @@ void ProcessingElement::rxProcess()
 	if (req_rx.read() == 1 - current_level_rx) {
 	    Flit flit_next = flit_rx.read();
         if (flit_buffer.size() > 0 && !flit_buffer.back().meta.like(flit_next.meta)) {
-            Packet packet_tmp;
-            encodingModel->decode(flit_buffer, packet_tmp);
+            if (!encodingModel->decode(flit_buffer, reverse_packet))
+            {
+                need_reverse_transmit = true;
+            }
             flit_buffer.clear();
         }
         flit_buffer.push_back(flit_next);
         LOG << "received " << flit_next << endl;
         if (flit_next.meta.flit_type == FLIT_TYPE_TAIL) {
-            Packet packet_tmp;
-            encodingModel->decode(flit_buffer, packet_tmp);
+            if (!encodingModel->decode(flit_buffer, reverse_packet))
+            {
+                need_reverse_transmit = true;
+            }
             flit_buffer.clear();
         }
 	    current_level_rx = 1 - current_level_rx;	// Negate the old value for Alternating Bit Protocol (ABP)
@@ -106,6 +110,12 @@ bool ProcessingElement::canShot(Packet & packet)
     if (local_id%2==0)
 	return false;
 #endif
+    if (need_reverse_transmit) {
+        packet = reverse_packet;
+        need_reverse_transmit = false;
+        return true;
+    }
+
     bool shot;
     double threshold;
 

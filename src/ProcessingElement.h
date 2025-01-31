@@ -32,7 +32,7 @@ SC_MODULE(ProcessingElement)
     sc_in < Flit > flit_rx;	// The input channel
     sc_in < bool > req_rx;	// The request associated with the input channel
     sc_out < bool > ack_rx;	// The outgoing ack signal associated with the input channel
-    sc_out < TBufferCapStatus > buffer_cap_status_rx;	
+    sc_out < TBufferCapStatus > buffer_cap_status_rx;
 
     sc_out < Flit > flit_tx;	// The output channel
     sc_out < bool > req_tx;	// The request associated with the output channel
@@ -49,6 +49,8 @@ SC_MODULE(ProcessingElement)
     queue < Flit > front_packet_flits; // Local queue of flits of front packets
     vector < Flit > flit_buffer;
     bool transmittedAtPreviousCycle;	// Used for distributions with memory
+    bool need_reverse_transmit;
+    Packet reverse_packet;
 
     // Functions
     void rxProcess();		// The receiving process
