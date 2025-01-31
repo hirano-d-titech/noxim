@@ -25,17 +25,16 @@ bool EncodingModel::predictPayloadsOver(const vector < Flit > &flits, vector< Pa
 {
     size_t size = flits.size();
     if (size < 2) return false; // flit_buffer must contains 2 or more flits. (head and tail)
-    Flit flit_head = flits[0];
-    if (flit_head.meta.flit_type != FLIT_TYPE_HEAD) return false; // top flit must be head typed.
+    Flit flit_represents = flits[0];
 
-    int src_id = flit_head.meta.src_id;
-    int dst_id = flit_head.meta.dst_id;
-    double timestamp = flit_head.meta.timestamp;
-    int length = flit_head.meta.sequence_length;
+    int src_id = flit_represents.meta.src_id;
+    int dst_id = flit_represents.meta.dst_id;
+    double timestamp = flit_represents.meta.timestamp;
+    int length = flit_represents.meta.sequence_length;
 
     received.clear();
     received.reserve(size);
-    received.push_back(flit_head.payload);
+    received.push_back(flit_represents.payload);
 
     for (size_t i = 1; i < size; i++)
     {

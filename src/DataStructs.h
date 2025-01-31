@@ -192,6 +192,14 @@ struct FlitMetadata {
 		&& meta.timestamp == timestamp
 		&& meta.use_low_voltage_path == use_low_voltage_path);
     }
+
+    inline bool like(const FlitMetadata & meta) const {
+	return (meta.src_id == src_id && meta.dst_id == dst_id
+		&& meta.vc_id == vc_id
+		&& meta.sequence_length == sequence_length
+		&& meta.timestamp == timestamp
+		&& meta.use_low_voltage_path == use_low_voltage_path);
+    }
 };
 
 struct NCHistory {
