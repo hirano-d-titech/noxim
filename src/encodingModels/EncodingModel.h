@@ -24,10 +24,15 @@ class EncodingModel
     protected:
     // with calc
     vector< Payload > generatePayloads(const Packet &packet);
+    Packet reconstructPacket(const vector < Flit > &flits);
     bool predictPayloadsOver(const vector < Flit > &flits, vector< Payload > &received, vector< Payload > &payloads);
     bool verifyPayloads(const vector < Payload > decoded, const vector < Payload > predicted);
 
+    // flip bit / loss flit
+    static void simulate_hops(vector < Flit > &flits);
+
     // with virtual
+    static double rand01() { return rand() / (RAND_MAX + 1.0); }
     static double pesudo_prob_poisson(int n, int k, double p);
     static double pseudo_prob_repeat(double p, int n);
 

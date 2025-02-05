@@ -21,6 +21,11 @@ vector < Payload > EncodingModel::generatePayloads(const Packet &packet)
     return payloads;
 }
 
+Packet EncodingModel::reconstructPacket(const vector < Flit > &flits)
+{
+    return Packet{flits[0].src_id, flits[0].dst_id, flits[0].vc_id, flits[0].timestamp, flits[0].sequence_length};
+}
+
 bool EncodingModel::predictPayloadsOver(const vector < Flit > &flits, vector< Payload > &received, vector< Payload > &predicted)
 {
     size_t size = flits.size();
@@ -84,6 +89,45 @@ bool EncodingModel::verifyPayloads(const vector < Payload > decoded, const vecto
     return true;
 }
 
+void EncodingModel::simulate_hops(vector < Flit > &flits)
+{
+    vector < Flit > after;
+    for (auto &&flit : flits)
+    {
+        bool lost = false;
+        for (int i = 0; i < flit.hop_no; i++)
+        {
+            if (rand01() < GlobalParams::wired_flit_loss_rate) {
+                lost = true;
+                break;
+            }
+            if (rand01() < GlobalParams::wired_bit_error_rate) {
+                flit.payload.data ^= (1 << (rand() % 32));
+            }
+        }
+        if (!lost) after.push_back(flit);
+    }
+    flits.swap(after);
+
+    after.clear();
+    for (auto &&flit : flits)
+    {
+        bool lost = false;
+        for (int i = 0; i < flit.hub_hop_no; i++)
+        {
+            if (rand01() < GlobalParams::wireless_flit_loss_rate) {
+                lost = true;
+                break;
+            }
+            if (rand01() < GlobalParams::wireless_bit_error_rate) {
+                flit.payload.data ^= (1 << (rand() % 32));
+            }
+        }
+        if (!lost) after.push_back(flit);
+    }
+    flits.swap(after);
+}
+
 double EncodingModel::pesudo_prob_poisson(int n, int k, double p){
     assert(p >= 0.0 && p <= 1.0);
     assert(n >= 0 && k >= 0 && n >= k);
@@ -104,7 +148,7 @@ double EncodingModel::pesudo_prob_poisson(int n, int k, double p){
 double EncodingModel::pseudo_prob_repeat(double p, int n){
     assert(p >= 0.0 && p <= 1.0);
     assert(n >= 0);
-    
+
     if (p == 0.0) return 0.0;
     if (n == 0) return 0.0;
     if (p == 1.0) return 1.0;

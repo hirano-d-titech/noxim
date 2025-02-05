@@ -19,7 +19,6 @@ bool Encoding_REPEAT::encode(Packet &packet, queue < Flit > &sending_flits) {
         Flit flit(packet);
         flit.sequence_no = i;
         flit.payload = payloads[i % packet.flit_left];
-        flit.virtual_encoding = false;
 
         flit.hub_relay_node = NOT_VALID;
 

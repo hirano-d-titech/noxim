@@ -128,7 +128,6 @@ struct Flit {
     int hop_no;			// Current number of hops from source to destination
     int hub_hop_no;     // Current number of passed wireless-hops
     bool use_low_voltage_path;
-    bool virtual_encoding;
 
     int hub_relay_node;
 
@@ -143,7 +142,6 @@ struct Flit {
         hop_no = 0;
         use_low_voltage_path = packet.use_low_voltage_path;
         hub_relay_node = NOT_VALID;
-        virtual_encoding = true;
     }
 
     inline bool operator ==(const Flit & flit) const {
