@@ -26,8 +26,11 @@ void ProcessingElement::rxProcess()
 	    Flit flit_next = flit_rx.read();
         flit_buffer.push_back(flit_next);
         if (flit_next.flit_type == FLIT_TYPE_TAIL) {
-            Packet packet_tmp;
-            encodingModel->decode(flit_buffer, packet_tmp);
+            Packet received_packet;
+            if (!encodingModel->decode(flit_buffer, received_packet))
+            {
+                packet_queue.push(received_packet.reverse());
+            }
             flit_buffer.clear();
         }
 	    current_level_rx = 1 - current_level_rx;	// Negate the old value for Alternating Bit Protocol (ABP)

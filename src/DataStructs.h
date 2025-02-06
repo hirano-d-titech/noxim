@@ -63,6 +63,11 @@ struct Packet {
 	flit_left = sz;
 	use_low_voltage_path = false;
     }
+
+    Packet reverse()
+    {
+        return Packet{dst_id, src_id, vc_id, sc_time_stamp().to_double() / GlobalParams::clock_period_ps, size};
+    }
 };
 
 // RouteData -- data required to perform routing
