@@ -75,14 +75,14 @@ bool Encoding_HAMMING::decode(vector < Flit > &received_flits, Packet &packet) {
     {
         if (pesudo_prob_poisson(avg_hop_no, 2, GlobalParams::wired_bit_error_rate) > rand01())
         {
-            onDecodeSuccess(false);
-            return true;
+            onDecodeFailure();
+            return false;
         }
 
         if (pesudo_prob_poisson(avg_hub_hop_no, 2, GlobalParams::wireless_bit_error_rate) > rand01())
         {
-            onDecodeSuccess(false);
-            return true;
+            onDecodeFailure();
+            return false;
         }
     }
 
