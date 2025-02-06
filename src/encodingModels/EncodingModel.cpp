@@ -130,7 +130,9 @@ void EncodingModel::simulate_hops(vector < Flit > &flits)
 
 double EncodingModel::pesudo_prob_poisson(int n, int k, double p){
     assert(p >= 0.0 && p <= 1.0);
-    assert(n >= 0 && k >= 0 && n >= k);
+    assert(n >= 0 && k >= 0);
+
+    if (n < k) return 0;
 
     double lambda = n * p;
     if(lambda == 0.0) return (k <= 0) ? 1.0 : 0.0;

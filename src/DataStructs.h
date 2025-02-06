@@ -145,6 +145,7 @@ struct Flit {
         timestamp = packet.timestamp;
         sequence_length = packet.size;
         hop_no = 0;
+        hub_hop_no = 0;
         use_low_voltage_path = packet.use_low_voltage_path;
         hub_relay_node = NOT_VALID;
     }
