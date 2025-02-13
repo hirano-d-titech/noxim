@@ -42,7 +42,7 @@ touch "$filename"
 # 配列の要素数だけループ
 for element in "${array[@]}"; do
     # コマンドを実行し、標準出力をキャプチャ
-    output=$(./noxim -config ../config_examples/bthesis.yaml -dimx $D -dimy $D -ecm $E -pir "$element" poisson)
+    output=$(./noxim -config ../config_examples/presentation.yaml -dimx $D -dimy $D -ecm $E -pir "$element" poisson)
     
     # 標準出力の後半14行を取得
     last14=$(echo "$output" | tail -n 14)
