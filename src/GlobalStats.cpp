@@ -491,8 +491,12 @@ void GlobalStats::showStats(std::ostream & out, bool detailed)
     out << endl;
 #endif
 
+	auto ecm = EncodingModels::get(GlobalParams::encoding_model);
+
     //int total_cycles = GlobalParams::simulation_time - GlobalParams::stats_warm_up_time;
     out << "% Total received packets: " << getReceivedPackets() << endl;
+	out << "% Failure/Decode packets Ratio: " << (double)ecm->getFailureCount() / ecm->getDecodeCount() << endl;
+	out << "% Error/Success packets Ratio: " << (double)ecm->getErrorCount() / (ecm->getDecodeCount() - ecm->getFailureCount()) << endl;
     out << "% Total received flits: " << getReceivedFlits() << endl;
     out << "% Received/Ideal flits Ratio: " << getReceivedIdealFlitRatio() << endl;
     out << "% Average wireless utilization: " << getWirelessPackets()/(double)getReceivedPackets() << endl;

@@ -23,7 +23,16 @@ void ProcessingElement::rxProcess()
 	current_level_rx = 0;
     } else {
 	if (req_rx.read() == 1 - current_level_rx) {
-	    Flit flit_tmp = flit_rx.read();
+	    Flit flit_next = flit_rx.read();
+        flit_buffer.push_back(flit_next);
+        if (flit_next.flit_type == FLIT_TYPE_TAIL) {
+            Packet received_packet;
+            if (!encodingModel->decode(flit_buffer, received_packet))
+            {
+                packet_queue.push(received_packet.reverse());
+            }
+            flit_buffer.clear();
+        }
 	    current_level_rx = 1 - current_level_rx;	// Negate the old value for Alternating Bit Protocol (ABP)
 	}
 	ack_rx.write(current_level_rx);
@@ -59,30 +68,16 @@ void ProcessingElement::txProcess()
 
 Flit ProcessingElement::nextFlit()
 {
-    Flit flit;
-    Packet packet = packet_queue.front();
+    if (front_packet_flits.empty())
+    {
+        encodingModel->encode(packet_queue.front(), front_packet_flits);
+    }
 
-    flit.src_id = packet.src_id;
-    flit.dst_id = packet.dst_id;
-    flit.vc_id = packet.vc_id;
-    flit.timestamp = packet.timestamp;
-    flit.sequence_no = packet.size - packet.flit_left;
-    flit.sequence_length = packet.size;
-    flit.hop_no = 0;
-    //  flit.payload     = DEFAULT_PAYLOAD;
+    Flit flit = front_packet_flits.front();
+    front_packet_flits.pop();
 
-    flit.hub_relay_node = NOT_VALID;
-
-    if (packet.size == packet.flit_left)
-	flit.flit_type = FLIT_TYPE_HEAD;
-    else if (packet.flit_left == 1)
-	flit.flit_type = FLIT_TYPE_TAIL;
-    else
-	flit.flit_type = FLIT_TYPE_BODY;
-
-    packet_queue.front().flit_left--;
-    if (packet_queue.front().flit_left == 0)
-	packet_queue.pop();
+    if (front_packet_flits.empty())
+        packet_queue.pop();
 
     return flit;
 }

@@ -34,9 +34,9 @@ void Router::rxProcess()
 	}
 	routed_flits = 0;
 	local_drained = 0;
-    } 
-    else 
-    { 
+    }
+    else
+    {
 	// This process simply sees a flow of incoming flits. All arbitration
 	// and wormhole related issues are addressed in the txProcess()
 	//assert(false);
@@ -47,9 +47,11 @@ void Router::rxProcess()
 	    //LOG<<"****RX****DIRECTION ="<<i<<  endl;
 
 	    if (req_rx[i].read() == 1 - current_level_rx[i])
-	    { 
+	    {
 		Flit received_flit = flit_rx[i].read();
 		//LOG<<"request opposite to the current_level, reading flit "<<received_flit<<endl;
+
+		received_flit.hop_no++;
 
 		int vc = received_flit.vc_id;
 
@@ -207,6 +209,7 @@ void Router::txProcess()
 		      //if (GlobalParams::verbose_mode > VERBOSE_OFF) 
 		      LOG << "Input[" << i << "][" << vc << "] forwarded to Output[" << o << "], flit: " << flit << endl;
 
+			  flit.hop_no++;
 		      flit_tx[o].write(flit);
 		      current_level_tx[o] = 1 - current_level_tx[o];
 		      req_tx[o].write(current_level_tx[o]);

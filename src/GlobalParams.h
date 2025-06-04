@@ -155,8 +155,13 @@ struct GlobalParams {
     static string routing_algorithm;
     static string routing_table_filename;
     static string selection_strategy;
+    static string encoding_model;
     static double packet_injection_rate;
     static double probability_of_retransmission;
+    static double wired_flit_loss_rate;
+    static double wireless_flit_loss_rate;
+    static double wired_bit_error_rate;
+    static double wireless_bit_error_rate;
     static double locality;
     static string traffic_distribution;
     static string traffic_table_filename;

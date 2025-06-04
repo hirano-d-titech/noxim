@@ -365,6 +365,11 @@ void Hub::antennaToTileProcess()
 				{
 					LOG << " RT_OUTVC_BUSY reservation direction " << dst_port << " for flit " << received_flit << endl;
 				}
+				else if (rt_status == RT_ALREADY_OTHER_OUT)
+				{
+					// TODO: is this status valid?
+					LOG << "RT_ALREADY_OTHER_OUT a channel different from " << channel << " already reserved by Hub port["<< i << "]["<<channel<<"]" << endl;
+				}
 				else assert(false); // no meaningful status here
 
 
@@ -388,6 +393,8 @@ void Hub::antennaToTileProcess()
 			{
 				Flit received_flit = target[channel]->buffer_rx.Front();
 				power.antennaBufferFront();
+
+				received_flit.hub_hop_no++;
 
 				if ( !buffer_to_tile[port][vc].IsFull() )
 				{
@@ -562,6 +569,8 @@ void Hub::tileToAntennaProcess()
 			{
 				Flit flit = buffer_from_tile[i][vc].Front();
 				// powerFront already accounted in 1st phase
+
+				flit.hub_hop_no++;
 
 				assert(r_from_tile[i][vc] == DIRECTION_WIRELESS);
 

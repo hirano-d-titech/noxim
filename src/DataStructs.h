@@ -63,6 +63,11 @@ struct Packet {
 	flit_left = sz;
 	use_low_voltage_path = false;
     }
+
+    Packet reverse()
+    {
+        return Packet{dst_id, src_id, vc_id, sc_time_stamp().to_double() / GlobalParams::clock_period_ps, size};
+    }
 };
 
 // RouteData -- data required to perform routing
@@ -126,9 +131,24 @@ struct Flit {
     Payload payload;	// Optional payload
     double timestamp;		// Unix timestamp at packet generation
     int hop_no;			// Current number of hops from source to destination
+    int hub_hop_no;     // Current number of passed wireless-hops
     bool use_low_voltage_path;
 
     int hub_relay_node;
+
+    Flit(){}
+
+    Flit(Packet packet){
+        src_id = packet.src_id;
+        dst_id = packet.dst_id;
+        vc_id = packet.vc_id;
+        timestamp = packet.timestamp;
+        sequence_length = packet.size;
+        hop_no = 0;
+        hub_hop_no = 0;
+        use_low_voltage_path = packet.use_low_voltage_path;
+        hub_relay_node = NOT_VALID;
+    }
 
     inline bool operator ==(const Flit & flit) const {
 	return (flit.src_id == src_id && flit.dst_id == dst_id
