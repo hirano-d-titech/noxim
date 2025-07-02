@@ -150,8 +150,6 @@ show_buffer_stats: false
 # enable wireless, when false, all wireless channel configuration is
 # ignored
 use_winoc: false
-# experimental power saving strategy
-use_wirxsleep: false
 
 # Verbosity level:
 #   VERBOSE_OFF
