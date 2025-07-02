@@ -159,30 +159,6 @@ unsigned int Stats::getTotalCommunications()
     return chist.size();
 }
 
-double Stats::getCommunicationEnergy(int src_id, int dst_id)
-{
-  // NOT YET IMPLEMENTED
-    // Assumptions: minimal path routing, constant packet size
-  /*
-    Coord src_coord = id2Coord(src_id);
-    Coord dst_coord = id2Coord(dst_id);
-
-    int hops =
-	abs(src_coord.x - dst_coord.x) + abs(src_coord.y - dst_coord.y);
-
-    double energy =
-	hops * (power.getPwrArbitration() + power.getPwrCrossbar() +
-		 power.getPwrBuffering() *
-		(GlobalParams::min_packet_size +
-		 GlobalParams::max_packet_size) / 2 +
-		power.getPwrRouting() + power.getPwrSelection()
-	);
-
-    return energy;
-  */
-  return -1.0;
-}
-
 int Stats::searchCommHistory(int src_id)
 {
     for (unsigned int i = 0; i < chist.size(); i++)
@@ -201,7 +177,6 @@ void Stats::showStats(int curr_node, std::ostream & out, bool header)
 	    << setw(10) << "delay avg"
 	    << setw(10) << "delay max"
 	    << setw(15) << "throughput"
-	    << setw(13) << "energy"
 	    << setw(12) << "received" << setw(12) << "received" << endl;
 	out << "%"
 	    << setw(5) << ""
@@ -209,7 +184,6 @@ void Stats::showStats(int curr_node, std::ostream & out, bool header)
 	    << setw(10) << "cycles"
 	    << setw(10) << "cycles"
 	    << setw(15) << "flits/cycle"
-	    << setw(13) << "Joule"
 	    << setw(12) << "packets" << setw(12) << "flits" << endl;
     }
     for (unsigned int i = 0; i < chist.size(); i++) {
@@ -219,8 +193,6 @@ void Stats::showStats(int curr_node, std::ostream & out, bool header)
 	    << setw(10) << getAverageDelay(chist[i].src_id)
 	    << setw(10) << getMaxDelay(chist[i].src_id)
 	    << setw(15) << getAverageThroughput(chist[i].src_id)
-	    << setw(13) << getCommunicationEnergy(chist[i].src_id,
-						  curr_node)
 	    << setw(12) << chist[i].delays.size()
 	    << setw(12) << chist[i].total_received_flits << endl;
     }

@@ -15,7 +15,6 @@
 #include <iomanip>
 #include <vector>
 #include "DataStructs.h"
-#include "Power.h"
 using namespace std;
 
 struct CommHistory {
@@ -67,12 +66,6 @@ class Stats {
     // Returns the number of communications whose destination is the
     // current node
     unsigned int getTotalCommunications();
-
-    // Returns the energy consumed for communication src_id-->dst_id
-    // under the following assumptions: (i) Minimal routing is
-    // considered, (ii) constant packet size is considered (as the
-    // average between the minimum and the maximum packet size).
-    double getCommunicationEnergy(int src_id, int dst_id);
 
     // Shows statistics for the current node
     void showStats(int curr_node, std::ostream & out =

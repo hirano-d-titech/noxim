@@ -84,7 +84,6 @@ void NoC::buildCommon()
 		}
 
 		// TODO FIX
-		// Hub Power model does not currently support different data rates for single hub
 		// If multiple channels are connected to an Hub, the data rate
 		// of the first channel will be used as default
 
@@ -98,17 +97,6 @@ void NoC::buildCommon()
 		else
 			data_rate_gbs = NOT_VALID;
 
-		// TODO: update power model (configureHub to support different tx/tx buffer depth in the power breakdown
-		// Currently, an averaged value is used when accounting in Power class methods
-
-		hub[hub_id]->power.configureHub(GlobalParams::flit_size,
-										GlobalParams::hub_configuration[hub_id].toTileBufferSize,
-										GlobalParams::hub_configuration[hub_id].fromTileBufferSize,
-										GlobalParams::flit_size,
-										GlobalParams::hub_configuration[hub_id].rxBufferSize,
-										GlobalParams::hub_configuration[hub_id].txBufferSize,
-										GlobalParams::flit_size,
-										data_rate_gbs);
 	}
 
 
@@ -193,12 +181,6 @@ void NoC::buildButterfly()
 								  GlobalParams::stats_warm_up_time,
 								  GlobalParams::buffer_depth,
 								  grtable);
-			t[i][j]->r->power.configureRouter(GlobalParams::flit_size,
-											  GlobalParams::buffer_depth,
-											  GlobalParams::flit_size,
-											  string(GlobalParams::routing_algorithm),
-											  "default");
-
 
 
 			// Tell to the PE its coordinates
@@ -520,12 +502,6 @@ void NoC::buildButterfly()
 							   GlobalParams::stats_warm_up_time,
 							   GlobalParams::buffer_depth,
 							   grtable);
-		core[i]->r->power.configureRouter(GlobalParams::flit_size,
-										  GlobalParams::buffer_depth,
-										  GlobalParams::flit_size,
-										  string(GlobalParams::routing_algorithm),
-										  "default");
-
 
 
 		// Tell to the PE its coordinates
@@ -842,12 +818,6 @@ void NoC::buildBaseline()
 		    GlobalParams::stats_warm_up_time,
 		    GlobalParams::buffer_depth,
 		    grtable);
-	    t[i][j]->r->power.configureRouter(GlobalParams::flit_size,
-		    GlobalParams::buffer_depth,
-		    GlobalParams::flit_size,
-		    string(GlobalParams::routing_algorithm),
-		    "default");
-
 
 
 	    // Tell to the PE its coordinates
@@ -1283,12 +1253,6 @@ void NoC::buildBaseline()
 		GlobalParams::stats_warm_up_time,
 		GlobalParams::buffer_depth,
 		grtable);
-	core[i]->r->power.configureRouter(GlobalParams::flit_size,
-		GlobalParams::buffer_depth,
-		GlobalParams::flit_size,
-		string(GlobalParams::routing_algorithm),
-		"default");
-
 
 
 	// Tell to the PE its coordinates
@@ -1574,12 +1538,6 @@ void NoC::buildOmega()
 								  GlobalParams::stats_warm_up_time,
 								  GlobalParams::buffer_depth,
 								  grtable);
-			t[i][j]->r->power.configureRouter(GlobalParams::flit_size,
-											  GlobalParams::buffer_depth,
-											  GlobalParams::flit_size,
-											  string(GlobalParams::routing_algorithm),
-											  "default");
-
 
 
 			// Tell to the PE its coordinates
@@ -1913,12 +1871,6 @@ void NoC::buildOmega()
 							   GlobalParams::stats_warm_up_time,
 							   GlobalParams::buffer_depth,
 							   grtable);
-		core[i]->r->power.configureRouter(GlobalParams::flit_size,
-										  GlobalParams::buffer_depth,
-										  GlobalParams::flit_size,
-										  string(GlobalParams::routing_algorithm),
-										  "default");
-
 
 
 		// Tell to the PE its coordinates
@@ -2190,12 +2142,6 @@ void NoC::buildMesh()
 				  GlobalParams::stats_warm_up_time,
 				  GlobalParams::buffer_depth,
 				  grtable);
-	    t[i][j]->r->power.configureRouter(GlobalParams::flit_size,
-		      			      GlobalParams::buffer_depth,
-					      GlobalParams::flit_size,
-					      string(GlobalParams::routing_algorithm),
-					      "default");
-					      
 
 
 	    // Tell to the PE its coordinates

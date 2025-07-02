@@ -12,7 +12,6 @@
 #include <systemc.h> //Included for the function time() 
 
 YAML::Node config;
-YAML::Node power_config;
 
 void loadConfiguration() {
 
@@ -23,20 +22,6 @@ void loadConfiguration() {
     } catch (YAML::BadFile &e) {
         cout << " Failed" << endl;
         cerr << "The specified YAML configuration file was not found!" << endl;
-        exit(0);
-    } catch (YAML::ParserException &pe) {
-        cout << " Failed" << endl;
-        cerr << "ERROR at line " << pe.mark.line +1 << " column " << pe.mark.column + 1 << ": "<< pe.msg << ". Please check identation." << endl;
-        exit(0);
-    }
-
-    cout << "Loading power configurations from file \"" << GlobalParams::power_config_filename << "\"...";
-    try {
-        power_config = YAML::LoadFile(GlobalParams::power_config_filename);
-        cout << " Done" << endl;
-    } catch (YAML::BadFile &e){
-        cout << " Failed" << endl;
-        cerr << "The specified YAML power configurations file was not found!" << endl;
         exit(0);
     } catch (YAML::ParserException &pe) {
         cout << " Failed" << endl;
@@ -91,7 +76,6 @@ void loadConfiguration() {
     GlobalParams::show_buffer_stats = readParam<bool>(config, "show_buffer_stats");
     GlobalParams::use_winoc = readParam<bool>(config, "use_winoc");
     GlobalParams::winoc_dst_hops = readParam<int>(config, "winoc_dst_hops",0);
-    GlobalParams::use_powermanager = readParam<bool>(config, "use_wirxsleep");
     
 
     set<int> channelSet;
@@ -133,8 +117,6 @@ void loadConfiguration() {
 
         GlobalParams::channel_configuration[channel_id] = channel_config_node.as<ChannelConfig>(); 
     }
-
-    GlobalParams::power_configuration = power_config["Energy"].as<PowerConfig>();
 }
 
 void setBufferToTile(int depth)
@@ -191,7 +173,6 @@ void showHelp(char selfname[])
          << "Where [options] is one or more of the following ones:" << endl
          << "\t-help\t\t\tShow this help and exit" << endl
          << "\t-config\t\t\tLoad the specified configuration file" << endl
-         << "\t-power\t\t\tLoad the specified power configurations file" << endl
          << "\t-verbose N\t\tVerbosity level (1=low, 2=medium, 3=high)" << endl
          << "\t-trace FILENAME\t\tTrace signals to a VCD file named 'FILENAME.vcd'" << endl
          << "\t-dimx N\t\t\tSet the mesh X dimension" << endl
@@ -203,7 +184,6 @@ void showHelp(char selfname[])
 	 << "\t-vc N\t\t\tNumber of virtual channels" << endl
          << "\t-winoc\t\t\tEnable radio hub wireless transmission" << endl
          << "\t-winoc_dst_hops\t\t\tMax number of hops between target RadioHub and destination node" << endl
-         << "\t-wirxsleep\t\tEnable radio hub wireless power manager" << endl
          << "\t-size Nmin Nmax\t\tSet the minimum and maximum packet size [flits]" << endl
          << "\t-flit N\t\t\tSet the flit size [bit]" << endl
          << "\t-topology TYPE\t\tSet the topology to one of the following:" << endl
@@ -436,11 +416,6 @@ void checkConfiguration()
 	     << "GlobalParams.h and compile again " << endl;
 	exit(1);
     }
-    if (GlobalParams::n_virtual_channels>1 && GlobalParams::use_powermanager)
-    {
-	cerr << "Error: Power manager (-wirxsleep) option only supports a single virtual channel" << endl;
-	exit(1);
-    }
 
     if (GlobalParams::ascii_monitor)
     {
@@ -493,10 +468,6 @@ void parseCmdLine(int arg_num, char *arg_vet[])
 	    else if (!strcmp(arg_vet[i], "-winoc_dst_hops")) 
 	    {
             GlobalParams::winoc_dst_hops = atoi(arg_vet[++i]);
-	    }
-	    else if (!strcmp(arg_vet[i], "-wirxsleep")) 
-	    {
-		GlobalParams::use_powermanager = true;
 	    }
 	    else if (!strcmp(arg_vet[i], "-size")) 
 	    {
@@ -601,7 +572,7 @@ void parseCmdLine(int arg_num, char *arg_vet[])
 		GlobalParams::simulation_time = atoi(arg_vet[++i]);
 	    else if (!strcmp(arg_vet[i], "-asciimonitor")) 
 		GlobalParams::ascii_monitor = true;
-	    else if (!strcmp(arg_vet[i], "-config") || !strcmp(arg_vet[i], "-power"))
+	    else if (!strcmp(arg_vet[i], "-config"))
 		// -config is managed from configure function
 		// i++ skips the configuration file name 
 		i++;
@@ -618,7 +589,6 @@ void parseCmdLine(int arg_num, char *arg_vet[])
 void configure(int arg_num, char *arg_vet[]) {
 
     bool config_found = false;
-    bool power_config_found = false;
 
     for (int i = 1; i < arg_num; i++) {
 	    if (!strcmp(arg_vet[i], "-help")) {
@@ -643,26 +613,6 @@ void configure(int arg_num, char *arg_vet[]) {
         else
         {
             cerr << "No YAML configuration file found!\n Use -config to load examples from config_examples folder" << endl;
-            exit(0);
-        }
-    }
-
-    for (int i = 1; i < arg_num; i++) {
-	    if (!strcmp(arg_vet[i], "-power")) {
-            GlobalParams::power_config_filename = arg_vet[++i];
-            power_config_found = true;
-            break;
-        }
-    }
-
-    if (!power_config_found)
-    {
-        std::ifstream infile(POWER_CONFIG_FILENAME);
-        if (infile.good())
-            GlobalParams::power_config_filename = POWER_CONFIG_FILENAME;
-        else
-        {
-            cerr << "No YAML power configurations file found!\n Use -power to load examples from config_examples folder" << endl;
             exit(0);
         }
     }

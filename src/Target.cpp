@@ -23,7 +23,6 @@ void Target::b_transport( tlm::tlm_generic_payload& trans, sc_time& delay )
     {
         LOG << "*** [Ch" <<local_id << "] Flit " << *my_flit << " moved to buffer_rx " << endl;
         buffer_rx.Push(*my_flit);
-        hub->power.antennaBufferPush();
         // Obliged to set response status to indicate successful completion
         trans.set_response_status( tlm::TLM_OK_RESPONSE );
         //buffer_rx.Print();

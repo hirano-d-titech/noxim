@@ -20,7 +20,6 @@
 #include "Initiator.h"
 #include "Target.h"
 #include "TokenRing.h"
-#include "Power.h"
 
 using namespace std;
 
@@ -72,8 +71,6 @@ SC_MODULE(Hub)
     ReservationTable antenna2tile_reservation_table;	// Switch reservation table
     ReservationTable tile2antenna_reservation_table;// Wireless reservation table
 
-    void updateRxPower();
-    void updateTxPower();
     void antennaToTileProcess();
     void tileToAntennaProcess();
 
@@ -82,15 +79,6 @@ SC_MODULE(Hub)
 
     void setFlitTransmissionCycles(int cycles,int ch_id) {flit_transmission_cycles[ch_id]=cycles;}
 
-    // Power stats
-    Power power;
-
-    int total_sleep_cycles;
-    int total_ttxoff_cycles;
-    map<int,int> buffer_rx_sleep_cycles; // antenna buffer RX power off cycles
-    map<int,int> abtxoff_cycles; // antenna buffer TX power off cycles
-    map<int,int> analogtxoff_cycles; // analog TX power off cycles
-    map<int,int> buffer_to_tile_poweroff_cycles;
 
     int wireless_communications_counter;
 
@@ -168,9 +156,6 @@ SC_MODULE(Hub)
             flag[ch] = new sc_inout<int>();
             token_ring->attachHub(ch,local_id, current_token_holder[ch],current_token_expiration[ch],flag[ch]);
             transmission_in_progress[ch] = false;
-            // power manager currently assumes TOKEN_PACKET mac policy
-            if (GlobalParams::use_powermanager)
-                assert(token_ring->getPolicy(ch).first==TOKEN_PACKET);
         }
 
         for (unsigned int i = 0; i < rxChannels.size(); i++) {
@@ -182,8 +167,6 @@ SC_MODULE(Hub)
         }
 
 	start_from_port = 0;
-	total_sleep_cycles = 0;
-	total_ttxoff_cycles = 0;
 	wireless_communications_counter = 0;
     }
 
@@ -196,9 +179,6 @@ SC_MODULE(Hub)
     void txRadioProcessTokenPacket(int channel);
     void txRadioProcessTokenHold(int channel);
     void txRadioProcessTokenMaxHold(int channel);
-
-    void rxPowerManager();
-    void txPowerManager();
 
     int selectChannel(int src, int dst) const ;
 };

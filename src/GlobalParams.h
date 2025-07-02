@@ -20,7 +20,6 @@
 using namespace std;
 
 #define CONFIG_FILENAME        "config.yaml"
-#define POWER_CONFIG_FILENAME  "power.yaml"
 
 // Define the directions as numbers
 #define DIRECTIONS              4
@@ -106,38 +105,6 @@ typedef struct {
     int rxBufferSize;
 } HubConfig;
 
-typedef struct {
-    map<pair <int, int>, double> front;
-    map<pair <int, int>, double> pop;
-    map<pair <int, int>, double> push;
-    map<pair <int, int>, double> leakage;
-} BufferPowerConfig;
-
-typedef map<double, pair <double, double> > LinkBitLinePowerConfig;
-
-typedef struct {
-    map<pair<double, double>, pair<double, double> > crossbar_pm;
-    map<int, pair<double, double> > network_interface;
-    map<string, pair<double, double> > routing_algorithm_pm;
-    map<string, pair<double, double> > selection_strategy_pm;
-} RouterPowerConfig;
-
-typedef struct {
-    pair<double, double> transceiver_leakage;
-    pair<double, double> transceiver_biasing;
-    double rx_dynamic;
-    double rx_snooping;
-    double default_tx_energy;
-    map<pair <int, int>, double> transmitter_attenuation_map;
-} HubPowerConfig;
-
-typedef struct {
-    BufferPowerConfig bufferPowerConfig;
-    LinkBitLinePowerConfig linkBitLinePowerConfig;
-    RouterPowerConfig routerPowerConfig;
-    HubPowerConfig hubPowerConfig;
-} PowerConfig;
-
 struct GlobalParams {
     static string verbose_mode;
     static int trace_mode;
@@ -161,7 +128,6 @@ struct GlobalParams {
     static string traffic_distribution;
     static string traffic_table_filename;
     static string config_filename;
-    static string power_config_filename;
     static int clock_period_ps;
     static int simulation_time;
     static int n_virtual_channels;
@@ -175,13 +141,11 @@ struct GlobalParams {
     static bool show_buffer_stats;
     static bool use_winoc;
     static int winoc_dst_hops;
-    static bool use_powermanager;
     static ChannelConfig default_channel_configuration;
     static map<int, ChannelConfig> channel_configuration;
     static HubConfig default_hub_configuration;
     static map<int, HubConfig> hub_configuration;
     static map<int, int> hub_for_tile;
-    static PowerConfig power_configuration;
     // out of yaml configuration
     static bool ascii_monitor;
     static int channel_selection;

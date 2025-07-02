@@ -12,7 +12,6 @@
 #define __BUS_H__
 
 #include "Utils.h"
-#include "Power.h"
 #include "Hub.h"
 #include "tlm_utils/simple_initiator_socket.h"
 #include "tlm_utils/simple_target_socket.h"
@@ -75,8 +74,6 @@ struct Channel: sc_module
 
   }
 
-  Power power;
-
   // Tagged TLM-2 blocking transport method
   virtual void b_transport( int id, tlm::tlm_generic_payload& trans, sc_time& delay );
 
@@ -128,9 +125,6 @@ struct Channel: sc_module
       int cc_flit_transmission_delay_ps; // clock compliant
 
   std::map <tlm::tlm_generic_payload*, unsigned int> m_id_map;
-
-   void powerManager(unsigned int hub_dst_index, tlm::tlm_generic_payload& trans);
-   void accountWirelessRxPower();
 
 };
 

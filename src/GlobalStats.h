@@ -70,23 +70,11 @@ class GlobalStats {
     // Returns the number of routed flits for each router
      vector < vector < unsigned long > > getRoutedFlitsMtx();
 
-    // Returns the total dyamic power
-    double getDynamicPower();
-    // Returns the total static power
-    double getStaticPower();
-
-    // Returns the total power
-    double getTotalPower() { return getDynamicPower()+getStaticPower(); }
-
     // Shows global statistics
     void showStats(std::ostream & out = std::cout, bool detailed = false);
 
     void showBufferStats(std::ostream & out);
 
-
-    void showPowerBreakDown(std::ostream & out);
-
-    void showPowerManagerStats(std::ostream & out);
 
     double getReceivedIdealFlitRatio();
 
@@ -98,7 +86,6 @@ class GlobalStats {
 
   private:
     const NoC *noc;
-    void updatePowerBreakDown(map<string,double> &dst,PowerBreakdown* src);
 };
 
 #endif

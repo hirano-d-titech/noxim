@@ -66,7 +66,6 @@ SC_MODULE(Router)
     bool current_level_rx[DIRECTIONS + 2];	// Current level for Alternating Bit Protocol (ABP)
     bool current_level_tx[DIRECTIONS + 2];	// Current level for Alternating Bit Protocol (ABP)
     Stats stats;		                // Statistics
-    Power power;
     LocalRoutingTable routing_table;		// Routing table
     ReservationTable reservation_table;		// Switch reservation table
     unsigned long routed_flits;

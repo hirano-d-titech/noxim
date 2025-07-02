@@ -25,7 +25,6 @@ void Initiator::thread_process()
 
 		tlm::tlm_command cmd = tlm::TLM_WRITE_COMMAND;
 		flit_payload = buffer_tx.Front();
-		hub->power.antennaBufferFront();
 
 		int destHub;
 
@@ -70,13 +69,11 @@ void Initiator::thread_process()
 		// Call b_transport to demonstrate the b/nb conversion by the simple_target_socket
 		socket->b_transport( *trans, delay);
 
-		hub->power.wirelessTx(hub->local_id,destHub,GlobalParams::flit_size);
 
 		// Initiator obliged to check response status and delay
 		if (!trans->is_response_error() )
 		{
 			buffer_tx.Pop();
-			hub->power.antennaBufferPop();
 
 			if (flit_payload.flit_type == FLIT_TYPE_HEAD)
 				hub->transmission_in_progress.at(_channel_id) = true;

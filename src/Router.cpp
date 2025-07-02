@@ -55,20 +55,13 @@ void Router::rxProcess()
 
 		if (!buffer[i][vc].IsFull()) 
 		{
-
 		    // Store the incoming flit in the circular buffer
 		    buffer[i][vc].Push(received_flit);
 		    LOG << " Flit " << received_flit << " collected from Input[" << i << "][" << vc <<"]" << endl;
 
-		    power.bufferRouterPush();
-
 		    // Negate the old value for Alternating Bit Protocol (ABP)
 		    //LOG<<"INVERTING CL FROM "<< current_level_rx[i]<< " TO "<<  1 - current_level_rx[i]<<endl;
 		    current_level_rx[i] = 1 - current_level_rx[i];
-
-		    // if a new flit is injected from local PE
-		    if (received_flit.src_id == local_id)
-			power.networkInterface();
 		}
 
 		else  // buffer full
@@ -120,7 +113,6 @@ void Router::txProcess()
 	      if (!buffer[i][vc].IsEmpty()) 
 	      {
 		  Flit flit = buffer[i][vc].Front();
-		  power.bufferRouterFront();
 
 		  if (flit.flit_type == FLIT_TYPE_HEAD) 
 		    {
@@ -196,7 +188,6 @@ void Router::txProcess()
 	      // can happen
 	      if (!buffer[i][vc].IsEmpty())  
 	      {
-		  // power contribution already computed in 1st phase
 		  Flit flit = buffer[i][vc].Front();
 		  //LOG<< "*****TX***Direction= "<<i<< "************"<<endl;
 		  //LOG<<"_cl_tx="<<current_level_tx[o]<<"req_tx="<<req_tx[o].read()<<" _ack= "<<ack_tx[o].read()<< endl;
@@ -220,17 +211,10 @@ void Router::txProcess()
 			  reservation_table.release(r,o);
 		      }
 
-		      /* Power & Stats ------------------------------------------------- */
-		      if (o == DIRECTION_HUB) power.r2hLink();
-		      else
-			  power.r2rLink();
-
-		      power.bufferRouterPop();
-		      power.crossBar();
+		      /* Stats ------------------------------------------------- */
 
 		      if (o == DIRECTION_LOCAL) 
 		      {
-			  power.networkInterface();
 			  LOG << "Consumed flit " << flit << endl;
 			  stats.receivedFlit(sc_time_stamp().to_double() / GlobalParams::clock_period_ps, flit);
 			  if (GlobalParams:: max_volume_to_be_drained) 
@@ -246,7 +230,7 @@ void Router::txProcess()
 		      } 
 		      else if (i != DIRECTION_LOCAL) // not generated locally
 			  routed_flits++;
-		      /* End Power & Stats ------------------------------------------------- */
+		      /* End Stats ------------------------------------------------- */
 			 //LOG<<"END_OK_cl_tx="<<current_level_tx[o]<<"_req_tx="<<req_tx[o].read()<<" _ack= "<<ack_tx[o].read()<< endl;
 		  }
 		  else
@@ -299,18 +283,6 @@ void Router::perCycleUpdate()
 	    free_slots[i].write(buffer[i][DEFAULT_VC].GetMaxBufferSize());
     } else {
         selectionStrategy->perCycleUpdate(this);
-
-	power.leakageRouter();
-	for (int i = 0; i < DIRECTIONS + 1; i++)
-	{
-	    for (int vc=0;vc<GlobalParams::n_virtual_channels;vc++)
-	    {
-		power.leakageBufferRouter();
-		power.leakageLinkRouter2Router();
-	    }
-	}
-
-	power.leakageLinkRouter2Hub();
     }
 }
 
@@ -459,10 +431,8 @@ int Router::route(const RouteData & route_data)
     if (route_data.dst_id == local_id)
 	return DIRECTION_LOCAL;
 
-    power.routing();
     vector < int >candidate_channels = routingFunction(route_data);
 
-    power.selection();
     return selectionFunction(candidate_channels, route_data);
 }
 

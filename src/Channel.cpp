@@ -29,10 +29,6 @@ void Channel::b_transport( int id, tlm::tlm_generic_payload& trans, sc_time& del
 	trans.set_address( masked_address );
 
 
-	accountWirelessRxPower();
-
-	powerManager(target_nr,trans);
-
 	// Realize the delay annotated onto the transport call
 	wait(delay);
 
@@ -45,42 +41,6 @@ void Channel::b_transport( int id, tlm::tlm_generic_payload& trans, sc_time& del
     }
 }
 
-
-void Channel::accountWirelessRxPower()
-{
-    for (unsigned int i = 0; i<hubs.size();i++)
-    {
-	if (!GlobalParams::use_powermanager) 
-	    hubs[i]->power.wirelessDynamicRx();
-	else
-	if (!(hubs[i]->power.isSleeping()))
-	    hubs[i]->power.wirelessDynamicRx();
-    }
-}
-
-
-void Channel::powerManager(unsigned int hub_dst_index, tlm::tlm_generic_payload& trans)
-{
-    if (!GlobalParams::use_powermanager) return;
-
-    struct Flit* f = (struct Flit*)trans.get_data_ptr();
-
-    if (f->flit_type==FLIT_TYPE_HEAD)
-    {
-	int sleep_cycles = flit_transmission_cycles * f->sequence_length;
-
-	for (unsigned int i = 0; i<hubs.size();i++)
-	{
-
-	    if (i!=hub_dst_index) 
-	    {
-		hubs[i]->power.rxSleep(sleep_cycles);
-		LOG << " HUB_"<<hubs_id[i]<<" rxSleep() invoked with " << sleep_cycles << " cycles " << endl;
-	    }
-	}
-    }
-
-}
 
 
   bool Channel::get_direct_mem_ptr(int id,

@@ -38,128 +38,6 @@ int Hub::route(Flit& f)
 
 }
 
-
-void Hub::rxPowerManager()
-{
-	// Check wheter accounting or not buffer to tile leakage
-	// For each port, two poweroff condition should be checked:
-	// - the buffer to tile is empty
-	// - it has not been reserved
-
-	// currently only supported without VC
-	assert(GlobalParams::n_virtual_channels==1);
-
-	for (int port=0;port<num_ports;port++)
-	{
-		if (!buffer_to_tile[port][DEFAULT_VC].IsEmpty() ||
-			antenna2tile_reservation_table.isNotReserved(port))
-			power.leakageBufferToTile();
-
-		else
-			buffer_to_tile_poweroff_cycles[port]++;
-	}
-
-
-	for (unsigned int i=0;i<rxChannels.size();i++)
-	{
-		int ch_id = rxChannels[i];
-
-		if (!target[ch_id]->buffer_rx.IsEmpty())
-		{
-			power.leakageAntennaBuffer();
-		}
-		else
-			buffer_rx_sleep_cycles[ch_id]++;
-	}
-
-	// Check wheter accounting antenna RX buffer
-	// check if there is at least one not empty antenna RX buffer
-	// To be only applied if the current hub is in RADIO_EVENT_SLEEP_ON mode
-
-	if (power.isSleeping())
-		total_sleep_cycles++;
-
-	else // not sleeping
-	{
-		power.wirelessSnooping();
-		power.leakageTransceiverRx();
-		power.biasingRx();
-	}
-}
-
-
-void Hub::updateRxPower()
-{
-	if (GlobalParams::use_powermanager)
-		rxPowerManager();
-	else
-	{
-		power.wirelessSnooping();
-		power.leakageTransceiverRx();
-		power.biasingRx();
-
-		for (unsigned int i=0;i<rxChannels.size();i++)
-			for (int vc=0;vc<GlobalParams::n_virtual_channels;vc++)
-				power.leakageAntennaBuffer();
-
-		for (int i = 0; i < num_ports; i++)
-			for (int vc=0;vc<GlobalParams::n_virtual_channels;vc++)
-				power.leakageBufferToTile();
-	}
-}
-
-void Hub::txPowerManager()
-{
-	for (unsigned int i=0;i<txChannels.size();i++)
-	{
-		// check if not empty or reserved
-		if (!init[i]->buffer_tx.IsEmpty() ||
-			tile2antenna_reservation_table.isNotReserved(i) )
-		{
-			power.leakageAntennaBuffer();
-			// check the second condition for turning off analog tx
-			if (power.isSleeping())
-			{
-				analogtxoff_cycles[i]++;
-			}
-			else
-			{
-				power.leakageTransceiverTx();
-				power.biasingTx();
-			}
-		}
-		else
-		{   // abtx is empty and not reserved - turn off
-			// note that this also applies to analog tx and serializer
-			abtxoff_cycles[i]++;
-			analogtxoff_cycles[i]++;
-			total_ttxoff_cycles++;
-		}
-	}
-}
-
-void Hub::updateTxPower()
-{
-	if (GlobalParams::use_powermanager)
-		txPowerManager();
-	else
-	{
-		for (unsigned int i=0;i<txChannels.size();i++)
-			for (int vc=0;vc<GlobalParams::n_virtual_channels;vc++)
-				power.leakageAntennaBuffer();
-
-		power.leakageTransceiverTx();
-		power.biasingTx();
-	}
-
-	// mandatory
-	power.leakageLinkRouter2Hub();
-	for (int i = 0; i < num_ports; i++)
-		for (int vc=0;vc<GlobalParams::n_virtual_channels;vc++)
-			power.leakageBufferFromTile();
-}
-
-
 void Hub::txRadioProcessTokenPacket(int channel)
 {
     int current_holder = current_token_holder[channel]->read();
@@ -259,10 +137,6 @@ void Hub::antennaToTileProcess()
 		}
 		return;
 	}
-	// IMPORTANT: do not move from here
-	// The rxPowerManager must perform its checks before the flits are removed from buffers
-	updateRxPower();
-
 
 	/***********************************************************************************
       data flow from antenna(s) towards the tiles consist of 3 different steps:
@@ -301,8 +175,6 @@ void Hub::antennaToTileProcess()
 					req_tx[i].write(current_level_tx[i]);
 
 					buffer_to_tile[i][vc].Pop();
-					power.bufferToTilePop();
-					power.r2hLink();
 					break; // port flit transmitted, skip remaining VCs
 				}
 				else
@@ -328,7 +200,6 @@ void Hub::antennaToTileProcess()
 		if (!(target[channel]->buffer_rx.IsEmpty()))
 		{
 			Flit received_flit = target[channel]->buffer_rx.Front();
-			power.antennaBufferFront();
 
 			// Check antenna buffer_rx making appropriate reservations
 			if (received_flit.flit_type==FLIT_TYPE_HEAD)
@@ -387,16 +258,13 @@ void Hub::antennaToTileProcess()
 			if (!(target[channel]->buffer_rx.IsEmpty()))
 			{
 				Flit received_flit = target[channel]->buffer_rx.Front();
-				power.antennaBufferFront();
 
 				if ( !buffer_to_tile[port][vc].IsFull() )
 				{
 					target[channel]->buffer_rx.Pop();
-					power.antennaBufferPop();
 					LOG << "*** [Ch" << channel << "] Moving flit  " << received_flit << " from buffer_rx to buffer_to_tile[" << port <<"][" << vc << "]" << endl;
 
 					buffer_to_tile[port][vc].Push(received_flit);
-					power.bufferToTilePush();
 
 					if (received_flit.flit_type == FLIT_TYPE_TAIL)
 					{
@@ -495,7 +363,6 @@ void Hub::tileToAntennaProcess()
 
 				assert(flit.vc_id == vc);
 
-				power.bufferFromTileFront();
 				r_from_tile[i][vc] = route(flit);
 
 				if (flit.flit_type == FLIT_TYPE_HEAD)
@@ -561,7 +428,6 @@ void Hub::tileToAntennaProcess()
 			if (!buffer_from_tile[i][vc].IsEmpty())
 			{
 				Flit flit = buffer_from_tile[i][vc].Front();
-				// powerFront already accounted in 1st phase
 
 				assert(r_from_tile[i][vc] == DIRECTION_WIRELESS);
 
@@ -572,9 +438,7 @@ void Hub::tileToAntennaProcess()
 					if (!(init[channel]->buffer_tx.IsFull()) )
 					{
 						buffer_from_tile[i][vc].Pop();
-						power.bufferFromTilePop();
 						init[channel]->buffer_tx.Push(flit);
-						power.antennaBufferPush();
 						if (flit.flit_type == FLIT_TYPE_TAIL)
 						{
 							TReservation r;
@@ -622,7 +486,6 @@ void Hub::tileToAntennaProcess()
 				LOG << "Storing " << received_flit << " on buffer_from_tile[" << i << "][" << vc << "]" << endl;
 
 				buffer_from_tile[i][vc].Push(received_flit);
-				power.bufferFromTilePush();
 
 				current_level_rx[i] = 1 - current_level_rx[i];
 			}
@@ -639,10 +502,6 @@ void Hub::tileToAntennaProcess()
 			bfs.mask[vc] = buffer_from_tile[i][vc].IsFull();
 		buffer_full_status_rx[i].write(bfs);
 	}
-
-	// IMPORTANT: do not move from here
-	// The txPowerManager assumes that all flit buffer write have been done
-	updateTxPower();
 }
 
 int Hub::selectChannel(int src_hub, int dst_hub) const
