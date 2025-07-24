@@ -45,10 +45,6 @@ using namespace std;
 
 //Topologies
 #define TOPOLOGY_MESH          "MESH"
-//Delta Networks Topologies
-#define TOPOLOGY_BASELINE      "BASELINE"
-#define TOPOLOGY_BUTTERFLY     "BUTTERFLY"
-#define TOPOLOGY_OMEGA         "OMEGA"
 
 // Routing algorithms
 #define ROUTING_DYAD           "DYAD"
@@ -67,7 +63,6 @@ using namespace std;
 #define TRAFFIC_TABLE_BASED    "TRAFFIC_TABLE_BASED"
 #define TRAFFIC_BIT_REVERSAL   "TRAFFIC_BIT_REVERSAL"
 #define TRAFFIC_SHUFFLE        "TRAFFIC_SHUFFLE"
-#define TRAFFIC_BUTTERFLY      "TRAFFIC_BUTTERFLY"
 #define TRAFFIC_LOCAL	       "TRAFFIC_LOCAL"
 #define TRAFFIC_ULOCAL	       "TRAFFIC_ULOCAL"
 
@@ -89,7 +84,6 @@ struct GlobalParams {
     static string topology;
     static int mesh_dim_x;
     static int mesh_dim_y;
-    static int n_delta_tiles;
     static double r2r_link_length;
     static double r2h_link_length;
     static int buffer_depth;

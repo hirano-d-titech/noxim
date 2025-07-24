@@ -41,14 +41,6 @@ void loadConfiguration() {
         GlobalParams::mesh_dim_x = readParam<int>(config, "mesh_dim_x");
         GlobalParams::mesh_dim_y = readParam<int>(config, "mesh_dim_y");
     }
-	//Delta network params
-    if (GlobalParams::topology == TOPOLOGY_BASELINE  ||
-        GlobalParams::topology == TOPOLOGY_BUTTERFLY ||
-        GlobalParams::topology == TOPOLOGY_OMEGA      ) {
-        //GlobalParams::mesh_dim_x = readParam<int>(config, "mesh_dim_x");
-        //GlobalParams::mesh_dim_y = readParam<int>(config, "mesh_dim_y");
-        GlobalParams::n_delta_tiles = readParam<int>(config, "n_delta_tiles");
-    }
 
     GlobalParams::r2r_link_length = readParam<double>(config, "r2r_link_length");
     GlobalParams::r2h_link_length = readParam<double>(config, "r2h_link_length");
@@ -92,9 +84,6 @@ void showHelp(char selfname[])
          << "\t-flit N\t\t\tSet the flit size [bit]" << endl
          << "\t-topology TYPE\t\tSet the topology to one of the following:" << endl
          << "\t\tMESH\t\t2D Mesh" << endl
-         << "\t\tBUTTERFLY\tDelta network Butterfly (radix 2)" << endl
-         << "\t\tBASELINE\tDelta network Baseline" << endl
-         << "\t\tOMEGA\t\tDelta network Omega" << endl
          << "\t-routing TYPE\t\tSet the routing algorithm to one of the following:" << endl
          << "\t\tXY\t\tXY routing algorithm" << endl
          << "\t\tWEST_FIRST\tWest-First routing algorithm" << endl
@@ -119,7 +108,6 @@ void showHelp(char selfname[])
          << "\t\ttranspose1\tTranspose matrix 1 traffic distribution" << endl
          << "\t\ttranspose2\tTranspose matrix 2 traffic distribution" << endl
          << "\t\tbitreversal\tBit-reversal traffic distribution" << endl
-         << "\t\tbutterfly\tButterfly traffic distribution" << endl
          << "\t\tshuffle\t\tShuffle traffic distribution" << endl
          <<	"\t\ttable FILENAME\tTraffic Table Based traffic distribution with table in the specified file" << endl
          << "\t-hs ID P\t\tAdd node ID to hotspot nodes, with percentage P (0..1) (Only for 'random' traffic)" << endl
@@ -175,25 +163,10 @@ void checkConfiguration()
 			exit(1);
 		}
 	}
-	else // other delta topologies
-	{
-		int x = GlobalParams::n_delta_tiles;
-		while( x != 1)
-		{
-			//checks whether a number is divisible by 2
-			if(x % 2 != 0)
-			{
-				cerr << "Error: n_delta_tiles must be a power of 2 " << endl;
-				exit(1);
-			}
-			x /= 2;
-		}
-		if (GlobalParams::routing_algorithm!="DELTA")
-		{
-			cerr << "Error: BUTTERFLY/OMEGA/BASELINE topologies only supported in DELTA routing algorithm " << endl;
-			exit(1);
-		}
-	}
+    else // other topology does not exist
+    {
+		assert(false);
+    }
 
     if (GlobalParams::buffer_depth < 1) {
 	cerr << "Error: buffer must be >= 1" << endl;
@@ -241,10 +214,8 @@ void checkConfiguration()
 		}
 	}
 	else {
-		if (GlobalParams::hotspots[i].first >= GlobalParams::n_delta_tiles){
-		    cerr << "Error: hotspot node " << GlobalParams::hotspots[i].first << " is invalid (out of range)" << endl;
-		    exit(1);
-		}
+		cerr << "Error: unsupported topology for hotspots" << endl;
+		exit(1);
 	}
 
 	if (GlobalParams::hotspots[i].second < 0.0
@@ -334,9 +305,6 @@ void parseCmdLine(int arg_num, char *arg_vet[])
 	    else if (!strcmp(arg_vet[i], "-dimy"))
 		GlobalParams::mesh_dim_y = atoi(arg_vet[++i]);
 
-	    else if (!strcmp(arg_vet[i], "-dtiles"))
-		GlobalParams::n_delta_tiles = atoi(arg_vet[++i]);
-
 	    else if (!strcmp(arg_vet[i], "-buffer"))
 		GlobalParams::buffer_depth = atoi(arg_vet[++i]);
 	    else if (!strcmp(arg_vet[i], "-vc"))
@@ -405,9 +373,6 @@ void parseCmdLine(int arg_num, char *arg_vet[])
 		else if (!strcmp(traffic, "bitreversal"))
 		    GlobalParams::traffic_distribution =
 			TRAFFIC_BIT_REVERSAL;
-		else if (!strcmp(traffic, "butterfly"))
-		    GlobalParams::traffic_distribution =
-			TRAFFIC_BUTTERFLY;
 		else if (!strcmp(traffic, "shuffle"))
 		    GlobalParams::traffic_distribution =
 			TRAFFIC_SHUFFLE;

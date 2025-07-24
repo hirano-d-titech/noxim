@@ -42,24 +42,10 @@ double GlobalStats::getAverageDelay()
 		}
 	    }
     }
-    else // other delta topologies
-    { 
-	for (int y = 0; y < GlobalParams::n_delta_tiles; y++)
-	{
-	    unsigned int received_packets =
-		noc->core[y]->r->stats.getReceivedPackets();
-
-	    if (received_packets) 
-	    {
-		avg_delay +=
-		    received_packets *
-		    noc->core[y]->r->stats.getAverageDelay();
-		total_packets += received_packets;
-	    }
-	}
-
+    else // other topology does not exist
+    {
+	assert(false);
     }
-
 
     avg_delay /= (double) total_packets;
 
@@ -97,14 +83,9 @@ double GlobalStats::getMaxDelay()
 	    }
 
     }
-    else  // other delta topologies 
+    else // other topology does not exist
     {
-	for (int y = 0; y < GlobalParams::n_delta_tiles; y++)
-	{
-	    double d = getMaxDelay(y);
-	    if (d > maxd)
-		maxd = d;
-	}
+	assert(false);
     }
 
     return maxd;
@@ -124,14 +105,9 @@ double GlobalStats::getMaxDelay(const int node_id)
 	else
 	    return -1.0;
     }
-    else // other delta topologies
+    else // other topology does not exist
     {
-	unsigned int received_packets =
-	    noc->core[node_id]->r->stats.getReceivedPackets();
-	if (received_packets)
-	    return noc->core[node_id]->r->stats.getMaxDelay();
-	else
-	    return -1.0;
+	assert(false);
     }
 
 }
@@ -218,10 +194,9 @@ unsigned int GlobalStats::getReceivedPackets()
 		for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
 	    n += noc->t[x][y]->r->stats.getReceivedPackets();
     }
-    else // other delta topologies
+    else // other topology does not exist
     {
-    	for (int y = 0; y < GlobalParams::n_delta_tiles; y++)
-	    n += noc->core[y]->r->stats.getReceivedPackets();
+		assert(false);
     }
 
     return n;
@@ -240,15 +215,9 @@ unsigned int GlobalStats::getReceivedFlits()
 #endif
 	    }
     }
-    else // other delta topologies
+    else // other topology does not exist
     {
-	for (int y = 0; y < GlobalParams::n_delta_tiles; y++)
-	{
-	    n += noc->core[y]->r->stats.getReceivedFlits();
-#ifdef TESTING
-	    drained_total += noc->core[y]->r->local_drained;
-#endif
-	}
+	assert(false);
     }
 
     return n;
@@ -261,10 +230,9 @@ double GlobalStats::getThroughput()
 	int number_of_ip = GlobalParams::mesh_dim_x * GlobalParams::mesh_dim_y;
 	return (double)getAggregatedThroughput()/(double)(number_of_ip);
     }
-    else // other delta topologies
+    else // other topology does not exist
     {
-	int number_of_ip = GlobalParams::n_delta_tiles;
-	return (double)getAggregatedThroughput()/(double)(number_of_ip);
+	assert(false);
     }
 }
 
@@ -290,17 +258,9 @@ double GlobalStats::getActiveThroughput()
 		trf += rf;
 	    }
     }
-    else // other delta topologies
+    else // other topology does not exist
     {
-	for (int y = 0; y < GlobalParams::n_delta_tiles; y++)
-	{
-	    rf = noc->core[y]->r->stats.getReceivedFlits();
-
-	    if (rf != 0)
-		n++;
-
-	    trf += rf;
-	}
+	assert(false);
     }
 
     return (double) trf / (double) (total_cycles * n);
@@ -372,12 +332,9 @@ void GlobalStats::showStats(std::ostream & out, bool detailed)
 	    for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
 		out << "PE["<<x << "," << y<< "]" << noc->t[x][y]->pe->getQueueSize()<< ",";
     }
-    else // other delta topologies
+    else // other topology does not exist
     {
-	out << "Queue sizes: " ;
-	for (int i=0;i<GlobalParams::n_delta_tiles;i++)
-		out << "PE"<<i << ": " << noc->core[i]->pe->getQueueSize()<< ",";
-	out << endl;
+	assert(false);
     }
 	
     out << endl;
@@ -412,14 +369,9 @@ void GlobalStats::showBufferStats(std::ostream & out)
 			out << endl;
      	}
     }
-    else // other delta topologies
+    else // other topology does not exist
     {
-    	for (int y = 0; y < GlobalParams::n_delta_tiles; y++)
-    	{
-			out << noc->core[y]->r->local_id;
-			noc->core[y]->r->ShowBuffersStats(out);
-			out << endl;
-     	}
+		assert(false);
     }
 
 }
@@ -434,10 +386,9 @@ double GlobalStats::getReceivedIdealFlitRatio()
 	ratio = getReceivedFlits() /(GlobalParams::packet_injection_rate * (GlobalParams::min_packet_size +
 		    GlobalParams::max_packet_size)/2 * total_cycles * GlobalParams::mesh_dim_y * GlobalParams::mesh_dim_x);
     }
-    else // other delta topologies
+    else // other topology does not exist
     {
-	ratio = getReceivedFlits() /(GlobalParams::packet_injection_rate * (GlobalParams::min_packet_size +
-		    GlobalParams::max_packet_size)/2 * total_cycles * GlobalParams::n_delta_tiles);
+	assert(false);
     }
     return ratio;
 }

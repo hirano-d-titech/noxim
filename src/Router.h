@@ -131,8 +131,6 @@ SC_MODULE(Router)
     vector<int> getNextHops(int src, int dst);
     int start_from_port;	     // Port from which to start the reservation cycle
     int start_from_vc[DIRECTIONS+1]; // VC from which to start the reservation cycle for the specific port
-
-    vector<int> nextDeltaHops(RouteData rd);
   public:
     unsigned int local_drained;
 

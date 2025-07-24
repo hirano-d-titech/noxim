@@ -179,15 +179,9 @@ inline Coord id2Coord(int id)
         assert(coord.x < GlobalParams::mesh_dim_x);
         assert(coord.y < GlobalParams::mesh_dim_y);
     }
-    else // other delta topologies
+    else // other topology does not exist
     {
-        id = id - GlobalParams::n_delta_tiles;
-        coord.x = id / (int)(GlobalParams::n_delta_tiles/2);
-        coord.y = id % (int)(GlobalParams::n_delta_tiles/2);
-
-        assert(coord.x < log2(GlobalParams::n_delta_tiles));
-        assert(coord.y < (GlobalParams::n_delta_tiles/2));
-
+		assert(false);
     }
     return coord;
 }
@@ -200,10 +194,9 @@ inline int coord2Id(const Coord & coord)
         id = (coord.y * GlobalParams::mesh_dim_x) + coord.x;
         assert(id < GlobalParams::mesh_dim_x * GlobalParams::mesh_dim_y);
     }
-    else
-    {   //use only for switch bloc in delta topologies
-        id = (coord.x * (GlobalParams::n_delta_tiles/2)) + coord.y + GlobalParams::n_delta_tiles;
-        assert(id > (GlobalParams::n_delta_tiles-1));
+    else // other topology does not exist
+    {
+		assert(false);
     }
 
     return id;
@@ -222,14 +215,6 @@ template<typename T> std::string i_to_string(const T& t){
          std::stringstream s;
 	 s << t;
          return s.str();
-}
-
-
-inline bool YouAreSwitch(int id)
-{
-    if (id < (GlobalParams::n_delta_tiles/2) * log2(GlobalParams::n_delta_tiles))
-    return true;
-    else return false;
 }
 
 #endif

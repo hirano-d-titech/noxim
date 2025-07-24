@@ -34,7 +34,7 @@ SC_MODULE(NoC)
     sc_in_clk clock;		// The input clock for the NoC
     sc_in < bool > reset;	// The reset signal for the NoC
 
-    // Signals mesh and switch bloc in delta topologies
+    // Signals mesh
     sc_signal_NSWE<bool> **req;
     sc_signal_NSWE<bool> **ack;
     sc_signal_NSWE<TBufferFullStatus> **buffer_full_status;
@@ -62,12 +62,6 @@ SC_MODULE(NoC)
 	if (GlobalParams::topology == TOPOLOGY_MESH)
 	    // Build the Mesh
 	    buildMesh();
-	else if (GlobalParams::topology == TOPOLOGY_BUTTERFLY)
-        buildButterfly(); 
-	else if (GlobalParams::topology == TOPOLOGY_BASELINE)
-	    buildBaseline();
-	else if (GlobalParams::topology == TOPOLOGY_OMEGA)
-	    buildOmega();
 	else {
 	    cerr << "ERROR: Topology " << GlobalParams::topology << " is not yet supported." << endl;
 	    exit(0);
@@ -90,9 +84,6 @@ SC_MODULE(NoC)
   private:
 
     void buildMesh();
-    void buildButterfly();
-    void buildBaseline();
-    void buildOmega();
     void buildCommon();
     void asciiMonitor();
 };

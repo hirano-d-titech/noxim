@@ -19,8 +19,6 @@ string GlobalParams::topology;
 int GlobalParams::mesh_dim_x;
 int GlobalParams::mesh_dim_y;
 
-int GlobalParams::n_delta_tiles;
-
 double GlobalParams::r2r_link_length;
 double GlobalParams::r2h_link_length;
 int GlobalParams::buffer_depth;

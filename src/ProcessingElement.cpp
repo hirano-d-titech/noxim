@@ -129,8 +129,6 @@ bool ProcessingElement::canShot(Packet & packet)
 		    packet = trafficBitReversal();
         else if (GlobalParams::traffic_distribution == TRAFFIC_SHUFFLE)
 		    packet = trafficShuffle();
-        else if (GlobalParams::traffic_distribution == TRAFFIC_BUTTERFLY)
-		    packet = trafficButterfly();
         else if (GlobalParams::traffic_distribution == TRAFFIC_LOCAL)
 		    packet = trafficLocal();
         else if (GlobalParams::traffic_distribution == TRAFFIC_ULOCAL)
@@ -275,12 +273,13 @@ Packet ProcessingElement::trafficRandom()
     p.src_id = local_id;
     double rnd = rand() / (double) RAND_MAX;
     double range_start = 0.0;
+
     int max_id;
 
     if (GlobalParams::topology == TOPOLOGY_MESH)
 	max_id = (GlobalParams::mesh_dim_x * GlobalParams::mesh_dim_y) - 1; //Mesh 
-    else    // other delta topologies
-	max_id = GlobalParams::n_delta_tiles-1; 
+    else    // other topologies does not exist
+	assert(false);
 
     // Random destination distribution
     do {
@@ -428,29 +427,6 @@ Packet ProcessingElement::trafficShuffle()
     for (int i = 0; i < nbits - 1; i++)
 	setBit(dnode, i + 1, getBit(local_id, i));
     setBit(dnode, 0, getBit(local_id, nbits - 1));
-
-    Packet p;
-    p.src_id = local_id;
-    p.dst_id = dnode;
-
-    p.vc_id = randInt(0,GlobalParams::n_virtual_channels-1);
-    p.timestamp = sc_time_stamp().to_double() / GlobalParams::clock_period_ps;
-    p.size = p.flit_left = getRandomSize();
-
-    return p;
-}
-
-Packet ProcessingElement::trafficButterfly()
-{
-
-    int nbits = (int) log2ceil((double)
-		 (GlobalParams::mesh_dim_x *
-		  GlobalParams::mesh_dim_y));
-    int dnode = 0;
-    for (int i = 1; i < nbits - 1; i++)
-	setBit(dnode, i, getBit(local_id, i));
-    setBit(dnode, 0, getBit(local_id, nbits - 1));
-    setBit(dnode, nbits - 1, getBit(local_id, 0));
 
     Packet p;
     p.src_id = local_id;

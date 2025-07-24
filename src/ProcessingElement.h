@@ -57,7 +57,6 @@ SC_MODULE(ProcessingElement)
     Packet trafficTranspose2();	// Transpose 2 destination distribution
     Packet trafficBitReversal();	// Bit-reversal destination distribution
     Packet trafficShuffle();	// Shuffle destination distribution
-    Packet trafficButterfly();	// Butterfly destination distribution
     Packet trafficLocal();	// Random with locality
     Packet trafficULocal();	// Random with locality
 
