@@ -82,7 +82,6 @@ probability_of_retransmission: 0.01
 #   TRAFFIC_TABLE_BASED
 #   TRAFFIC_BIT_REVERSAL
 #   TRAFFIC_SHUFFLE
-#   TRAFFIC_BUTTERFLY
 traffic_distribution: TRAFFIC_RANDOM
 # when traffic table based is specified, use the following
 # configuration file

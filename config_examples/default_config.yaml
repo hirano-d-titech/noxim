@@ -6,12 +6,8 @@
 #
 # Topologies:
 #   MESH
-#   BUTTERFLY
-#   BASELINE
-#   OMEGA
 #
-#   BUTTERFLY, BASELINE, and OMEGA are Delta Network topologies
-# topology: MESH
+topology: MESH
 # X and Y mesh sizes
 mesh_dim_x: 4
 mesh_dim_y: 4
@@ -27,7 +23,6 @@ n_virtual_channels: 1
 
 # Routing algorithms:
 #   XY
-#   DELTA
 #   WEST_FIRST
 #   NORTH_LAST
 #   NEGATIVE_FIRST
@@ -90,7 +85,6 @@ probability_of_retransmission: 0.01
 #   TRAFFIC_TABLE_BASED
 #   TRAFFIC_BIT_REVERSAL
 #   TRAFFIC_SHUFFLE
-#   TRAFFIC_BUTTERFLY
 traffic_distribution: TRAFFIC_RANDOM
 # when traffic table based is specified, use the following
 # configuration file

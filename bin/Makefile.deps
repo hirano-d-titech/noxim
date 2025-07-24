@@ -110,10 +110,6 @@
 ./build/routingAlgorithms/Routing_WEST_FIRST.o: ../src/routingAlgorithms/RoutingAlgorithm.h
 ./build/routingAlgorithms/Routing_WEST_FIRST.o: ../src/routingAlgorithms/RoutingAlgorithms.h
 ./build/routingAlgorithms/Routing_WEST_FIRST.o: ../src/Router.h
-./build/routingAlgorithms/Routing_DELTA.o: ../src/routingAlgorithms/Routing_DELTA.h
-./build/routingAlgorithms/Routing_DELTA.o: ../src/routingAlgorithms/RoutingAlgorithm.h
-./build/routingAlgorithms/Routing_DELTA.o: ../src/routingAlgorithms/RoutingAlgorithms.h
-./build/routingAlgorithms/Routing_DELTA.o: ../src/Router.h
 ./build/routingAlgorithms/Routing_TABLE_BASED.o: ../src/routingAlgorithms/Routing_TABLE_BASED.h
 ./build/routingAlgorithms/Routing_TABLE_BASED.o: ../src/routingAlgorithms/RoutingAlgorithm.h
 ./build/routingAlgorithms/Routing_TABLE_BASED.o: ../src/routingAlgorithms/RoutingAlgorithms.h
