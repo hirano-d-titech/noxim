@@ -20,6 +20,13 @@
 ./build/ProcessingElement.o: ../src/ProcessingElement.h ../src/DataStructs.h
 ./build/ProcessingElement.o: ../src/GlobalParams.h ../src/GlobalTrafficTable.h
 ./build/ProcessingElement.o: ../src/Utils.h
+./build/ProcessingElement.o: ../src/encodingModels/EncodingModel.h
+./build/ProcessingElement.o: ../src/DataStructs.h ../src/Utils.h
+./build/ProcessingElement.o: ../src/encodingModels/EncodingModels.h
+./build/ProcessingElement.o: ../src/encodingModels/EncodingModel.h
+./build/ReservationTable_test.o: ../src/ReservationTable.h
+./build/ReservationTable_test.o: ../src/DataStructs.h ../src/GlobalParams.h
+./build/ReservationTable_test.o: ../src/Utils.h
 ./build/GlobalStats.o: ../src/GlobalStats.h ../src/NoC.h ../src/Tile.h
 ./build/GlobalStats.o: ../src/Router.h ../src/DataStructs.h
 ./build/GlobalStats.o: ../src/GlobalParams.h ../src/Buffer.h ../src/Stats.h
@@ -36,6 +43,9 @@
 ./build/GlobalStats.o: ../src/Router.h
 ./build/GlobalStats.o: ../src/selectionStrategies/Selection_BUFFER_LEVEL.h
 ./build/GlobalStats.o: ../src/ProcessingElement.h ../src/GlobalTrafficTable.h
+./build/GlobalStats.o: ../src/encodingModels/EncodingModel.h
+./build/GlobalStats.o: ../src/encodingModels/EncodingModels.h
+./build/GlobalStats.o: ../src/encodingModels/EncodingModel.h
 ./build/Main.o: ../src/ConfigurationManager.h ../src/GlobalParams.h
 ./build/Main.o: ../src/NoC.h ../src/Tile.h ../src/Router.h
 ./build/Main.o: ../src/DataStructs.h ../src/Buffer.h ../src/Stats.h
@@ -52,7 +62,9 @@
 ./build/Main.o: ../src/Router.h
 ./build/Main.o: ../src/selectionStrategies/Selection_BUFFER_LEVEL.h
 ./build/Main.o: ../src/ProcessingElement.h ../src/GlobalTrafficTable.h
-./build/Main.o: ../src/GlobalStats.h
+./build/Main.o: ../src/encodingModels/EncodingModel.h
+./build/Main.o: ../src/encodingModels/EncodingModels.h
+./build/Main.o: ../src/encodingModels/EncodingModel.h ../src/GlobalStats.h
 ./build/ConfigurationManager.o: ../src/ConfigurationManager.h
 ./build/ConfigurationManager.o: ../src/GlobalParams.h
 ./build/MM.o: ../src/MM.h
@@ -73,6 +85,9 @@
 ./build/NoC.o: ../src/Router.h
 ./build/NoC.o: ../src/selectionStrategies/Selection_BUFFER_LEVEL.h
 ./build/NoC.o: ../src/ProcessingElement.h ../src/GlobalTrafficTable.h
+./build/NoC.o: ../src/encodingModels/EncodingModel.h
+./build/NoC.o: ../src/encodingModels/EncodingModels.h
+./build/NoC.o: ../src/encodingModels/EncodingModel.h
 ./build/ReservationTable.o: ../src/ReservationTable.h ../src/DataStructs.h
 ./build/ReservationTable.o: ../src/GlobalParams.h ../src/Utils.h
 ./build/GlobalParams.o: ../src/GlobalParams.h
@@ -127,3 +142,18 @@
 ./build/routingAlgorithms/Routing_NORTH_LAST.o: ../src/routingAlgorithms/RoutingAlgorithm.h
 ./build/routingAlgorithms/Routing_NORTH_LAST.o: ../src/routingAlgorithms/RoutingAlgorithms.h
 ./build/routingAlgorithms/Routing_NORTH_LAST.o: ../src/Router.h
+./build/encodingModels/EncodingModels.o: ../src/encodingModels/EncodingModels.h
+./build/encodingModels/EncodingModels.o: ../src/encodingModels/EncodingModel.h
+./build/encodingModels/Encoding_RAW.o: ../src/encodingModels/Encoding_RAW.h
+./build/encodingModels/Encoding_RAW.o: ../src/encodingModels/EncodingModel.h
+./build/encodingModels/Encoding_RAW.o: ../src/encodingModels/EncodingModels.h
+./build/encodingModels/Encoding_REPEAT.o: ../src/encodingModels/Encoding_REPEAT.h
+./build/encodingModels/Encoding_REPEAT.o: ../src/encodingModels/EncodingModel.h
+./build/encodingModels/Encoding_REPEAT.o: ../src/encodingModels/EncodingModels.h
+./build/encodingModels/Encoding_HAMMING.o: ../src/encodingModels/Encoding_HAMMING.h
+./build/encodingModels/Encoding_HAMMING.o: ../src/encodingModels/EncodingModel.h
+./build/encodingModels/Encoding_HAMMING.o: ../src/encodingModels/EncodingModels.h
+./build/encodingModels/Encoding_ILH.o: ../src/encodingModels/Encoding_ILH.h
+./build/encodingModels/Encoding_ILH.o: ../src/encodingModels/EncodingModel.h
+./build/encodingModels/Encoding_ILH.o: ../src/encodingModels/EncodingModels.h
+./build/encodingModels/EncodingModel.o: ../src/encodingModels/EncodingModel.h
