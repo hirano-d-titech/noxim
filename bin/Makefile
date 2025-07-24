@@ -1,8 +1,8 @@
 ##### LIBRARIES CONFIGURATION #####
 
-SYSTEMC := libs/systemc-2.3.1
-YAML    := libs/yaml-cpp
-
+SYSTEMC := /lib/systemc-2.3.1
+YAML    := /usr/include/yaml-cpp
+GTEST_LIBS := -lgtest -lgtest_main -pthread
 
 ##### DIRECTORIES #####
 
@@ -14,6 +14,10 @@ OBJDIR  := ./build
 
 SRCS := $(wildcard $(SRCDIR)/*.cpp) $(wildcard $(addsuffix *.cpp,$(SUBDIRS)))
 OBJS := $(subst $(SRCDIR),$(OBJDIR),$(SRCS:.cpp=.o))
+
+# TEST OBJS
+CORE_OBJS := $(filter-out build/Main.o,$(OBJS))
+TEST_OBJS = $(wildcard $(OBJDIR)/*_test.o)
 
 MODULE := noxim
 
@@ -31,7 +35,7 @@ CXXFLAGS := $(OPT) $(OTHER) $(DEBUG)
 INCDIR := -I$(SRCDIR) -isystem $(SYSTEMC)/include -I$(YAML)/include
 LIBDIR := -L$(SRCDIR) -L$(SYSTEMC_LIBS) -L$(YAML)/lib
 
-LIBS := -lsystemc -lm -lyaml-cpp 
+LIBS := -lsystemc -lm -lyaml-cpp
 
 SPACE := $(subst ,, )
 VPATH := $(SRCDIR):$(subst $(SPACE),:,$(SUBDIRS))
@@ -39,7 +43,7 @@ VPATH := $(SRCDIR):$(subst $(SPACE),:,$(SUBDIRS))
 ##### RULES #####
 
 $(MODULE): $(OBJS)
-	$(CXX) $(LIBDIR) $^ $(LIBS) -o $@ 2>&1 | c++filt
+	$(CXX) $(LIBDIR) $^ $(LIBS) $(GTEST_LIBS) -o $@ 2>&1 | c++filt
 
 $(OBJDIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
@@ -50,5 +54,8 @@ clean:
 
 depend: 
 	makedepend $(SRCS) -Y -f- 2>/dev/null | sed 's_$(SRCDIR)_$(OBJDIR)_' > Makefile.deps
+
+test: $(CORE_OBJS) $(TEST_OBJS)
+	$(CXX) $^ $(GTEST_LIBS) $(LIBDIR) $(LIBS) -o $@
 
 -include Makefile.deps
