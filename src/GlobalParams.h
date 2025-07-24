@@ -82,10 +82,6 @@ using namespace std;
 #define RELEASE_CHANNEL 1
 #define HOLD_CHANNEL 	2
 
-#define TOKEN_HOLD             "TOKEN_HOLD"
-#define TOKEN_MAX_HOLD         "TOKEN_MAX_HOLD"
-#define TOKEN_PACKET           "TOKEN_PACKET"
-
 struct GlobalParams {
     static string verbose_mode;
     static int trace_mode;
