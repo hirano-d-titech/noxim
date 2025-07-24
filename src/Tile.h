@@ -20,8 +20,6 @@ SC_MODULE(Tile)
 {
     SC_HAS_PROCESS(Tile);
 
-    
-
     // I/O Ports
     sc_in_clk clock;		                // The input clock for the tile
     sc_in <bool> reset;	                        // The reset signal for the tile
@@ -37,18 +35,6 @@ SC_MODULE(Tile)
     sc_out <bool> req_tx[DIRECTIONS];	        // The requests associated with the output channels
     sc_in <bool> ack_tx[DIRECTIONS];	        // The outgoing ack signals associated with the output channels
     sc_in <TBufferFullStatus> buffer_full_status_tx[DIRECTIONS];
-
-    // hub specific ports
-    sc_in <Flit> hub_flit_rx;	// The input channels
-    sc_in <bool> hub_req_rx;	        // The requests associated with the input channels
-    sc_out <bool> hub_ack_rx;	        // The outgoing ack signals associated with the input channels
-    sc_out <TBufferFullStatus> hub_buffer_full_status_rx;
-
-    sc_out <Flit> hub_flit_tx;	// The output channels
-    sc_out <bool> hub_req_tx;	        // The requests associated with the output channels
-    sc_in <bool> hub_ack_tx;	        // The outgoing ack signals associated with the output channels
-    sc_in <TBufferFullStatus> hub_buffer_full_status_tx;	
-
 
     // NoP related I/O and signals
     sc_out <int> free_slots[DIRECTIONS];
@@ -113,19 +99,6 @@ SC_MODULE(Tile)
 	r->req_tx[DIRECTION_LOCAL] (req_rx_local);
 	r->ack_tx[DIRECTION_LOCAL] (ack_rx_local);
 	r->buffer_full_status_tx[DIRECTION_LOCAL] (buffer_full_status_rx_local);
-
-
-	// hub related
-	r->flit_rx[DIRECTION_HUB] (hub_flit_rx);
-	r->req_rx[DIRECTION_HUB] (hub_req_rx);
-	r->ack_rx[DIRECTION_HUB] (hub_ack_rx);
-	r->buffer_full_status_rx[DIRECTION_HUB] (hub_buffer_full_status_rx);
-
-	r->flit_tx[DIRECTION_HUB] (hub_flit_tx);
-	r->req_tx[DIRECTION_HUB] (hub_req_tx);
-	r->ack_tx[DIRECTION_HUB] (hub_ack_tx);
-	r->buffer_full_status_tx[DIRECTION_HUB] (hub_buffer_full_status_tx);
-
 
 	// Processing Element pin assignments
 	pe = new ProcessingElement("ProcessingElement");

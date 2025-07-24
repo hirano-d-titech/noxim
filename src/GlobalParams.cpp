@@ -47,13 +47,9 @@ double GlobalParams::dyad_threshold;
 unsigned int GlobalParams::max_volume_to_be_drained;
 vector <pair <int, double> > GlobalParams::hotspots;
 bool GlobalParams::show_buffer_stats;
-bool GlobalParams::use_winoc;
-int GlobalParams::winoc_dst_hops;
-ChannelConfig GlobalParams::default_channel_configuration;
-map<int, ChannelConfig> GlobalParams::channel_configuration;
-HubConfig GlobalParams::default_hub_configuration;
-map<int, HubConfig> GlobalParams::hub_configuration;
-map<int, int> GlobalParams::hub_for_tile;
+
+// need-to-delete in non-wireless-noxim
+int GlobalParams::channel_selection;
+
 // out of yaml configuration
 bool GlobalParams::ascii_monitor;
-int GlobalParams::channel_selection;

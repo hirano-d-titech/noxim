@@ -71,8 +71,6 @@ Flit ProcessingElement::nextFlit()
     flit.hop_no = 0;
     //  flit.payload     = DEFAULT_PAYLOAD;
 
-    flit.hub_relay_node = NOT_VALID;
-
     if (packet.size == packet.flit_left)
 	flit.flit_type = FLIT_TYPE_HEAD;
     else if (packet.flit_left == 1)
@@ -182,11 +180,9 @@ Packet ProcessingElement::trafficLocal()
     {
 	if (rnd<=GlobalParams::locality)
 	{
-	    if (local_id!=i && sameRadioHub(local_id,i))
-		dst_set.push_back(i);
+	    if (local_id!=i) dst_set.push_back(i);
 	}
 	else
-	    if (!sameRadioHub(local_id,i))
 		dst_set.push_back(i);
     }
 
@@ -197,7 +193,7 @@ Packet ProcessingElement::trafficLocal()
     p.timestamp = sc_time_stamp().to_double() / GlobalParams::clock_period_ps;
     p.size = p.flit_left = getRandomSize();
     p.vc_id = randInt(0,GlobalParams::n_virtual_channels-1);
-    
+
     return p;
 }
 

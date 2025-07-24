@@ -28,9 +28,6 @@ using namespace std;
 #define DIRECTION_SOUTH         2
 #define DIRECTION_WEST          3
 #define DIRECTION_LOCAL         4
-#define DIRECTION_HUB           5
-#define DIRECTION_HUB_RELAY     5000
-#define DIRECTION_WIRELESS    747
 
 #define MAX_VIRTUAL_CHANNELS	8
 #define DEFAULT_VC 		0
@@ -89,22 +86,6 @@ using namespace std;
 #define TOKEN_MAX_HOLD         "TOKEN_MAX_HOLD"
 #define TOKEN_PACKET           "TOKEN_PACKET"
 
-typedef struct {
-    pair<double, double> ber;
-    int dataRate;
-    vector<string> macPolicy;
-} ChannelConfig;
-
-typedef struct {
-    vector<int> attachedNodes;
-    vector<int> rxChannels;
-    vector<int> txChannels;
-    int toTileBufferSize;
-    int fromTileBufferSize;
-    int txBufferSize;
-    int rxBufferSize;
-} HubConfig;
-
 struct GlobalParams {
     static string verbose_mode;
     static int trace_mode;
@@ -139,13 +120,6 @@ struct GlobalParams {
     static double dyad_threshold;
     static unsigned int max_volume_to_be_drained;
     static bool show_buffer_stats;
-    static bool use_winoc;
-    static int winoc_dst_hops;
-    static ChannelConfig default_channel_configuration;
-    static map<int, ChannelConfig> channel_configuration;
-    static HubConfig default_hub_configuration;
-    static map<int, HubConfig> hub_configuration;
-    static map<int, int> hub_for_tile;
     // out of yaml configuration
     static bool ascii_monitor;
     static int channel_selection;

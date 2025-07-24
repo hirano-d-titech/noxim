@@ -15,9 +15,6 @@
 #include "Tile.h"
 #include "GlobalRoutingTable.h"
 #include "GlobalTrafficTable.h"
-#include "Hub.h"
-#include "Channel.h"
-#include "TokenRing.h"
 
 using namespace std;
 
@@ -30,18 +27,6 @@ struct sc_signal_NSWE
     sc_signal<T> north;
 };
 
-template <typename T>
-struct sc_signal_NSWEH
-{
-    sc_signal<T> east;
-    sc_signal<T> west;
-    sc_signal<T> south;
-    sc_signal<T> north;
-    sc_signal<T> to_hub;
-    sc_signal<T> from_hub;
-};
-
-
 SC_MODULE(NoC)
 {
     public: bool SwitchOnly; //true if the tile are switch only 
@@ -50,38 +35,18 @@ SC_MODULE(NoC)
     sc_in < bool > reset;	// The reset signal for the NoC
 
     // Signals mesh and switch bloc in delta topologies
-    sc_signal_NSWEH<bool> **req;
-    sc_signal_NSWEH<bool> **ack;
-    sc_signal_NSWEH<TBufferFullStatus> **buffer_full_status;
-    sc_signal_NSWEH<Flit> **flit;
+    sc_signal_NSWE<bool> **req;
+    sc_signal_NSWE<bool> **ack;
+    sc_signal_NSWE<TBufferFullStatus> **buffer_full_status;
+    sc_signal_NSWE<Flit> **flit;
     sc_signal_NSWE<int> **free_slots;
 
     // NoP
     sc_signal_NSWE<NoP_data> **nop_data;
 
-    //signals for connecting Core2Hub (just to test wireless in Butterfly)
-    sc_signal<Flit> *flit_from_hub;
-    sc_signal<Flit> *flit_to_hub;
-
-    sc_signal<bool> *req_from_hub;
-    sc_signal<bool> *req_to_hub;
-
-    sc_signal<bool> *ack_from_hub;
-    sc_signal<bool> *ack_to_hub;
-
-    sc_signal<TBufferFullStatus> *buffer_full_status_from_hub;
-    sc_signal<TBufferFullStatus> *buffer_full_status_to_hub;
-
-
-
     // Matrix of tiles
     Tile ***t;
     Tile ** core;
-
-    map<int, Hub*> hub;
-    map<int, Channel*> channel;
-
-    TokenRing* token_ring;
 
     // Global tables
     GlobalRoutingTable grtable;
@@ -130,9 +95,6 @@ SC_MODULE(NoC)
     void buildOmega();
     void buildCommon();
     void asciiMonitor();
-    int * hub_connected_ports;
 };
-
-//Hub * dd;
 
 #endif

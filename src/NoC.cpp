@@ -19,87 +19,6 @@ inline int toggleKthBit(int n, int k)
 
 void NoC::buildCommon()
 {
-	token_ring = new TokenRing("tokenring");
-	token_ring->clock(clock);
-	token_ring->reset(reset);
-
-
-	char channel_name[16];
-	for (map<int, ChannelConfig>::iterator it = GlobalParams::channel_configuration.begin();
-		 it != GlobalParams::channel_configuration.end();
-		 ++it)
-	{
-		int channel_id = it->first;
-		sprintf(channel_name, "Channel_%d", channel_id);
-		channel[channel_id] = new Channel(channel_name, channel_id);
-	}
-
-	char hub_name[16];
-	for (map<int, HubConfig>::iterator it = GlobalParams::hub_configuration.begin();
-		 it != GlobalParams::hub_configuration.end();
-		 ++it)
-	{
-		int hub_id = it->first;
-		//LOG << " hub id " <<  hub_id;
-		HubConfig hub_config = it->second;
-
-		sprintf(hub_name, "Hub_%d", hub_id);
-		hub[hub_id] = new Hub(hub_name, hub_id,token_ring);
-		hub[hub_id]->clock(clock);
-		hub[hub_id]->reset(reset);
-
-
-		// Determine, from configuration file, which Hub is connected to which Tile
-		for(vector<int>::iterator iit = hub_config.attachedNodes.begin();
-			iit != hub_config.attachedNodes.end();
-			++iit)
-		{
-			GlobalParams::hub_for_tile[*iit] = hub_id;
-			//LOG<<"I am hub "<<hub_id<<" and I amconnecting to "<<*iit<<endl;
-
-		}
-		//for (map<int, int>::iterator it1 = GlobalParams::hub_for_tile.begin(); it1 != GlobalParams::hub_for_tile.end(); it1++ )
-		//LOG<<"it1 first "<< it1->first<< "second"<< it1->second<<endl;
-
-		// Determine, from configuration file, which Hub is connected to which Channel
-		for(vector<int>::iterator iit = hub_config.txChannels.begin();
-			iit != hub_config.txChannels.end();
-			++iit)
-		{
-			int channel_id = *iit;
-			//LOG << "Binding " << hub[hub_id]->name() << " to txChannel " << channel_id << endl;
-			hub[hub_id]->init[channel_id]->socket.bind(channel[channel_id]->targ_socket);
-			//LOG << "Binding " << hub[hub_id]->name() << " to txChannel " << channel_id << endl;
-			hub[hub_id]->setFlitTransmissionCycles(channel[channel_id]->getFlitTransmissionCycles(),channel_id);
-		}
-
-		for(vector<int>::iterator iit = hub_config.rxChannels.begin();
-			iit != hub_config.rxChannels.end();
-			++iit)
-		{
-			int channel_id = *iit;
-			//LOG << "Binding " << hub[hub_id]->name() << " to rxChannel " << channel_id << endl;
-			channel[channel_id]->init_socket.bind(hub[hub_id]->target[channel_id]->socket);
-			channel[channel_id]->addHub(hub[hub_id]);
-		}
-
-		// TODO FIX
-		// If multiple channels are connected to an Hub, the data rate
-		// of the first channel will be used as default
-
-		int no_channels = hub_config.txChannels.size();
-
-		int data_rate_gbs;
-
-		if (no_channels > 0) {
-			data_rate_gbs = GlobalParams::channel_configuration[hub_config.txChannels[0]].dataRate;
-		}
-		else
-			data_rate_gbs = NOT_VALID;
-
-	}
-
-
 	// Check for routing table availability
 	if (GlobalParams::routing_algorithm == ROUTING_TABLE_BASED)
 		assert(grtable.load(GlobalParams::routing_table_filename.c_str()));
@@ -107,9 +26,6 @@ void NoC::buildCommon()
 	// Check for traffic table availability
 	if (GlobalParams::traffic_distribution == TRAFFIC_TABLE_BASED)
 		assert(gttable.load(GlobalParams::traffic_table_filename.c_str()));
-
-	// Var to track Hub connected ports
-	hub_connected_ports = (int *) calloc(GlobalParams::hub_configuration.size(), sizeof(int));
 
 }
 
@@ -132,10 +48,10 @@ void NoC::buildButterfly()
 	int dimY = sw;
 	cout  << "tiles equal : " << GlobalParams::n_delta_tiles << endl;
 	cout <<"dimX_stg= "<< dimX << "  " << "dimY_sw= " << dimY << endl ;
-	req = new sc_signal_NSWEH<bool>*[dimX];
-	ack = new sc_signal_NSWEH<bool>*[dimX];
-	buffer_full_status = new sc_signal_NSWEH<TBufferFullStatus>*[dimX];
-	flit = new sc_signal_NSWEH<Flit>*[dimX];
+	req = new sc_signal_NSWE<bool>*[dimX];
+	ack = new sc_signal_NSWE<bool>*[dimX];
+	buffer_full_status = new sc_signal_NSWE<TBufferFullStatus>*[dimX];
+	flit = new sc_signal_NSWE<Flit>*[dimX];
 
 	// not used in butterfly
 	free_slots = new sc_signal_NSWE<int>*[dimX];
@@ -144,10 +60,10 @@ void NoC::buildButterfly()
 	// instantiation of the signal matrix
 	// For each row (dimX) create a vector of DimY (columns)
 	for (int i=0; i < dimX; i++) {
-		req[i] = new sc_signal_NSWEH<bool>[dimY];
-		ack[i] = new sc_signal_NSWEH<bool>[dimY];
-		buffer_full_status[i] = new sc_signal_NSWEH<TBufferFullStatus>[dimY];
-		flit[i] = new sc_signal_NSWEH<Flit>[dimY];
+		req[i] = new sc_signal_NSWE<bool>[dimY];
+		ack[i] = new sc_signal_NSWE<bool>[dimY];
+		buffer_full_status[i] = new sc_signal_NSWE<TBufferFullStatus>[dimY];
+		flit[i] = new sc_signal_NSWE<Flit>[dimY];
 
 		free_slots[i] = new sc_signal_NSWE<int>[dimY];
 		nop_data[i] = new sc_signal_NSWE<NoP_data>[dimY];
@@ -160,7 +76,7 @@ void NoC::buildButterfly()
 	}
 
 
-// assert
+	// assert
 	// Create the mesh as a matrix of tiles
 	for (int j = 0; j < dimY; j++) {
 		for (int i = 0; i < dimX; i++) {
@@ -191,45 +107,6 @@ void NoC::buildButterfly()
 			// Map clock and reset
 			t[i][j]->clock(clock);
 			t[i][j]->reset(reset);
-
-
-			// BFLY: hub connections work as usual
-			t[i][j]->hub_req_rx(req[i][j].from_hub);
-			t[i][j]->hub_flit_rx(flit[i][j].from_hub);
-			t[i][j]->hub_ack_rx(ack[i][j].to_hub);
-			t[i][j]->hub_buffer_full_status_rx(buffer_full_status[i][j].to_hub);
-
-			// signals/port when tile transmits(tx) to hub
-			t[i][j]->hub_req_tx(req[i][j].to_hub); // 7, sc_out
-			t[i][j]->hub_flit_tx(flit[i][j].to_hub);
-			t[i][j]->hub_ack_tx(ack[i][j].from_hub);
-			t[i][j]->hub_buffer_full_status_tx(buffer_full_status[i][j].from_hub);
-
-			//assert(false);
-			// TODO: Review port index. Connect each Hub to all its Channels
-			map<int, int>::iterator it = GlobalParams::hub_for_tile.find(tile_id);
-			if (it != GlobalParams::hub_for_tile.end())
-			{
-				int hub_id = GlobalParams::hub_for_tile[tile_id];
-
-				// The next time that the same HUB is considered, the next
-				// port will be connected
-				int port = hub_connected_ports[hub_id]++;
-
-				hub[hub_id]->tile2port_mapping[t[i][j]->local_id] = port;
-
-				hub[hub_id]->req_rx[port](req[i][j].to_hub);
-				hub[hub_id]->flit_rx[port](flit[i][j].to_hub);
-				hub[hub_id]->ack_rx[port](ack[i][j].from_hub);
-				hub[hub_id]->buffer_full_status_rx[port](buffer_full_status[i][j].from_hub);
-
-				hub[hub_id]->flit_tx[port](flit[i][j].from_hub);
-				hub[hub_id]->req_tx[port](req[i][j].from_hub);
-				hub[hub_id]->ack_tx[port](ack[i][j].to_hub);
-				hub[hub_id]->buffer_full_status_tx[port](buffer_full_status[i][j].to_hub);
-
-			}
-
 		}
 	} // original double for loop
 
@@ -472,20 +349,6 @@ void NoC::buildButterfly()
 
 	core = new Tile*[n];
 
-	//signals instantiation for connecting Core2Hub (just to test wioreless in Butterfly)
-	flit_from_hub = new sc_signal<Flit>[n];
-	flit_to_hub = new sc_signal<Flit>[n];
-
-	req_from_hub = new sc_signal<bool>[n];
-	req_to_hub = new sc_signal<bool>[n];
-
-	ack_from_hub = new sc_signal<bool>[n];
-	ack_to_hub = new sc_signal<bool>[n];
-
-	buffer_full_status_from_hub = new sc_signal<TBufferFullStatus>[n];
-	buffer_full_status_to_hub = new sc_signal<TBufferFullStatus>[n];
-
-
 	// Create the Core bloc
 
 	for (int i = 0; i < n; i++)
@@ -518,38 +381,6 @@ void NoC::buildButterfly()
 		// Map clock and reset
 		core[i]->clock(clock);
 		core[i]->reset(reset);
-
-		// remplace dummy signal down to complete map core2Hub
-
-		// TODO: Review port index. Connect each Hub to all its Channels // connect Hub2Core
-		//for (map<int, int>::iterator it1 = GlobalParams::hub_for_tile.begin(); it1 != GlobalParams::hub_for_tile.end(); it1++ )
-		//LOG<<"it1 first "<< it1->first<< "second"<< it1->second<<endl;
-		map<int, int>::iterator it = GlobalParams::hub_for_tile.find(core_id);
-		if (it != GlobalParams::hub_for_tile.end())
-		{
-			int hub_id = GlobalParams::hub_for_tile[core_id];
-
-
-			// The next time that the same HUB is considered, the next
-			// port will be connected
-			int port = hub_connected_ports[hub_id]++;
-			//LOG<<"I am hub "<<hub_id<<" connecting to core "<<core_id<<"using port "<<port<<endl;
-			hub[hub_id]->tile2port_mapping[core[i]->local_id] = port;
-
-			hub[hub_id]->req_rx[port](req_to_hub[core_id]);
-			hub[hub_id]->flit_rx[port](flit_to_hub[core_id]);
-			hub[hub_id]->ack_rx[port](ack_from_hub[core_id]);
-			hub[hub_id]->buffer_full_status_rx[port](buffer_full_status_from_hub[core_id]);
-
-			hub[hub_id]->flit_tx[port](flit_from_hub[core_id]);
-			hub[hub_id]->req_tx[port](req_from_hub[core_id]);
-			hub[hub_id]->ack_tx[port](ack_to_hub[core_id]);
-			hub[hub_id]->buffer_full_status_tx[port](buffer_full_status_to_hub[core_id]);
-
-		}
-
-
-
 	}
 
 	// ---- Example Cores mapping----
@@ -697,27 +528,6 @@ void NoC::buildButterfly()
 			core[c]->ack_rx[k](*bool_dummy_signal);
 			core[c]->buffer_full_status_rx[k](*tbufferfullstatus_dummy_signal);
 		}
-
-		core[c]->hub_flit_rx(flit_from_hub[c]);
-		core[c]->hub_req_rx(req_from_hub[c]);
-		core[c]->hub_ack_rx(ack_to_hub[c]);
-		core[c]->hub_buffer_full_status_rx(buffer_full_status_to_hub[c]);
-
-		core[c]->hub_flit_tx(flit_to_hub[c]);
-		core[c]->hub_req_tx(req_to_hub[c]);
-		core[c]->hub_ack_tx(ack_from_hub[c]);
-		core[c]->hub_buffer_full_status_tx(buffer_full_status_from_hub[c]);
-
-		//core[c]->hub_flit_rx(*flit_dummy_signal);
-		//core[c]->hub_req_rx(*bool_dummy_signal);
-		//core[c]->hub_ack_rx(*bool_dummy_signal);
-		//core[c]->hub_buffer_full_status_rx(*tbufferfullstatus_dummy_signal);
-
-		//core[c]->hub_flit_tx(*flit_dummy_signal);
-		//core[c]->hub_req_tx(*bool_dummy_signal);
-		//core[c]->hub_ack_tx(*bool_dummy_signal);
-		//core[c]->hub_buffer_full_status_tx(*tbufferfullstatus_dummy_signal);
-
 	}
 
 	// ... and for switches
@@ -770,10 +580,10 @@ void NoC::buildBaseline()
 
     cout  << "tiles equal : " << GlobalParams::n_delta_tiles << endl;
     cout <<"dimX_stg= "<< dimX << "  " << "dimY_sw= " << dimY << endl ;
-    req = new sc_signal_NSWEH<bool>*[dimX];
-    ack = new sc_signal_NSWEH<bool>*[dimX];
-    buffer_full_status = new sc_signal_NSWEH<TBufferFullStatus>*[dimX];
-    flit = new sc_signal_NSWEH<Flit>*[dimX];
+    req = new sc_signal_NSWE<bool>*[dimX];
+    ack = new sc_signal_NSWE<bool>*[dimX];
+    buffer_full_status = new sc_signal_NSWE<TBufferFullStatus>*[dimX];
+    flit = new sc_signal_NSWE<Flit>*[dimX];
 
     // not used in delta topologies
     free_slots = new sc_signal_NSWE<int>*[dimX];
@@ -783,10 +593,10 @@ void NoC::buildBaseline()
     // For each row (dimX) create a vector of DimY (columns)
     for (int i=0; i < dimX; i++) 
     {
-	req[i] = new sc_signal_NSWEH<bool>[dimY];
-	ack[i] = new sc_signal_NSWEH<bool>[dimY];
-	buffer_full_status[i] = new sc_signal_NSWEH<TBufferFullStatus>[dimY];
-	flit[i] = new sc_signal_NSWEH<Flit>[dimY];
+	req[i] = new sc_signal_NSWE<bool>[dimY];
+	ack[i] = new sc_signal_NSWE<bool>[dimY];
+	buffer_full_status[i] = new sc_signal_NSWE<TBufferFullStatus>[dimY];
+	flit[i] = new sc_signal_NSWE<Flit>[dimY];
 
 	free_slots[i] = new sc_signal_NSWE<int>[dimY];
 	nop_data[i] = new sc_signal_NSWE<NoP_data>[dimY];
@@ -828,46 +638,6 @@ void NoC::buildBaseline()
 	    // Map clock and reset
 	    t[i][j]->clock(clock);
 	    t[i][j]->reset(reset);
-
-	    
-
-
-	    // BASELINE: hub connections work as usual
-	    t[i][j]->hub_req_rx(req[i][j].from_hub);
-	    t[i][j]->hub_flit_rx(flit[i][j].from_hub);
-	    t[i][j]->hub_ack_rx(ack[i][j].to_hub);
-	    t[i][j]->hub_buffer_full_status_rx(buffer_full_status[i][j].to_hub);
-
-	    // signals/port when tile transmits(tx) to hub
-	    t[i][j]->hub_req_tx(req[i][j].to_hub); // 7, sc_out
-	    t[i][j]->hub_flit_tx(flit[i][j].to_hub);
-	    t[i][j]->hub_ack_tx(ack[i][j].from_hub);
-	    t[i][j]->hub_buffer_full_status_tx(buffer_full_status[i][j].from_hub);
-
-	    // TODO: Review port index. Connect each Hub to all its Channels 
-	    map<int, int>::iterator it = GlobalParams::hub_for_tile.find(tile_id);
-	    if (it != GlobalParams::hub_for_tile.end())
-	    {
-		int hub_id = GlobalParams::hub_for_tile[tile_id];
-
-		// The next time that the same HUB is considered, the next
-		// port will be connected
-		int port = hub_connected_ports[hub_id]++;
-
-		hub[hub_id]->tile2port_mapping[t[i][j]->local_id] = port;
-
-		hub[hub_id]->req_rx[port](req[i][j].to_hub);
-		hub[hub_id]->flit_rx[port](flit[i][j].to_hub);
-		hub[hub_id]->ack_rx[port](ack[i][j].from_hub);
-		hub[hub_id]->buffer_full_status_rx[port](buffer_full_status[i][j].from_hub);
-
-		hub[hub_id]->flit_tx[port](flit[i][j].from_hub);
-		hub[hub_id]->req_tx[port](req[i][j].from_hub);
-		hub[hub_id]->ack_tx[port](ack[i][j].to_hub);
-		hub[hub_id]->buffer_full_status_tx[port](buffer_full_status[i][j].to_hub);
-
-	    }
-
 	}
     } // original double for loop
 
@@ -1224,20 +994,6 @@ void NoC::buildBaseline()
     // instantiation of the Cores (we have only one row)
     core = new Tile*[n];
 
-    //signals instantiation for connecting Core2Hub (NEW feauture on Baseline)
-	flit_from_hub = new sc_signal<Flit>[n];
-	flit_to_hub = new sc_signal<Flit>[n];
-
-	req_from_hub = new sc_signal<bool>[n];
-	req_to_hub = new sc_signal<bool>[n];
-
-	ack_from_hub = new sc_signal<bool>[n];
-	ack_to_hub = new sc_signal<bool>[n];
-
-	buffer_full_status_from_hub = new sc_signal<TBufferFullStatus>[n];
-	buffer_full_status_to_hub = new sc_signal<TBufferFullStatus>[n];
-
-
     // Create the Core bloc 
     for (int i = 0; i < n; i++) 
     { 
@@ -1269,32 +1025,6 @@ void NoC::buildBaseline()
 	// Map clock and reset
 	core[i]->clock(clock);
 	core[i]->reset(reset);
-
-	//NEW feauture: Hub2tile 
-	    map<int, int>::iterator it = GlobalParams::hub_for_tile.find(core_id);
-		if (it != GlobalParams::hub_for_tile.end())
-		{
-			int hub_id = GlobalParams::hub_for_tile[core_id];
-
-
-			// The next time that the same HUB is considered, the next
-			// port will be connected
-			int port = hub_connected_ports[hub_id]++;
-			//LOG<<"I am hub "<<hub_id<<" connecting to core "<<core_id<<"using port "<<port<<endl;
-			hub[hub_id]->tile2port_mapping[core[i]->local_id] = port;
-
-			hub[hub_id]->req_rx[port](req_to_hub[core_id]);
-			hub[hub_id]->flit_rx[port](flit_to_hub[core_id]);
-			hub[hub_id]->ack_rx[port](ack_from_hub[core_id]);
-			hub[hub_id]->buffer_full_status_rx[port](buffer_full_status_from_hub[core_id]);
-
-			hub[hub_id]->flit_tx[port](flit_from_hub[core_id]);
-			hub[hub_id]->req_tx[port](req_from_hub[core_id]);
-			hub[hub_id]->ack_tx[port](ack_to_hub[core_id]);
-			hub[hub_id]->buffer_full_status_tx[port](buffer_full_status_to_hub[core_id]);
-
-		}
-
     } 
 
     // ---- Cores mapping ---- 
@@ -1419,25 +1149,6 @@ void NoC::buildBaseline()
 	    core[c]->ack_rx[k](*bool_dummy_signal);
 	    core[c]->buffer_full_status_rx[k](*tbufferfullstatus_dummy_signal);
 	}
-		core[c]->hub_flit_rx(flit_from_hub[c]);
-		core[c]->hub_req_rx(req_from_hub[c]);
-		core[c]->hub_ack_rx(ack_to_hub[c]);
-		core[c]->hub_buffer_full_status_rx(buffer_full_status_to_hub[c]);
-
-		core[c]->hub_flit_tx(flit_to_hub[c]);
-		core[c]->hub_req_tx(req_to_hub[c]);
-		core[c]->hub_ack_tx(ack_from_hub[c]);
-		core[c]->hub_buffer_full_status_tx(buffer_full_status_from_hub[c]);
-	/*
-	core[c]->hub_flit_tx(*flit_dummy_signal);
-	core[c]->hub_req_tx(*bool_dummy_signal);
-	core[c]->hub_ack_tx(*bool_dummy_signal);
-	core[c]->hub_buffer_full_status_tx(*tbufferfullstatus_dummy_signal);
-
-	core[c]->hub_flit_rx(*flit_dummy_signal);
-	core[c]->hub_req_rx(*bool_dummy_signal);
-	core[c]->hub_ack_rx(*bool_dummy_signal);
-	core[c]->hub_buffer_full_status_rx(*tbufferfullstatus_dummy_signal);*/
     }
 
     // ... and for switches
@@ -1490,10 +1201,10 @@ void NoC::buildOmega()
 	int dimY = sw;
 	cout  << "tiles equal : " << GlobalParams::n_delta_tiles << endl;
 	cout <<"dimX_stg= "<< dimX << "  " << "dimY_sw= " << dimY << endl ;
-	req = new sc_signal_NSWEH<bool>*[dimX];
-	ack = new sc_signal_NSWEH<bool>*[dimX];
-	buffer_full_status = new sc_signal_NSWEH<TBufferFullStatus>*[dimX];
-	flit = new sc_signal_NSWEH<Flit>*[dimX];
+	req = new sc_signal_NSWE<bool>*[dimX];
+	ack = new sc_signal_NSWE<bool>*[dimX];
+	buffer_full_status = new sc_signal_NSWE<TBufferFullStatus>*[dimX];
+	flit = new sc_signal_NSWE<Flit>*[dimX];
 
 	// not used in delta topologies
 	free_slots = new sc_signal_NSWE<int>*[dimX];
@@ -1502,10 +1213,10 @@ void NoC::buildOmega()
 	// instantiation of the signal matrix
 	// For each row (dimX) create a vector of DimY (columns)
 	for (int i=0; i < dimX; i++) {
-		req[i] = new sc_signal_NSWEH<bool>[dimY];
-		ack[i] = new sc_signal_NSWEH<bool>[dimY];
-		buffer_full_status[i] = new sc_signal_NSWEH<TBufferFullStatus>[dimY];
-		flit[i] = new sc_signal_NSWEH<Flit>[dimY];
+		req[i] = new sc_signal_NSWE<bool>[dimY];
+		ack[i] = new sc_signal_NSWE<bool>[dimY];
+		buffer_full_status[i] = new sc_signal_NSWE<TBufferFullStatus>[dimY];
+		flit[i] = new sc_signal_NSWE<Flit>[dimY];
 
 		free_slots[i] = new sc_signal_NSWE<int>[dimY];
 		nop_data[i] = new sc_signal_NSWE<NoP_data>[dimY];
@@ -1548,44 +1259,6 @@ void NoC::buildOmega()
 			// Map clock and reset
 			t[i][j]->clock(clock);
 			t[i][j]->reset(reset);
-
-
-			// Omega: hub connections work as usual
-			t[i][j]->hub_req_rx(req[i][j].from_hub);
-			t[i][j]->hub_flit_rx(flit[i][j].from_hub);
-			t[i][j]->hub_ack_rx(ack[i][j].to_hub);
-			t[i][j]->hub_buffer_full_status_rx(buffer_full_status[i][j].to_hub);
-
-			// signals/port when tile transmits(tx) to hub
-			t[i][j]->hub_req_tx(req[i][j].to_hub); // 7, sc_out
-			t[i][j]->hub_flit_tx(flit[i][j].to_hub);
-			t[i][j]->hub_ack_tx(ack[i][j].from_hub);
-			t[i][j]->hub_buffer_full_status_tx(buffer_full_status[i][j].from_hub);
-
-			// TODO: Review port index. Connect each Hub to all its Channels
-			map<int, int>::iterator it = GlobalParams::hub_for_tile.find(tile_id);
-			if (it != GlobalParams::hub_for_tile.end())
-			{
-				int hub_id = GlobalParams::hub_for_tile[tile_id];
-
-				// The next time that the same HUB is considered, the next
-				// port will be connected
-				int port = hub_connected_ports[hub_id]++;
-
-				hub[hub_id]->tile2port_mapping[t[i][j]->local_id] = port;
-
-				hub[hub_id]->req_rx[port](req[i][j].to_hub);
-				hub[hub_id]->flit_rx[port](flit[i][j].to_hub);
-				hub[hub_id]->ack_rx[port](ack[i][j].from_hub);
-				hub[hub_id]->buffer_full_status_rx[port](buffer_full_status[i][j].from_hub);
-
-				hub[hub_id]->flit_tx[port](flit[i][j].from_hub);
-				hub[hub_id]->req_tx[port](req[i][j].from_hub);
-				hub[hub_id]->ack_tx[port](ack[i][j].to_hub);
-				hub[hub_id]->buffer_full_status_tx[port](buffer_full_status[i][j].to_hub);
-
-			}
-
 		}
 	} // End original double for loop
 
@@ -1841,20 +1514,6 @@ void NoC::buildOmega()
 
 	core = new Tile*[n];
 
-	//signals instantiation for connecting Core2Hub (NEW feature in Omega)
-	flit_from_hub = new sc_signal<Flit>[n];
-	flit_to_hub = new sc_signal<Flit>[n];
-
-	req_from_hub = new sc_signal<bool>[n];
-	req_to_hub = new sc_signal<bool>[n];
-
-	ack_from_hub = new sc_signal<bool>[n];
-	ack_to_hub = new sc_signal<bool>[n];
-
-	buffer_full_status_from_hub = new sc_signal<TBufferFullStatus>[n];
-	buffer_full_status_to_hub = new sc_signal<TBufferFullStatus>[n];
-
-
 	// Create the Core bloc
 
 	for (int i = 0; i < n; i++)
@@ -1887,31 +1546,6 @@ void NoC::buildOmega()
 		// Map clock and reset
 		core[i]->clock(clock);
 		core[i]->reset(reset);
-
-		//NEW feauture: Hub2tile 
-	    map<int, int>::iterator it = GlobalParams::hub_for_tile.find(core_id);
-		if (it != GlobalParams::hub_for_tile.end())
-		{
-			int hub_id = GlobalParams::hub_for_tile[core_id];
-
-
-			// The next time that the same HUB is considered, the next
-			// port will be connected
-			int port = hub_connected_ports[hub_id]++;
-			//LOG<<"I am hub "<<hub_id<<" connecting to core "<<core_id<<"using port "<<port<<endl;
-			hub[hub_id]->tile2port_mapping[core[i]->local_id] = port;
-
-			hub[hub_id]->req_rx[port](req_to_hub[core_id]);
-			hub[hub_id]->flit_rx[port](flit_to_hub[core_id]);
-			hub[hub_id]->ack_rx[port](ack_from_hub[core_id]);
-			hub[hub_id]->buffer_full_status_rx[port](buffer_full_status_from_hub[core_id]);
-
-			hub[hub_id]->flit_tx[port](flit_from_hub[core_id]);
-			hub[hub_id]->req_tx[port](req_from_hub[core_id]);
-			hub[hub_id]->ack_tx[port](ack_to_hub[core_id]);
-			hub[hub_id]->buffer_full_status_tx[port](buffer_full_status_to_hub[core_id]);
-
-		}
 		
 	} //-------------------------------------end core comment---------------------------------
 
@@ -2038,28 +1672,6 @@ void NoC::buildOmega()
 			core[c]->ack_rx[k](*bool_dummy_signal);
 			core[c]->buffer_full_status_rx[k](*tbufferfullstatus_dummy_signal);
 		}
-
-		core[c]->hub_flit_rx(flit_from_hub[c]);
-		core[c]->hub_req_rx(req_from_hub[c]);
-		core[c]->hub_ack_rx(ack_to_hub[c]);
-		core[c]->hub_buffer_full_status_rx(buffer_full_status_to_hub[c]);
-
-		core[c]->hub_flit_tx(flit_to_hub[c]);
-		core[c]->hub_req_tx(req_to_hub[c]);
-		core[c]->hub_ack_tx(ack_from_hub[c]);
-		core[c]->hub_buffer_full_status_tx(buffer_full_status_from_hub[c]);
-
-		/*
-		core[c]->hub_flit_tx(*flit_dummy_signal);
-		core[c]->hub_req_tx(*bool_dummy_signal);
-		core[c]->hub_ack_tx(*bool_dummy_signal);
-		core[c]->hub_buffer_full_status_tx(*tbufferfullstatus_dummy_signal);
-
-		core[c]->hub_flit_rx(*flit_dummy_signal);
-		core[c]->hub_req_rx(*bool_dummy_signal);
-		core[c]->hub_ack_rx(*bool_dummy_signal);
-		core[c]->hub_buffer_full_status_rx(*tbufferfullstatus_dummy_signal);
-		*/
 	}
 
 	// ... and for switches
@@ -2101,19 +1713,19 @@ void NoC::buildMesh()
     int dimY = GlobalParams::mesh_dim_y + 1;
 
     
-    req = new sc_signal_NSWEH<bool>*[dimX];
-    ack = new sc_signal_NSWEH<bool>*[dimX];
-    buffer_full_status = new sc_signal_NSWEH<TBufferFullStatus>*[dimX];
-    flit = new sc_signal_NSWEH<Flit>*[dimX];
+    req = new sc_signal_NSWE<bool>*[dimX];
+    ack = new sc_signal_NSWE<bool>*[dimX];
+    buffer_full_status = new sc_signal_NSWE<TBufferFullStatus>*[dimX];
+    flit = new sc_signal_NSWE<Flit>*[dimX];
 
     free_slots = new sc_signal_NSWE<int>*[dimX];
     nop_data = new sc_signal_NSWE<NoP_data>*[dimX];
 
     for (int i=0; i < dimX; i++) {
-        req[i] = new sc_signal_NSWEH<bool>[dimY];
-        ack[i] = new sc_signal_NSWEH<bool>[dimY];
-	buffer_full_status[i] = new sc_signal_NSWEH<TBufferFullStatus>[dimY];
-        flit[i] = new sc_signal_NSWEH<Flit>[dimY];
+        req[i] = new sc_signal_NSWE<bool>[dimY];
+        ack[i] = new sc_signal_NSWE<bool>[dimY];
+	buffer_full_status[i] = new sc_signal_NSWE<TBufferFullStatus>[dimY];
+        flit[i] = new sc_signal_NSWE<Flit>[dimY];
 
         free_slots[i] = new sc_signal_NSWE<int>[dimY];
         nop_data[i] = new sc_signal_NSWE<NoP_data>[dimY];
@@ -2201,42 +1813,6 @@ void NoC::buildMesh()
 	    t[i][j]->flit_tx[DIRECTION_WEST] (flit[i][j].west);
 	    t[i][j]->ack_tx[DIRECTION_WEST] (ack[i][j].east);
 	    t[i][j]->buffer_full_status_tx[DIRECTION_WEST] (buffer_full_status[i][j].east);
-
-	    // TODO: check if hub signal is always required
-	    // signals/port when tile receives(rx) from hub
-	    t[i][j]->hub_req_rx(req[i][j].from_hub);
-	    t[i][j]->hub_flit_rx(flit[i][j].from_hub);
-	    t[i][j]->hub_ack_rx(ack[i][j].to_hub);
-	    t[i][j]->hub_buffer_full_status_rx(buffer_full_status[i][j].to_hub);
-
-	    // signals/port when tile transmits(tx) to hub
-	    t[i][j]->hub_req_tx(req[i][j].to_hub); // 7, sc_out
-	    t[i][j]->hub_flit_tx(flit[i][j].to_hub);
-	    t[i][j]->hub_ack_tx(ack[i][j].from_hub);
-	    t[i][j]->hub_buffer_full_status_tx(buffer_full_status[i][j].from_hub);
-
-        // TODO: Review port index. Connect each Hub to all its Channels 
-        map<int, int>::iterator it = GlobalParams::hub_for_tile.find(tile_id);
-        if (it != GlobalParams::hub_for_tile.end())
-        {
-            int hub_id = GlobalParams::hub_for_tile[tile_id];
-
-            // The next time that the same HUB is considered, the next
-            // port will be connected
-            int port = hub_connected_ports[hub_id]++;
-
-            hub[hub_id]->tile2port_mapping[t[i][j]->local_id] = port;
-
-            hub[hub_id]->req_rx[port](req[i][j].to_hub);
-            hub[hub_id]->flit_rx[port](flit[i][j].to_hub);
-            hub[hub_id]->ack_rx[port](ack[i][j].from_hub);
-            hub[hub_id]->buffer_full_status_rx[port](buffer_full_status[i][j].from_hub);
-
-            hub[hub_id]->flit_tx[port](flit[i][j].from_hub);
-            hub[hub_id]->req_tx[port](req[i][j].from_hub);
-            hub[hub_id]->ack_tx[port](ack[i][j].to_hub);
-            hub[hub_id]->buffer_full_status_tx[port](buffer_full_status[i][j].to_hub);
-        }
 
         // Map buffer level signals (analogy with req_tx/rx port mapping)
 	    t[i][j]->free_slots[DIRECTION_NORTH] (free_slots[i][j].north);

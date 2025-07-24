@@ -102,8 +102,6 @@ void ReservationTable::print()
 
 void ReservationTable::reserve(const TReservation r, const int port_out)
 {
-    // IMPORTANT: problem when used by Hub with more connections
-    //
     // reservation of reserved/not valid ports is illegal. Correctness
     // should be assured by ReservationTable users
     assert(checkReservation(r, port_out)==RT_AVAILABLE);
