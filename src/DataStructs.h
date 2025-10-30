@@ -70,6 +70,12 @@ struct Packet {
     }
 };
 
+// Ack -- Ack signal definition
+struct Ack {
+    int src_id;
+    int dst_id;
+};
+
 // RouteData -- data required to perform routing
 struct RouteData {
     int current_id;

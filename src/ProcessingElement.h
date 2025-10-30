@@ -41,6 +41,9 @@ SC_MODULE(ProcessingElement)
 
     sc_in < int >free_slots_neighbor;
 
+    sc_out<Ack> ack_req;
+    sc_in<bool> ack_ack;
+
     // Registers
     int local_id;		// Unique identification number
     bool current_level_rx;	// Current level for Alternating Bit Protocol (ABP)
