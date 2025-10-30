@@ -31,6 +31,7 @@ void Router::rxProcess()
 	    ack_rx[i].write(0);
 	    current_level_rx[i] = 0;
 	    buffer_full_status_rx[i].write(bfs);
+	    while(!delay_buffer[i].empty()) delay_buffer[i].pop();
 	}
 	routed_flits = 0;
 	local_drained = 0;
@@ -41,45 +42,57 @@ void Router::rxProcess()
 	// and wormhole related issues are addressed in the txProcess()
 	//assert(false);
 	for (int i = 0; i < DIRECTIONS + 1; i++) {
-	    // To accept a new flit, the following conditions must match:
-	    // 1) there is an incoming request
-	    // 2) there is a free slot in the input buffer of direction i
-	    //LOG<<"****RX****DIRECTION ="<<i<<  endl;
+        
+        int target_delay = (delay_status < 0) ? 0 : min(delay_status, GlobalParams::max_delay_cycles);
+        while (delay_buffer[i].size() < target_delay)
+        {
+            delay_buffer[i].push(make_pair(Flit(), false));
+        }
 
 	    if (req_rx[i].read() == 1 - current_level_rx[i])
 	    {
-		Flit received_flit = flit_rx[i].read();
-		//LOG<<"request opposite to the current_level, reading flit "<<received_flit<<endl;
+		    Flit received_flit = flit_rx[i].read();
+		    received_flit.hop_no++;
+		    
+		    update_delay_status();
 
-		received_flit.hop_no++;
-
-		int vc = received_flit.vc_id;
-
-		if (!buffer[i][vc].IsFull()) 
-		{
-		    // Store the incoming flit in the circular buffer
-		    buffer[i][vc].Push(received_flit);
-		    LOG << " Flit " << received_flit << " collected from Input[" << i << "][" << vc <<"]" << endl;
-
-		    // Negate the old value for Alternating Bit Protocol (ABP)
-		    //LOG<<"INVERTING CL FROM "<< current_level_rx[i]<< " TO "<<  1 - current_level_rx[i]<<endl;
+            delay_buffer[i].push(make_pair(received_flit, true));
+		    
 		    current_level_rx[i] = 1 - current_level_rx[i];
-		}
-
-		else  // buffer full
-		{
-		    // should not happen with the new TBufferFullStatus control signals    
-		    // except for flit coming from local PE, which don't use it 
-		    LOG << " Flit " << received_flit << " buffer full Input[" << i << "][" << vc <<"]" << endl;
-		    assert(i== DIRECTION_LOCAL);
-		}
-
 	    }
 	    ack_rx[i].write(current_level_rx[i]);
+
+        while (delay_buffer[i].size() > target_delay)
+        {
+            pair<Flit, bool> head = delay_buffer[i].front();
+            Flit& flit_to_process = head.first;
+            
+            if (head.second)
+            {
+                int vc = flit_to_process.vc_id;
+                if (delay_status >= GlobalParams::max_delay_cycles)
+                {
+                    LOG << " Flit " << flit_to_process << " dropped from Input[" << i << "] due to router broken" << endl;
+                }
+                else if (!buffer[i][vc].IsFull()) 
+                {
+                    buffer[i][vc].Push(flit_to_process);
+                    LOG << " Flit " << flit_to_process << " collected from Input[" << i << "][" << vc <<"]" << endl;
+                }
+                else
+                {
+                    LOG << " Flit " << flit_to_process << " buffer full Input[" << i << "][" << vc <<"]" << endl;
+					assert(i== DIRECTION_LOCAL);
+                    break;
+                }
+            }
+            delay_buffer[i].pop();
+        }
+
 	    // updates the mask of VCs to prevent incoming data on full buffers
 	    TBufferFullStatus bfs;
 	    for (int vc=0;vc<GlobalParams::n_virtual_channels;vc++)
-		bfs.mask[vc] = buffer[i][vc].IsFull();
+		    bfs.mask[vc] = buffer[i][vc].IsFull();
 	    buffer_full_status_rx[i].write(bfs);
 	}
     }
@@ -354,6 +367,8 @@ void Router::configure(const int _id,
     local_id = _id;
     stats.configure(_id, _warm_up_time);
 
+    delay_status = GlobalParams::default_delay_status;
+
     start_from_port = DIRECTION_LOCAL;
   
 
@@ -471,4 +486,32 @@ void Router::ShowBuffersStats(std::ostream & out)
   for (int i=0; i<DIRECTIONS+1; i++)
       for (int vc=0; vc<GlobalParams::n_virtual_channels;vc++)
 	    buffer[i][vc].ShowStats(out);
+}
+
+void Router::update_delay_status()
+{
+    if (delay_status < 0) return;
+
+    if (get_delay_increase_probability() > (double)rand() / RAND_MAX)
+    {
+        delay_status++;
+    }
+
+    if (get_delay_decrease_probability() > (double)rand() / RAND_MAX)
+    {
+        if (delay_status > 0)
+        {
+            delay_status--;
+        }
+    }
+}
+
+double Router::get_delay_increase_probability()
+{
+    return GlobalParams::delay_increase_probability;
+}
+
+double Router::get_delay_decrease_probability()
+{
+    return GlobalParams::delay_decrease_probability;
 }

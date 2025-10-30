@@ -12,6 +12,8 @@
 #define __NOXIMROUTER_H__
 
 #include <systemc.h>
+#include <queue>
+#include <utility>
 #include "DataStructs.h"
 #include "Buffer.h"
 #include "Stats.h"
@@ -72,7 +74,14 @@ SC_MODULE(Router)
     RoutingAlgorithm * routingAlgorithm; 
     SelectionStrategy * selectionStrategy; 
     
+    // Delay status
+    int delay_status;
+    std::queue<std::pair<Flit, int>> delay_buffer[DIRECTIONS + 1];
+
     // Functions
+    void update_delay_status();
+    double get_delay_increase_probability();
+    double get_delay_decrease_probability();
 
     void process();
     void rxProcess();		// The receiving process
