@@ -42,7 +42,7 @@ class GlobalStats {
     double getMaxDelay(const int src_id, const int dst_id);
 
     // Returns tha matrix of max delay for any node of the network
-     vector < vector < double > > getMaxDelayMtx();
+    vector < vector < double > > getMaxDelayMtx();
 
     // Returns the aggregated average throughput (flits/cycles)
     double getAggregatedThroughput();
@@ -65,7 +65,7 @@ class GlobalStats {
 
 
     // Returns the number of routed flits for each router
-     vector < vector < unsigned long > > getRoutedFlitsMtx();
+    vector < vector < unsigned long > > getRoutedFlitsMtx();
 
     // Shows global statistics
     void showStats(std::ostream & out = std::cout, bool detailed = false);

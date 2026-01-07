@@ -8,18 +8,18 @@
 using namespace std;
 
 class Routing_NORTH_LAST : RoutingAlgorithm {
-	public:
-		vector<int> route(Router * router, const RouteData & routeData);
+  public:
+    vector<int> route(Router * router, const RouteData & routeData);
 
-		static Routing_NORTH_LAST * getInstance();
+    static Routing_NORTH_LAST * getInstance();
 
-	private:
-		Routing_NORTH_LAST(){};
-		~Routing_NORTH_LAST(){};
+  private:
+    Routing_NORTH_LAST(){};
+    ~Routing_NORTH_LAST(){};
 
-		static Routing_NORTH_LAST * routing_NORTH_LAST;
-		static RoutingAlgorithmsRegister routingAlgorithmsRegister;
-        static RoutingAlgorithm * xy;
+    static Routing_NORTH_LAST * routing_NORTH_LAST;
+    static RoutingAlgorithmsRegister routingAlgorithmsRegister;
+    static RoutingAlgorithm * xy;
 };
 
 #endif

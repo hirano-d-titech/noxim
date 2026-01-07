@@ -29,7 +29,7 @@ class Stats {
   public:
 
     Stats() {
-    } 
+    }
 
     void configure(const int node_id, const double _warm_up_time);
 
@@ -69,7 +69,7 @@ class Stats {
 
     // Shows statistics for the current node
     void showStats(int curr_node, std::ostream & out =
-		   std::cout, bool header = false);
+      std::cout, bool header = false);
 
 
   private:

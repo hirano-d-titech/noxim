@@ -10,17 +10,17 @@ using namespace std;
 typedef map<string, EncodingModel* > EncodingModelsMap;
 
 class EncodingModels {
-    public:
-        static EncodingModelsMap * encodingModelsMap;
-        static EncodingModelsMap * getEncodingModelsMap();
+  public:
+    static EncodingModelsMap * encodingModelsMap;
+    static EncodingModelsMap * getEncodingModelsMap();
 
-        static EncodingModel * get(const string & encodingModelName);
+    static EncodingModel * get(const string & encodingModelName);
 };
 
 struct EncodingModelsRegister : EncodingModels {
-    EncodingModelsRegister(const string & encodingModelName, EncodingModel * encodingModel) {
-        getEncodingModelsMap()->insert(make_pair(encodingModelName, encodingModel));
-    }
+  EncodingModelsRegister(const string & encodingModelName, EncodingModel * encodingModel) {
+    getEncodingModelsMap()->insert(make_pair(encodingModelName, encodingModel));
+  }
 };
 
 #endif

@@ -21,18 +21,19 @@ using namespace std;
 template <typename T>
 struct sc_signal_NSWE
 {
-    sc_signal<T> east;
-    sc_signal<T> west;
-    sc_signal<T> south;
-    sc_signal<T> north;
+  sc_signal<T> east;
+  sc_signal<T> west;
+  sc_signal<T> south;
+  sc_signal<T> north;
 };
 
 SC_MODULE(NoC)
 {
-    public: bool SwitchOnly; //true if the tile are switch only 
+  public:
+    bool SwitchOnly; //true if the tile are switch only 
     // I/O Ports
-    sc_in_clk clock;		// The input clock for the NoC
-    sc_in < bool > reset;	// The reset signal for the NoC
+    sc_in_clk clock;    // The input clock for the NoC
+    sc_in < bool > reset;  // The reset signal for the NoC
 
     // Signals mesh
     sc_signal_NSWE<bool> **req;
@@ -59,22 +60,22 @@ SC_MODULE(NoC)
     {
 
 
-	if (GlobalParams::topology == TOPOLOGY_MESH)
-	    // Build the Mesh
-	    buildMesh();
-	else {
-	    cerr << "ERROR: Topology " << GlobalParams::topology << " is not yet supported." << endl;
-	    exit(0);
-    }
-	GlobalParams::channel_selection = CHSEL_RANDOM;
-	// out of yaml configuration (experimental features)
-	//GlobalParams::channel_selection = CHSEL_FIRST_FREE;
+      if (GlobalParams::topology == TOPOLOGY_MESH)
+        // Build the Mesh
+        buildMesh();
+      else {
+        cerr << "ERROR: Topology " << GlobalParams::topology << " is not yet supported." << endl;
+        exit(0);
+      }
+      GlobalParams::channel_selection = CHSEL_RANDOM;
+      // out of yaml configuration (experimental features)
+      //GlobalParams::channel_selection = CHSEL_FIRST_FREE;
 
-	if (GlobalParams::ascii_monitor)
-	{
-	    SC_METHOD(asciiMonitor);
-	    sensitive << clock.pos();
-	}
+      if (GlobalParams::ascii_monitor)
+      {
+        SC_METHOD(asciiMonitor);
+        sensitive << clock.pos();
+      }
 
     }
 

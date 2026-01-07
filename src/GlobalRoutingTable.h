@@ -45,8 +45,7 @@ LinkId direction2ILinkId(const int node_id, const int dir);
 int oLinkId2Direction(const LinkId & out_link);
 
 // Converts a set of output links to a set of directions
-vector <
-    int >admissibleOutputsSet2Vector(const AdmissibleOutputs & ao);
+vector<int> admissibleOutputsSet2Vector(const AdmissibleOutputs & ao);
 
 class GlobalRoutingTable {
 
@@ -59,11 +58,11 @@ class GlobalRoutingTable {
 
     RoutingTableNode getNodeRoutingTable(const int node_id);
 
-    bool isValid() {
-	return valid;
-  } private:
+    bool isValid() { return valid; }
 
-     RoutingTableNoC rt_noc;
+  private:
+
+    RoutingTableNoC rt_noc;
     bool valid;
 
 };

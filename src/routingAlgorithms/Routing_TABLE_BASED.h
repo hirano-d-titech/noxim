@@ -10,19 +10,18 @@
 using namespace std;
 
 class Routing_TABLE_BASED : RoutingAlgorithm {
-	public:
-		vector<int> route(Router * router, const RouteData & routeData);
+  public:
+    vector<int> route(Router * router, const RouteData & routeData);
 
-		static Routing_TABLE_BASED * getInstance();
+    static Routing_TABLE_BASED * getInstance();
+    inline string name() { return "Routing_TABLE_BASED";};
 
-        inline string name() { return "Routing_TABLE_BASED";};
+  private:
+    Routing_TABLE_BASED(){};
+    ~Routing_TABLE_BASED(){};
 
-	private:
-		Routing_TABLE_BASED(){};
-		~Routing_TABLE_BASED(){};
-
-		static Routing_TABLE_BASED * routing_TABLE_BASED;
-		static RoutingAlgorithmsRegister routingAlgorithmsRegister;
+    static Routing_TABLE_BASED * routing_TABLE_BASED;
+    static RoutingAlgorithmsRegister routingAlgorithmsRegister;
 };
 
 #endif

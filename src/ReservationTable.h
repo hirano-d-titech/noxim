@@ -20,18 +20,18 @@ using namespace std;
 
 struct TReservation
 {
-    int input;
-    int vc;
-    inline bool operator ==(const TReservation & r) const
-    {
-	return (r.input==input && r.vc == vc);
-    }
+  int input;
+  int vc;
+  inline bool operator ==(const TReservation & r) const
+  {
+    return (r.input==input && r.vc == vc);
+  }
 };
 
 typedef struct RTEntry
 {
-    vector<TReservation> reservations;
-    vector<TReservation>::size_type index;
+  vector<TReservation> reservations;
+  vector<TReservation>::size_type index;
 } TRTEntry;
 
 class ReservationTable {
@@ -66,8 +66,8 @@ class ReservationTable {
 
   private:
 
-     TRTEntry *rtable;	// reservation vector: rtable[i] gives a RTEntry containing the set of input/VC 
-			// which reserved output port
+     TRTEntry *rtable;  // reservation vector: rtable[i] gives a RTEntry containing the set of input/VC 
+      // which reserved output port
 
      int n_outputs;
 };

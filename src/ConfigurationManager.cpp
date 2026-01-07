@@ -15,485 +15,470 @@ YAML::Node config;
 
 void loadConfiguration() {
 
-    cout << "Loading configuration from file \"" << GlobalParams::config_filename << "\"...";
-    try {
-        config = YAML::LoadFile(GlobalParams::config_filename);
-        cout << " Done" << endl;
-    } catch (YAML::BadFile &e) {
-        cout << " Failed" << endl;
-        cerr << "The specified YAML configuration file was not found!" << endl;
-        exit(0);
-    } catch (YAML::ParserException &pe) {
-        cout << " Failed" << endl;
-        cerr << "ERROR at line " << pe.mark.line +1 << " column " << pe.mark.column + 1 << ": "<< pe.msg << ". Please check identation." << endl;
-        exit(0);
-    }
+  cout << "Loading configuration from file \"" << GlobalParams::config_filename << "\"...";
+  try {
+    config = YAML::LoadFile(GlobalParams::config_filename);
+    cout << " Done" << endl;
+  } catch (YAML::BadFile &e) {
+    cout << " Failed" << endl;
+    cerr << "The specified YAML configuration file was not found!" << endl;
+    exit(0);
+  } catch (YAML::ParserException &pe) {
+    cout << " Failed" << endl;
+    cerr << "ERROR at line " << pe.mark.line +1 << " column " << pe.mark.column + 1 << ": "<< pe.msg << ". Please check identation." << endl;
+    exit(0);
+  }
 
-    // Initialize global configuration parameters (can be overridden with command-line arguments)
-    GlobalParams::verbose_mode = readParam<string>(config, "verbose_mode");
-    GlobalParams::trace_mode = readParam<bool>(config, "trace_mode");
-    GlobalParams::trace_filename = readParam<string>(config, "trace_filename");
+  // Initialize global configuration parameters (can be overridden with command-line arguments)
+  GlobalParams::verbose_mode = readParam<string>(config, "verbose_mode");
+  GlobalParams::trace_mode = readParam<bool>(config, "trace_mode");
+  GlobalParams::trace_filename = readParam<string>(config, "trace_filename");
 
-    GlobalParams::topology = readParam<string>(config, "topology", TOPOLOGY_MESH);
+  GlobalParams::topology = readParam<string>(config, "topology", TOPOLOGY_MESH);
 
-    //Mesh network params
-    if (GlobalParams::topology == TOPOLOGY_MESH) {
-        GlobalParams::mesh_dim_x = readParam<int>(config, "mesh_dim_x");
-        GlobalParams::mesh_dim_y = readParam<int>(config, "mesh_dim_y");
-    }
+  //Mesh network params
+  if (GlobalParams::topology == TOPOLOGY_MESH) {
+    GlobalParams::mesh_dim_x = readParam<int>(config, "mesh_dim_x");
+    GlobalParams::mesh_dim_y = readParam<int>(config, "mesh_dim_y");
+  }
 
-    GlobalParams::r2r_link_length = readParam<double>(config, "r2r_link_length");
-    GlobalParams::r2h_link_length = readParam<double>(config, "r2h_link_length");
-    GlobalParams::buffer_depth = readParam<int>(config, "buffer_depth");
-    GlobalParams::flit_size = readParam<int>(config, "flit_size");
-    GlobalParams::min_packet_size = readParam<int>(config, "min_packet_size");
-    GlobalParams::max_packet_size = readParam<int>(config, "max_packet_size");
-    GlobalParams::routing_algorithm = readParam<string>(config, "routing_algorithm");
-    GlobalParams::routing_table_filename = readParam<string>(config, "routing_table_filename"); 
-    GlobalParams::selection_strategy = readParam<string>(config, "selection_strategy");
-    GlobalParams::encoding_model = readParam<string>(config, "encoding_model", "RAW");
-    GlobalParams::packet_injection_rate = readParam<double>(config, "packet_injection_rate");
-    GlobalParams::probability_of_retransmission = readParam<double>(config, "probability_of_retransmission");
-    GlobalParams::wired_flit_loss_rate = readParam<double>(config, "wired_flit_loss_rate", 1E-5);
-    GlobalParams::wireless_flit_loss_rate = readParam<double>(config, "wireless_flit_loss_rate", 0.01);
-    GlobalParams::wired_bit_error_rate = readParam<double>(config, "wired_bit_error_rate", 1E-9);
-    GlobalParams::wireless_bit_error_rate = readParam<double>(config, "wireless_bit_error_rate", 1E-4);
-    GlobalParams::traffic_distribution = readParam<string>(config, "traffic_distribution");
-    GlobalParams::traffic_table_filename = readParam<string>(config, "traffic_table_filename");
-    GlobalParams::clock_period_ps = readParam<int>(config, "clock_period_ps");
-    GlobalParams::simulation_time = readParam<int>(config, "simulation_time");
-    GlobalParams::n_virtual_channels = readParam<int>(config, "n_virtual_channels");
-    GlobalParams::reset_time = readParam<int>(config, "reset_time");
-    GlobalParams::stats_warm_up_time = readParam<int>(config, "stats_warm_up_time");
-    GlobalParams::rnd_generator_seed = time(NULL);
-    GlobalParams::detailed = readParam<bool>(config, "detailed");
-    GlobalParams::dyad_threshold = readParam<double>(config, "dyad_threshold");
-    GlobalParams::max_volume_to_be_drained = readParam<unsigned int>(config, "max_volume_to_be_drained");
-    //GlobalParams::hotspots;
-    GlobalParams::show_buffer_stats = readParam<bool>(config, "show_buffer_stats");
+  GlobalParams::r2r_link_length = readParam<double>(config, "r2r_link_length");
+  GlobalParams::r2h_link_length = readParam<double>(config, "r2h_link_length");
+  GlobalParams::buffer_depth = readParam<int>(config, "buffer_depth");
+  GlobalParams::flit_size = readParam<int>(config, "flit_size");
+  GlobalParams::min_packet_size = readParam<int>(config, "min_packet_size");
+  GlobalParams::max_packet_size = readParam<int>(config, "max_packet_size");
+  GlobalParams::routing_algorithm = readParam<string>(config, "routing_algorithm");
+  GlobalParams::routing_table_filename = readParam<string>(config, "routing_table_filename"); 
+  GlobalParams::selection_strategy = readParam<string>(config, "selection_strategy");
+  GlobalParams::encoding_model = readParam<string>(config, "encoding_model", "RAW");
+  GlobalParams::packet_injection_rate = readParam<double>(config, "packet_injection_rate");
+  GlobalParams::probability_of_retransmission = readParam<double>(config, "probability_of_retransmission");
+  GlobalParams::wired_flit_loss_rate = readParam<double>(config, "wired_flit_loss_rate", 1E-5);
+  GlobalParams::wireless_flit_loss_rate = readParam<double>(config, "wireless_flit_loss_rate", 0.01);
+  GlobalParams::wired_bit_error_rate = readParam<double>(config, "wired_bit_error_rate", 1E-9);
+  GlobalParams::wireless_bit_error_rate = readParam<double>(config, "wireless_bit_error_rate", 1E-4);
+  GlobalParams::traffic_distribution = readParam<string>(config, "traffic_distribution");
+  GlobalParams::traffic_table_filename = readParam<string>(config, "traffic_table_filename");
+  GlobalParams::clock_period_ps = readParam<int>(config, "clock_period_ps");
+  GlobalParams::simulation_time = readParam<int>(config, "simulation_time");
+  GlobalParams::n_virtual_channels = readParam<int>(config, "n_virtual_channels");
+  GlobalParams::reset_time = readParam<int>(config, "reset_time");
+  GlobalParams::stats_warm_up_time = readParam<int>(config, "stats_warm_up_time");
+  GlobalParams::rnd_generator_seed = time(NULL);
+  GlobalParams::detailed = readParam<bool>(config, "detailed");
+  GlobalParams::dyad_threshold = readParam<double>(config, "dyad_threshold");
+  GlobalParams::max_volume_to_be_drained = readParam<unsigned int>(config, "max_volume_to_be_drained");
+  //GlobalParams::hotspots;
+  GlobalParams::show_buffer_stats = readParam<bool>(config, "show_buffer_stats");
 }
 
 void showHelp(char selfname[])
 {
-    cout << "Usage: " << selfname << " [options]" << endl
-         << "Where [options] is one or more of the following ones:" << endl
-         << "\t-help\t\t\tShow this help and exit" << endl
-         << "\t-config\t\t\tLoad the specified configuration file" << endl
-         << "\t-verbose N\t\tVerbosity level (1=low, 2=medium, 3=high)" << endl
-         << "\t-trace FILENAME\t\tTrace signals to a VCD file named 'FILENAME.vcd'" << endl
-         << "\t-dimx N\t\t\tSet the mesh X dimension" << endl
-         << "\t-dimy N\t\t\tSet the mesh Y dimension" << endl
-         << "\t-buffer N\t\tSet the depth of router input buffers [flits]" << endl
-	     << "\t-vc N\t\t\tNumber of virtual channels" << endl
-         << "\t-size Nmin Nmax\t\tSet the minimum and maximum packet size [flits]" << endl
-         << "\t-flit N\t\t\tSet the flit size [bit]" << endl
-         << "\t-topology TYPE\t\tSet the topology to one of the following:" << endl
-         << "\t\tMESH\t\t2D Mesh" << endl
-         << "\t-routing TYPE\t\tSet the routing algorithm to one of the following:" << endl
-         << "\t\tXY\t\tXY routing algorithm" << endl
-         << "\t\tWEST_FIRST\tWest-First routing algorithm" << endl
-         << "\t\tNORTH_LAST\tNorth-Last routing algorithm" << endl
-         << "\t\tNEGATIVE_FIRST\tNegative-First routing algorithm" << endl
-         << "\t\tODD_EVEN\tOdd-Even routing algorithm" << endl
-         << "\t\tDYAD T\t\tDyAD routing algorithm with threshold T" << endl
-         << "\t\tTABLE_BASED FILENAME\tRouting Table Based routing algorithm with table in the specified file" << endl
-         << "\t-sel TYPE\t\tSet the selection strategy to one of the following:" << endl
-         << "\t\tRANDOM\t\tRandom selection strategy" << endl
-         << "\t\tBUFFER_LEVEL\tBuffer-Level Based selection strategy" << endl
-         << "\t\tNOP\t\tNeighbors-on-Path selection strategy" << endl
-         <<	"\t-pir R TYPE\t\tSet the packet injection rate R [0..1] and the time distribution TYPE where TYPE is one of the following:" << endl
-         << "\t\tpoisson\t\tMemory-less Poisson distribution" << endl
-         << "\t\tburst R\t\tBurst distribution with given real burstness" << endl
-         << "\t\tpareto on off r\tSelf-similar Pareto distribution with given real parameters (alfa-on alfa-off r)" << endl
-         << "\t\tcustom R\tCustom distribution with given real probability of retransmission" << endl
-         << "\t-traffic TYPE\t\tSet the spatial distribution of traffic to TYPE where TYPE is one of the following:" << endl
-         << "\t\trandom\t\tRandom traffic distribution" << endl
-         << "\t\tlocal L\t\tRandom traffic with a fraction L (0..1) of packets having a destination connected to the local hub" << endl
-         << "\t\tulocal\t\tRandom traffic with locality smooth distribution" << endl
-         << "\t\ttranspose1\tTranspose matrix 1 traffic distribution" << endl
-         << "\t\ttranspose2\tTranspose matrix 2 traffic distribution" << endl
-         << "\t\tbitreversal\tBit-reversal traffic distribution" << endl
-         << "\t\tshuffle\t\tShuffle traffic distribution" << endl
-         <<	"\t\ttable FILENAME\tTraffic Table Based traffic distribution with table in the specified file" << endl
-         << "\t-hs ID P\t\tAdd node ID to hotspot nodes, with percentage P (0..1) (Only for 'random' traffic)" << endl
-         << "\t-warmup N\t\tStart to collect statistics after N cycles" << endl
-         << "\t-seed N\t\t\tSet the seed of the random generator (default time())" << endl
-         << "\t-detailed\t\tShow detailed statistics" << endl
-         << "\t-show_buf_stats\t\tShow buffers statistics" << endl
-         << "\t-volume N\t\tStop the simulation when either the maximum number of cycles has been reached or N flits have" << endl
-         << "\t\t\t\tbeen delivered" << endl
-         << "\t-asciimonitor\t\tShow status of the network while running (experimental)" << endl
-         << "\t-sim N\t\t\tRun for the specified simulation time [cycles]" << endl
-         << endl
-         << "If you find this program useful please don't forget to mention in your paper Maurizio Palesi <maurizio.palesi@unikore.it>" << endl
-         <<	"If you find this program useless please feel free to complain with Davide Patti <davide.patti@dieei.unict.it>" << endl
-         <<	"If you want to send money please feel free to PayPal to Fabrizio Fazzino <fabrizio@fazzino.it>" << endl
-         <<	"and if need to solve any other problem of your life please contact Turi Monteleone <salvatore.monteleone@dieei.unict.it>" << endl;
+  cout << "Usage: " << selfname << " [options]" << endl
+      << "Where [options] is one or more of the following ones:" << endl
+      << "\t-help\t\t\tShow this help and exit" << endl
+      << "\t-config\t\t\tLoad the specified configuration file" << endl
+      << "\t-verbose N\t\tVerbosity level (1=low, 2=medium, 3=high)" << endl
+      << "\t-trace FILENAME\t\tTrace signals to a VCD file named 'FILENAME.vcd'" << endl
+      << "\t-dimx N\t\t\tSet the mesh X dimension" << endl
+      << "\t-dimy N\t\t\tSet the mesh Y dimension" << endl
+      << "\t-buffer N\t\tSet the depth of router input buffers [flits]" << endl
+      << "\t-vc N\t\t\tNumber of virtual channels" << endl
+      << "\t-size Nmin Nmax\t\tSet the minimum and maximum packet size [flits]" << endl
+      << "\t-flit N\t\t\tSet the flit size [bit]" << endl
+      << "\t-topology TYPE\t\tSet the topology to one of the following:" << endl
+      << "\t\tMESH\t\t2D Mesh" << endl
+      << "\t-routing TYPE\t\tSet the routing algorithm to one of the following:" << endl
+      << "\t\tXY\t\tXY routing algorithm" << endl
+      << "\t\tWEST_FIRST\tWest-First routing algorithm" << endl
+      << "\t\tNORTH_LAST\tNorth-Last routing algorithm" << endl
+      << "\t\tNEGATIVE_FIRST\tNegative-First routing algorithm" << endl
+      << "\t\tODD_EVEN\tOdd-Even routing algorithm" << endl
+      << "\t\tDYAD T\t\tDyAD routing algorithm with threshold T" << endl
+      << "\t\tTABLE_BASED FILENAME\tRouting Table Based routing algorithm with table in the specified file" << endl
+      << "\t-sel TYPE\t\tSet the selection strategy to one of the following:" << endl
+      << "\t\tRANDOM\t\tRandom selection strategy" << endl
+      << "\t\tBUFFER_LEVEL\tBuffer-Level Based selection strategy" << endl
+      << "\t\tNOP\t\tNeighbors-on-Path selection strategy" << endl
+      <<  "\t-pir R TYPE\t\tSet the packet injection rate R [0..1] and the time distribution TYPE where TYPE is one of the following:" << endl
+      << "\t\tpoisson\t\tMemory-less Poisson distribution" << endl
+      << "\t\tburst R\t\tBurst distribution with given real burstness" << endl
+      << "\t\tpareto on off r\tSelf-similar Pareto distribution with given real parameters (alfa-on alfa-off r)" << endl
+      << "\t\tcustom R\tCustom distribution with given real probability of retransmission" << endl
+      << "\t-traffic TYPE\t\tSet the spatial distribution of traffic to TYPE where TYPE is one of the following:" << endl
+      << "\t\trandom\t\tRandom traffic distribution" << endl
+      << "\t\tlocal L\t\tRandom traffic with a fraction L (0..1) of packets having a destination connected to the local hub" << endl
+      << "\t\tulocal\t\tRandom traffic with locality smooth distribution" << endl
+      << "\t\ttranspose1\tTranspose matrix 1 traffic distribution" << endl
+      << "\t\ttranspose2\tTranspose matrix 2 traffic distribution" << endl
+      << "\t\tbitreversal\tBit-reversal traffic distribution" << endl
+      << "\t\tshuffle\t\tShuffle traffic distribution" << endl
+      <<  "\t\ttable FILENAME\tTraffic Table Based traffic distribution with table in the specified file" << endl
+      << "\t-hs ID P\t\tAdd node ID to hotspot nodes, with percentage P (0..1) (Only for 'random' traffic)" << endl
+      << "\t-warmup N\t\tStart to collect statistics after N cycles" << endl
+      << "\t-seed N\t\t\tSet the seed of the random generator (default time())" << endl
+      << "\t-detailed\t\tShow detailed statistics" << endl
+      << "\t-show_buf_stats\t\tShow buffers statistics" << endl
+      << "\t-volume N\t\tStop the simulation when either the maximum number of cycles has been reached or N flits have" << endl
+      << "\t\t\t\tbeen delivered" << endl
+      << "\t-asciimonitor\t\tShow status of the network while running (experimental)" << endl
+      << "\t-sim N\t\t\tRun for the specified simulation time [cycles]" << endl
+      << endl
+      << "If you find this program useful please don't forget to mention in your paper Maurizio Palesi <maurizio.palesi@unikore.it>" << endl
+      <<  "If you find this program useless please feel free to complain with Davide Patti <davide.patti@dieei.unict.it>" << endl
+      <<  "If you want to send money please feel free to PayPal to Fabrizio Fazzino <fabrizio@fazzino.it>" << endl
+      <<  "and if need to solve any other problem of your life please contact Turi Monteleone <salvatore.monteleone@dieei.unict.it>" << endl;
 }
 
 void showConfig()
 {
-    cout << "Using the following configuration: " << endl
-         << "- verbose_mode = " << GlobalParams::verbose_mode << endl
-         << "- trace_mode = " << GlobalParams::trace_mode << endl
-      // << "- trace_filename = " << GlobalParams::trace_filename << endl
-         << "- mesh_dim_x = " << GlobalParams::mesh_dim_x << endl
-         << "- mesh_dim_y = " << GlobalParams::mesh_dim_y << endl
-         << "- buffer_depth = " << GlobalParams::buffer_depth << endl
-         << "- n_virtual_channels = " << GlobalParams::n_virtual_channels << endl
-         << "- max_packet_size = " << GlobalParams::max_packet_size << endl
-         << "- routing_algorithm = " << GlobalParams::routing_algorithm << endl
-      // << "- routing_table_filename = " << GlobalParams::routing_table_filename << endl
-         << "- selection_strategy = " << GlobalParams::selection_strategy << endl
-         << "- encoding_model = " << GlobalParams::encoding_model << endl
-         << "- packet_injection_rate = " << GlobalParams::packet_injection_rate << endl
-         << "- probability_of_retransmission = " << GlobalParams::probability_of_retransmission << endl
-         << "- traffic_distribution = " << GlobalParams::traffic_distribution << endl
-         << "- clock_period = " << GlobalParams::clock_period_ps << "ps" << endl
-         << "- simulation_time = " << GlobalParams::simulation_time << endl
-         << "- warm_up_time = " << GlobalParams::stats_warm_up_time << endl
-         << "- rnd_generator_seed = " << GlobalParams::rnd_generator_seed << endl;
+  cout << "Using the following configuration: " << endl
+      << "- verbose_mode = " << GlobalParams::verbose_mode << endl
+      << "- trace_mode = " << GlobalParams::trace_mode << endl
+  // << "- trace_filename = " << GlobalParams::trace_filename << endl
+      << "- mesh_dim_x = " << GlobalParams::mesh_dim_x << endl
+      << "- mesh_dim_y = " << GlobalParams::mesh_dim_y << endl
+      << "- buffer_depth = " << GlobalParams::buffer_depth << endl
+      << "- n_virtual_channels = " << GlobalParams::n_virtual_channels << endl
+      << "- max_packet_size = " << GlobalParams::max_packet_size << endl
+      << "- routing_algorithm = " << GlobalParams::routing_algorithm << endl
+  // << "- routing_table_filename = " << GlobalParams::routing_table_filename << endl
+      << "- selection_strategy = " << GlobalParams::selection_strategy << endl
+      << "- encoding_model = " << GlobalParams::encoding_model << endl
+      << "- packet_injection_rate = " << GlobalParams::packet_injection_rate << endl
+      << "- probability_of_retransmission = " << GlobalParams::probability_of_retransmission << endl
+      << "- traffic_distribution = " << GlobalParams::traffic_distribution << endl
+      << "- clock_period = " << GlobalParams::clock_period_ps << "ps" << endl
+      << "- simulation_time = " << GlobalParams::simulation_time << endl
+      << "- warm_up_time = " << GlobalParams::stats_warm_up_time << endl
+      << "- rnd_generator_seed = " << GlobalParams::rnd_generator_seed << endl;
 }
 
 void checkConfiguration()
 {
-	if (GlobalParams::topology==TOPOLOGY_MESH)
-	{
-		if (GlobalParams::mesh_dim_x <= 1) {
-			cerr << "Error: dimx must be greater than 1" << endl;
-			exit(1);
-		}
-
-		if (GlobalParams::mesh_dim_y <= 1) {
-			cerr << "Error: dimy must be greater than 1" << endl;
-			exit(1);
-		}
-	}
-    else // other topology does not exist
-    {
-		assert(false);
+  if (GlobalParams::topology==TOPOLOGY_MESH)
+  {
+    if (GlobalParams::mesh_dim_x <= 1) {
+      cerr << "Error: dimx must be greater than 1" << endl;
+      exit(1);
     }
 
-    if (GlobalParams::buffer_depth < 1) {
-	cerr << "Error: buffer must be >= 1" << endl;
-	exit(1);
+    if (GlobalParams::mesh_dim_y <= 1) {
+      cerr << "Error: dimy must be greater than 1" << endl;
+      exit(1);
     }
-    if (GlobalParams::flit_size <= 0) {
-	cerr << "Error: flit_size must be > 0" << endl;
-	exit(1);
+  }
+  else // other topology does not exist
+  {
+    assert(false);
+  }
+
+  if (GlobalParams::buffer_depth < 1) {
+    cerr << "Error: buffer must be >= 1" << endl;
+    exit(1);
+  }
+  if (GlobalParams::flit_size <= 0) {
+    cerr << "Error: flit_size must be > 0" << endl;
+    exit(1);
+  }
+
+  if (GlobalParams::min_packet_size < 2 ||
+    GlobalParams::max_packet_size < 2) {
+    cerr << "Error: packet size must be >= 2" << endl;
+    exit(1);
+  }
+
+  if (GlobalParams::min_packet_size >
+    GlobalParams::max_packet_size) {
+    cerr << "Error: min packet size must be less than max packet size"
+        << endl;
+    exit(1);
+  }
+
+  if (GlobalParams::selection_strategy.compare("INVALID_SELECTION") == 0) {
+    cerr << "Error: invalid selection policy" << endl;
+    exit(1);
+  }
+
+  if (GlobalParams::packet_injection_rate <= 0.0 ||
+    GlobalParams::packet_injection_rate > 1.0) {
+    cerr <<
+        "Error: packet injection rate mmust be in the interval ]0,1]"
+        << endl;
+    exit(1);
+  }
+
+  for (unsigned int i = 0; i < GlobalParams::hotspots.size(); i++) {
+    if (GlobalParams::topology==TOPOLOGY_MESH){
+      if (GlobalParams::hotspots[i].first >=
+          GlobalParams::mesh_dim_x * GlobalParams::mesh_dim_y) {
+        cerr << "Error: hotspot node " << GlobalParams::hotspots[i].first
+            << " is invalid (out of range)" << endl;
+        exit(1);
+      }
+    }
+    else {
+      cerr << "Error: unsupported topology for hotspots" << endl;
+      exit(1);
     }
 
-    if (GlobalParams::min_packet_size < 2 ||
-	GlobalParams::max_packet_size < 2) {
-	cerr << "Error: packet size must be >= 2" << endl;
-	exit(1);
+    if (GlobalParams::hotspots[i].second < 0.0 ||
+        GlobalParams::hotspots[i].second > 1.0) {
+        cerr << "Error: hotspot percentage must be in the interval [0,1]"<< endl;
+        exit(1);
     }
+  }
 
-    if (GlobalParams::min_packet_size >
-	GlobalParams::max_packet_size) {
-	cerr << "Error: min packet size must be less than max packet size"
-	    << endl;
-	exit(1);
-    }
+  if (GlobalParams::stats_warm_up_time < 0) {
+    cerr << "Error: warm-up time must be positive" << endl;
+    exit(1);
+  }
 
-    if (GlobalParams::selection_strategy.compare("INVALID_SELECTION") == 0) {
-	cerr << "Error: invalid selection policy" << endl;
-	exit(1);
-    }
+  if (GlobalParams::simulation_time < 0) {
+    cerr << "Error: simulation time must be positive" << endl;
+    exit(1);
+  }
+  if (GlobalParams::n_virtual_channels > MAX_VIRTUAL_CHANNELS) {
+    cerr << "Error: number of virtual channels must be less than " << MAX_VIRTUAL_CHANNELS <<endl;
+    exit(1);
+  }
 
-    if (GlobalParams::packet_injection_rate <= 0.0 ||
-	GlobalParams::packet_injection_rate > 1.0) {
-	cerr <<
-	    "Error: packet injection rate mmust be in the interval ]0,1]"
-	    << endl;
-	exit(1);
-    }
+  if (GlobalParams::stats_warm_up_time >
+    GlobalParams::simulation_time) {
+    cerr << "Error: warmup time must be less than simulation time" <<
+        endl;
+    exit(1);
+  }
 
-    for (unsigned int i = 0; i < GlobalParams::hotspots.size(); i++) {
-	if (GlobalParams::topology==TOPOLOGY_MESH){
-		if (GlobalParams::hotspots[i].first >=
-		    GlobalParams::mesh_dim_x *
-		    GlobalParams::mesh_dim_y) {
-		    cerr << "Error: hotspot node " << GlobalParams::
-			hotspots[i].first << " is invalid (out of range)" << endl;
-		    exit(1);
-		}
-	}
-	else {
-		cerr << "Error: unsupported topology for hotspots" << endl;
-		exit(1);
-	}
-
-	if (GlobalParams::hotspots[i].second < 0.0
-	    || GlobalParams::hotspots[i].second > 1.0) {
-	    cerr <<
-		"Error: hotspot percentage must be in the interval [0,1]"
-		<< endl;
-	    exit(1);
-	}
-    }
-
-    if (GlobalParams::stats_warm_up_time < 0) {
-	cerr << "Error: warm-up time must be positive" << endl;
-	exit(1);
-    }
-
-    if (GlobalParams::simulation_time < 0) {
-	cerr << "Error: simulation time must be positive" << endl;
-	exit(1);
-    }
-    if (GlobalParams::n_virtual_channels > MAX_VIRTUAL_CHANNELS) {
-	cerr << "Error: number of virtual channels must be less than " << MAX_VIRTUAL_CHANNELS <<endl;
-	exit(1);
-    }
-
-    if (GlobalParams::stats_warm_up_time >
-	GlobalParams::simulation_time) {
-	cerr << "Error: warmup time must be less than simulation time" <<
-	    endl;
-	exit(1);
-    }
-
-    if (GlobalParams::locality<0 || GlobalParams::locality>1)
-    {
-	cerr << "Error: traffic locality must be in the range 0..1" << endl;
-	exit(1);
-    }
+  if (GlobalParams::locality<0 || GlobalParams::locality>1)
+  {
+    cerr << "Error: traffic locality must be in the range 0..1" << endl;
+    exit(1);
+  }
 
 
-    if (GlobalParams::n_virtual_channels>1 && GlobalParams::selection_strategy.compare("NOP")==0)
-    {
-	cerr << "Error: NoP selection strategy can be used only with a single virtual channel" << endl;
-	exit(1);
-    }
+  if (GlobalParams::n_virtual_channels>1 && GlobalParams::selection_strategy.compare("NOP")==0)
+  {
+    cerr << "Error: NoP selection strategy can be used only with a single virtual channel" << endl;
+    exit(1);
+  }
 
-    if (GlobalParams::n_virtual_channels>1 && GlobalParams::selection_strategy.compare("BUFFER_LEVEL")==0)
-    {
-	cerr << "Error: Buffer level selection strategy can be used only with a single virtual channel" << endl;
-	exit(1);
-    }
-    if (GlobalParams::n_virtual_channels>MAX_VIRTUAL_CHANNELS) 
-    {
-	cerr << "Error: cannot use more than " << MAX_VIRTUAL_CHANNELS << " virtual channels." << endl
-	     << "If you need more vc please modify the MAX_VIRTUAL_CHANNELS definition in " << endl
-	     << "GlobalParams.h and compile again " << endl;
-	exit(1);
-    }
+  if (GlobalParams::n_virtual_channels>1 && GlobalParams::selection_strategy.compare("BUFFER_LEVEL")==0)
+  {
+    cerr << "Error: Buffer level selection strategy can be used only with a single virtual channel" << endl;
+    exit(1);
+  }
+  if (GlobalParams::n_virtual_channels>MAX_VIRTUAL_CHANNELS) 
+  {
+    cerr << "Error: cannot use more than " << MAX_VIRTUAL_CHANNELS << " virtual channels." << endl
+        << "If you need more vc please modify the MAX_VIRTUAL_CHANNELS definition in " << endl
+        << "GlobalParams.h and compile again " << endl;
+    exit(1);
+  }
 
-    if (GlobalParams::ascii_monitor)
-    {
+  if (GlobalParams::ascii_monitor)
+  {
 #ifdef DEBUG
-	cerr << "-ascii_monitor option need DEBUG flag to be disabled in Makefile " << endl;
-	exit(1);
+    cerr << "-ascii_monitor option need DEBUG flag to be disabled in Makefile " << endl;
+    exit(1);
 #endif
-    }
+  }
 }
 
 void parseCmdLine(int arg_num, char *arg_vet[])
 {
-    if (arg_num == 1)
-	cout <<
-	    "Running with default parameters (use '-help' option to see how to override them)"
-	    << endl;
-    else 
+  if (arg_num == 1)
+    cout <<
+      "Running with default parameters (use '-help' option to see how to override them)"
+      << endl;
+  else
+  {
+    for (int i = 1; i < arg_num; i++)
     {
-	for (int i = 1; i < arg_num; i++) 
-	{
-	    if (!strcmp(arg_vet[i], "-verbose"))
-		GlobalParams::verbose_mode = atoi(arg_vet[++i]);
-	    else if (!strcmp(arg_vet[i], "-trace")) 
-	    {
-		GlobalParams::trace_mode = true;
-		GlobalParams::trace_filename = arg_vet[++i];
-	    } 
-	    else if (!strcmp(arg_vet[i], "-dimx"))
-		GlobalParams::mesh_dim_x = atoi(arg_vet[++i]);
-	    else if (!strcmp(arg_vet[i], "-dimy"))
-		GlobalParams::mesh_dim_y = atoi(arg_vet[++i]);
-
-	    else if (!strcmp(arg_vet[i], "-buffer"))
-		GlobalParams::buffer_depth = atoi(arg_vet[++i]);
-	    else if (!strcmp(arg_vet[i], "-vc"))
-		GlobalParams::n_virtual_channels = (atoi(arg_vet[++i]));
-	    else if (!strcmp(arg_vet[i], "-flit"))
-		GlobalParams::flit_size = atoi(arg_vet[++i]);
-	    else if (!strcmp(arg_vet[i], "-size")) 
-	    {
-		GlobalParams::min_packet_size = atoi(arg_vet[++i]);
-		GlobalParams::max_packet_size = atoi(arg_vet[++i]);
-	    } 
-	    else if (!strcmp(arg_vet[i], "-topology")) 
-	    {
-		    GlobalParams::topology = arg_vet[++i];
-            cout << "Changing topology to " << GlobalParams::topology << endl;
+      if (!strcmp(arg_vet[i], "-verbose"))
+        GlobalParams::verbose_mode = atoi(arg_vet[++i]);
+      else if (!strcmp(arg_vet[i], "-trace"))
+      {
+        GlobalParams::trace_mode = true;
+        GlobalParams::trace_filename = arg_vet[++i];
+      }
+      else if (!strcmp(arg_vet[i], "-dimx"))
+        GlobalParams::mesh_dim_x = atoi(arg_vet[++i]);
+      else if (!strcmp(arg_vet[i], "-dimy"))
+        GlobalParams::mesh_dim_y = atoi(arg_vet[++i]);
+      else if (!strcmp(arg_vet[i], "-buffer"))
+        GlobalParams::buffer_depth = atoi(arg_vet[++i]);
+      else if (!strcmp(arg_vet[i], "-vc"))
+        GlobalParams::n_virtual_channels = (atoi(arg_vet[++i]));
+      else if (!strcmp(arg_vet[i], "-flit"))
+        GlobalParams::flit_size = atoi(arg_vet[++i]);
+      else if (!strcmp(arg_vet[i], "-size"))
+      {
+        GlobalParams::min_packet_size = atoi(arg_vet[++i]);
+        GlobalParams::max_packet_size = atoi(arg_vet[++i]);
+      }
+      else if (!strcmp(arg_vet[i], "-topology"))
+      {
+        GlobalParams::topology = arg_vet[++i];
+        cout << "Changing topology to " << GlobalParams::topology << endl;
+      }
+      else if (!strcmp(arg_vet[i], "-routing"))
+      {
+        GlobalParams::routing_algorithm = arg_vet[++i];
+        if (GlobalParams::routing_algorithm == ROUTING_DYAD)
+          GlobalParams::dyad_threshold = atof(arg_vet[++i]);
+        else if (GlobalParams::routing_algorithm == ROUTING_TABLE_BASED)
+        {
+          GlobalParams::routing_table_filename = arg_vet[++i];
+          GlobalParams::packet_injection_rate = 0;
         }
-	    else if (!strcmp(arg_vet[i], "-routing")) 
-	    {
-		GlobalParams::routing_algorithm = arg_vet[++i];
-		if (GlobalParams::routing_algorithm == ROUTING_DYAD)
-		    GlobalParams::dyad_threshold = atof(arg_vet[++i]);
-		else if (GlobalParams::routing_algorithm == ROUTING_TABLE_BASED) 
-		{
-		    GlobalParams::routing_table_filename = arg_vet[++i];
-		    GlobalParams::packet_injection_rate = 0;
-		} 
-	    } 
-	    else if (!strcmp(arg_vet[i], "-sel")) {
-		GlobalParams::selection_strategy = arg_vet[++i];
-	    } 
-        else if (!strcmp(arg_vet[i], "-ecm")) {
+      }
+      else if (!strcmp(arg_vet[i], "-sel")) {
+        GlobalParams::selection_strategy = arg_vet[++i];
+      }
+      else if (!strcmp(arg_vet[i], "-ecm")) {
         GlobalParams::encoding_model = arg_vet[++i];
+      }
+      else if (!strcmp(arg_vet[i], "-pir")) 
+      {
+        GlobalParams::packet_injection_rate = atof(arg_vet[++i]);
+        char *distribution = arg_vet[i+1<arg_num?++i:i];
+        if (!strcmp(distribution, "poisson"))
+          GlobalParams::probability_of_retransmission = GlobalParams::packet_injection_rate;
+        else if (!strcmp(distribution, "burst")) 
+        {
+          double burstness = atof(arg_vet[++i]);
+          GlobalParams::probability_of_retransmission = GlobalParams::packet_injection_rate / (1 - burstness);
         }
-	    else if (!strcmp(arg_vet[i], "-pir")) 
-	    {
-		
-		GlobalParams::packet_injection_rate = atof(arg_vet[++i]);
-		char *distribution = arg_vet[i+1<arg_num?++i:i];
-		
-		if (!strcmp(distribution, "poisson"))
-		    GlobalParams::probability_of_retransmission = GlobalParams::packet_injection_rate;
-		else if (!strcmp(distribution, "burst")) 
-		{
-		    double burstness = atof(arg_vet[++i]);
-		    GlobalParams::probability_of_retransmission = GlobalParams::packet_injection_rate / (1 - burstness);
-		} 
-		else if (!strcmp(distribution, "pareto")) {
-		    double Aon = atof(arg_vet[++i]);
-		    double Aoff = atof(arg_vet[++i]);
-		    double r = atof(arg_vet[++i]);
-		    GlobalParams::probability_of_retransmission =
-			GlobalParams::packet_injection_rate *
-			pow((1 - r), (1 / Aoff - 1 / Aon));
-		} 
-		else if (!strcmp(distribution, "custom"))
-		    GlobalParams::probability_of_retransmission = atof(arg_vet[++i]);
-		else assert("Invalid pir format" && false);
-	    } 
-	    else if (!strcmp(arg_vet[i], "-traffic")) 
-	    {
-		char *traffic = arg_vet[++i];
-		if (!strcmp(traffic, "random")) GlobalParams::traffic_distribution = TRAFFIC_RANDOM;
-		else if (!strcmp(traffic, "transpose1"))
-		    GlobalParams::traffic_distribution =
-			TRAFFIC_TRANSPOSE1;
-		else if (!strcmp(traffic, "transpose2"))
-		    GlobalParams::traffic_distribution =
-			TRAFFIC_TRANSPOSE2;
-		else if (!strcmp(traffic, "bitreversal"))
-		    GlobalParams::traffic_distribution =
-			TRAFFIC_BIT_REVERSAL;
-		else if (!strcmp(traffic, "shuffle"))
-		    GlobalParams::traffic_distribution =
-			TRAFFIC_SHUFFLE;
-		else if (!strcmp(traffic, "ulocal"))
-		    GlobalParams::traffic_distribution =
-			TRAFFIC_ULOCAL;
-		else if (!strcmp(traffic, "table")) {
-		    GlobalParams::traffic_distribution =
-			TRAFFIC_TABLE_BASED;
-		    GlobalParams::traffic_table_filename = arg_vet[++i];
-		} else if (!strcmp(traffic, "local")) {
-		    GlobalParams::traffic_distribution = TRAFFIC_LOCAL;
-		    GlobalParams::locality=atof(arg_vet[++i]);
-		}
-		else assert(false);
-	    } 
-	    else if (!strcmp(arg_vet[i], "-hs")) 
-	    {
-		int node = atoi(arg_vet[++i]);
-		double percentage = atof(arg_vet[++i]);
-		pair < int, double >t(node, percentage);
-		GlobalParams::hotspots.push_back(t);
-	    } 
-	    else if (!strcmp(arg_vet[i], "-warmup"))
-		GlobalParams::stats_warm_up_time = atoi(arg_vet[++i]);
-	    else if (!strcmp(arg_vet[i], "-seed"))
-		GlobalParams::rnd_generator_seed = atoi(arg_vet[++i]);
-	    else if (!strcmp(arg_vet[i], "-detailed"))
-		GlobalParams::detailed = true;
-	    else if (!strcmp(arg_vet[i], "-show_buf_stats"))
-		GlobalParams::show_buffer_stats = true;
-	    else if (!strcmp(arg_vet[i], "-volume"))
-		GlobalParams::max_volume_to_be_drained =
-		    atoi(arg_vet[++i]);
-	    else if (!strcmp(arg_vet[i], "-sim"))
-		GlobalParams::simulation_time = atoi(arg_vet[++i]);
-	    else if (!strcmp(arg_vet[i], "-asciimonitor")) 
-		GlobalParams::ascii_monitor = true;
-	    else if (!strcmp(arg_vet[i], "-config"))
-		// -config is managed from configure function
-		// i++ skips the configuration file name 
-		i++;
-	    else {
-		cerr << "Error: Invalid option: " << arg_vet[i] << endl;
-		exit(1);
-	    }
-	}
+        else if (!strcmp(distribution, "pareto")) {
+          double Aon = atof(arg_vet[++i]);
+          double Aoff = atof(arg_vet[++i]);
+          double r = atof(arg_vet[++i]);
+          GlobalParams::probability_of_retransmission =
+          GlobalParams::packet_injection_rate *
+          pow((1 - r), (1 / Aoff - 1 / Aon));
+        }
+        else if (!strcmp(distribution, "custom"))
+          GlobalParams::probability_of_retransmission = atof(arg_vet[++i]);
+        else assert("Invalid pir format" && false);
+      }
+      else if (!strcmp(arg_vet[i], "-traffic"))
+      {
+        char *traffic = arg_vet[++i];
+        if (!strcmp(traffic, "random")) GlobalParams::traffic_distribution = TRAFFIC_RANDOM;
+        else if (!strcmp(traffic, "transpose1"))
+          GlobalParams::traffic_distribution = TRAFFIC_TRANSPOSE1;
+        else if (!strcmp(traffic, "transpose2"))
+          GlobalParams::traffic_distribution = TRAFFIC_TRANSPOSE2;
+        else if (!strcmp(traffic, "bitreversal"))
+          GlobalParams::traffic_distribution = TRAFFIC_BIT_REVERSAL;
+        else if (!strcmp(traffic, "shuffle"))
+          GlobalParams::traffic_distribution = TRAFFIC_SHUFFLE;
+        else if (!strcmp(traffic, "ulocal"))
+          GlobalParams::traffic_distribution = TRAFFIC_ULOCAL;
+        else if (!strcmp(traffic, "table")) {
+          GlobalParams::traffic_distribution = TRAFFIC_TABLE_BASED;
+          GlobalParams::traffic_table_filename = arg_vet[++i];
+        } else if (!strcmp(traffic, "local")) {
+          GlobalParams::traffic_distribution = TRAFFIC_LOCAL;
+          GlobalParams::locality=atof(arg_vet[++i]);
+        }
+        else assert(false);
+      }
+      else if (!strcmp(arg_vet[i], "-hs"))
+      {
+        int node = atoi(arg_vet[++i]);
+        double percentage = atof(arg_vet[++i]);
+        pair < int, double >t(node, percentage);
+        GlobalParams::hotspots.push_back(t);
+      }
+      else if (!strcmp(arg_vet[i], "-warmup"))
+        GlobalParams::stats_warm_up_time = atoi(arg_vet[++i]);
+      else if (!strcmp(arg_vet[i], "-seed"))
+        GlobalParams::rnd_generator_seed = atoi(arg_vet[++i]);
+      else if (!strcmp(arg_vet[i], "-detailed"))
+        GlobalParams::detailed = true;
+      else if (!strcmp(arg_vet[i], "-show_buf_stats"))
+        GlobalParams::show_buffer_stats = true;
+      else if (!strcmp(arg_vet[i], "-volume"))
+        GlobalParams::max_volume_to_be_drained = atoi(arg_vet[++i]);
+      else if (!strcmp(arg_vet[i], "-sim"))
+        GlobalParams::simulation_time = atoi(arg_vet[++i]);
+      else if (!strcmp(arg_vet[i], "-asciimonitor")) 
+        GlobalParams::ascii_monitor = true;
+      else if (!strcmp(arg_vet[i], "-config"))
+        // -config is managed from configure function
+        // i++ skips the configuration file name 
+        i++;
+      else {
+        cerr << "Error: Invalid option: " << arg_vet[i] << endl;
+        exit(1);
+      }
     }
-
+  }
 }
 
 
 void configure(int arg_num, char *arg_vet[]) {
+  bool config_found = false;
 
-    bool config_found = false;
-
-    for (int i = 1; i < arg_num; i++) {
-	    if (!strcmp(arg_vet[i], "-help")) {
-		showHelp(arg_vet[0]);
-		exit(0);
-        }
+  for (int i = 1; i < arg_num; i++) {
+    if (!strcmp(arg_vet[i], "-help")) {
+      showHelp(arg_vet[0]);
+      exit(0);
     }
+  }
 
-    for (int i = 1; i < arg_num; i++) {
-	    if (!strcmp(arg_vet[i], "-config")) {
-            GlobalParams::config_filename = arg_vet[++i];
-            config_found = true;
-            break;
-        }
+  for (int i = 1; i < arg_num; i++) {
+    if (!strcmp(arg_vet[i], "-config")) {
+      GlobalParams::config_filename = arg_vet[++i];
+      config_found = true;
+      break;
     }
+  }
 
-    if (!config_found)
+  if (!config_found)
+  {
+    std::ifstream infile(CONFIG_FILENAME);
+    if (infile.good())
+      GlobalParams::config_filename = CONFIG_FILENAME;
+    else
     {
-        std::ifstream infile(CONFIG_FILENAME);
-        if (infile.good())
-            GlobalParams::config_filename = CONFIG_FILENAME;
-        else
-        {
-            cerr << "No YAML configuration file found!\n Use -config to load examples from config_examples folder" << endl;
-            exit(0);
-        }
+      cerr << "No YAML configuration file found!\n Use -config to load examples from config_examples folder" << endl;
+      exit(0);
     }
+  }
 
-    loadConfiguration();
-    parseCmdLine(arg_num, arg_vet);
+  loadConfiguration();
+  parseCmdLine(arg_num, arg_vet);
 
-    checkConfiguration();
+  checkConfiguration();
 
-    // Show configuration
-    if (GlobalParams::verbose_mode > VERBOSE_OFF)
-	showConfig();
+  // Show configuration
+  if (GlobalParams::verbose_mode > VERBOSE_OFF)
+    showConfig();
 }
 
 template <typename T> 
 T readParam(YAML::Node node, string param, T default_value) {
-   try {
-       return node[param].as<T>();
-   } catch(exception &e) {
-       /*
-       cerr << "WARNING: parameter " << param << " not present in YAML configuration file." << endl;
-       cerr << "Using command line value or default value " << default_value << endl;
-        */
-       return default_value;
-   }
+  try {
+    return node[param].as<T>();
+  } catch(exception &e) {
+    /*
+    cerr << "WARNING: parameter " << param << " not present in YAML configuration file." << endl;
+    cerr << "Using command line value or default value " << default_value << endl;
+    */
+    return default_value;
+  }
 }
 
 template <typename T> 
 T readParam(YAML::Node node, string param) {
-   try {
-       return node[param].as<T>();
-   } catch(exception &e) {
-       cerr << "ERROR: Cannot read param " << param << ". " << endl;
-       exit(0);
-   }
+  try {
+    return node[param].as<T>();
+  } catch(exception &e) {
+    cerr << "ERROR: Cannot read param " << param << ". " << endl;
+    exit(0);
+  }
 }

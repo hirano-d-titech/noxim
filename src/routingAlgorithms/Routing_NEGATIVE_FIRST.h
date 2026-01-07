@@ -8,18 +8,18 @@
 using namespace std;
 
 class Routing_NEGATIVE_FIRST : RoutingAlgorithm {
-	public:
-		vector<int> route(Router * router, const RouteData & routeData);
+  public:
+    vector<int> route(Router * router, const RouteData & routeData);
 
-		static Routing_NEGATIVE_FIRST * getInstance();
+    static Routing_NEGATIVE_FIRST * getInstance();
 
-	private:
-		Routing_NEGATIVE_FIRST(){};
-		~Routing_NEGATIVE_FIRST(){};
+  private:
+    Routing_NEGATIVE_FIRST(){};
+    ~Routing_NEGATIVE_FIRST(){};
 
-		static Routing_NEGATIVE_FIRST * routing_NEGATIVE_FIRST;
-		static RoutingAlgorithmsRegister routingAlgorithmsRegister;
-        static RoutingAlgorithm * xy;
+    static Routing_NEGATIVE_FIRST * routing_NEGATIVE_FIRST;
+    static RoutingAlgorithmsRegister routingAlgorithmsRegister;
+    static RoutingAlgorithm * xy;
 };
 
 #endif

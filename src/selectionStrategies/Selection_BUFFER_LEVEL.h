@@ -8,18 +8,18 @@
 using namespace std;
 
 class Selection_BUFFER_LEVEL : SelectionStrategy {
-	public:
-        int apply(Router * router, const vector < int >&directions, const RouteData & route_data);
-        void perCycleUpdate(Router * router);
+  public:
+    int apply(Router * router, const vector < int >&directions, const RouteData & route_data);
+    void perCycleUpdate(Router * router);
 
-		static Selection_BUFFER_LEVEL * getInstance();
+    static Selection_BUFFER_LEVEL * getInstance();
 
-	private:
-		Selection_BUFFER_LEVEL(){};
-		~Selection_BUFFER_LEVEL(){};
+  private:
+    Selection_BUFFER_LEVEL(){};
+    ~Selection_BUFFER_LEVEL(){};
 
-		static Selection_BUFFER_LEVEL * selection_BUFFER_LEVEL;
-		static SelectionStrategiesRegister selectionStrategiesRegister;
+    static Selection_BUFFER_LEVEL * selection_BUFFER_LEVEL;
+    static SelectionStrategiesRegister selectionStrategiesRegister;
 };
 
 #endif

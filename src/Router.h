@@ -36,18 +36,18 @@ SC_MODULE(Router)
     friend class Selection_BUFFER_LEVEL;
 
     // I/O Ports
-    sc_in_clk clock;		                  // The input clock for the router
+    sc_in_clk clock;                      // The input clock for the router
     sc_in <bool> reset;                           // The reset signal for the router
 
     // number of ports: 4 mesh directions + local
-    sc_in <Flit> flit_rx[DIRECTIONS + 1];	  // The input channels 
-    sc_in <bool> req_rx[DIRECTIONS + 1];	  // The requests associated with the input channels
-    sc_out <bool> ack_rx[DIRECTIONS + 1];	  // The outgoing ack signals associated with the input channels
+    sc_in <Flit> flit_rx[DIRECTIONS + 1];    // The input channels 
+    sc_in <bool> req_rx[DIRECTIONS + 1];    // The requests associated with the input channels
+    sc_out <bool> ack_rx[DIRECTIONS + 1];    // The outgoing ack signals associated with the input channels
     sc_out <TBufferFullStatus> buffer_full_status_rx[DIRECTIONS+1];
 
     sc_out <Flit> flit_tx[DIRECTIONS + 1];   // The output channels
-    sc_out <bool> req_tx[DIRECTIONS + 1];	  // The requests associated with the output channels
-    sc_in <bool> ack_tx[DIRECTIONS + 1];	  // The outgoing ack signals associated with the output channels
+    sc_out <bool> req_tx[DIRECTIONS + 1];    // The requests associated with the output channels
+    sc_in <bool> ack_tx[DIRECTIONS + 1];    // The outgoing ack signals associated with the output channels
     sc_in <TBufferFullStatus> buffer_full_status_tx[DIRECTIONS+1];
 
     sc_out <int> free_slots[DIRECTIONS + 1];
@@ -59,15 +59,15 @@ SC_MODULE(Router)
 
     // Registers
 
-    int local_id;		                // Unique ID
-    int routing_type;		                // Type of routing algorithm
+    int local_id;                    // Unique ID
+    int routing_type;                    // Type of routing algorithm
     int selection_type;
-    BufferBank buffer[DIRECTIONS + 1];		// buffer[direction][virtual_channel] 
-    bool current_level_rx[DIRECTIONS + 1];	// Current level for Alternating Bit Protocol (ABP)
-    bool current_level_tx[DIRECTIONS + 1];	// Current level for Alternating Bit Protocol (ABP)
-    Stats stats;		                // Statistics
-    LocalRoutingTable routing_table;		// Routing table
-    ReservationTable reservation_table;		// Switch reservation table
+    BufferBank buffer[DIRECTIONS + 1];    // buffer[direction][virtual_channel] 
+    bool current_level_rx[DIRECTIONS + 1];  // Current level for Alternating Bit Protocol (ABP)
+    bool current_level_tx[DIRECTIONS + 1];  // Current level for Alternating Bit Protocol (ABP)
+    Stats stats;                    // Statistics
+    LocalRoutingTable routing_table;    // Routing table
+    ReservationTable reservation_table;    // Switch reservation table
     unsigned long routed_flits;
     RoutingAlgorithm * routingAlgorithm; 
     SelectionStrategy * selectionStrategy; 
@@ -75,41 +75,41 @@ SC_MODULE(Router)
     // Functions
 
     void process();
-    void rxProcess();		// The receiving process
-    void txProcess();		// The transmitting process
+    void rxProcess();    // The receiving process
+    void txProcess();    // The transmitting process
     void perCycleUpdate();
     void configure(const int _id, const double _warm_up_time,
-		   const unsigned int _max_buffer_size,
-		   GlobalRoutingTable & grt);
+       const unsigned int _max_buffer_size,
+       GlobalRoutingTable & grt);
 
-    unsigned long getRoutedFlits();	// Returns the number of routed flits 
+    unsigned long getRoutedFlits();  // Returns the number of routed flits 
 
     // Constructor
 
     SC_CTOR(Router) {
-        SC_METHOD(process);
-        sensitive << reset;
-        sensitive << clock.pos();
+      SC_METHOD(process);
+      sensitive << reset;
+      sensitive << clock.pos();
 
-        SC_METHOD(perCycleUpdate);
-        sensitive << reset;
-        sensitive << clock.pos();
+      SC_METHOD(perCycleUpdate);
+      sensitive << reset;
+      sensitive << clock.pos();
 
-        routingAlgorithm = RoutingAlgorithms::get(GlobalParams::routing_algorithm);
+      routingAlgorithm = RoutingAlgorithms::get(GlobalParams::routing_algorithm);
 
-        if (routingAlgorithm == 0)
-        {
-            cerr << " FATAL: invalid routing -routing " << GlobalParams::routing_algorithm << ", check with noxim -help" << endl;
-            exit(-1);
-        }
+      if (routingAlgorithm == 0)
+      {
+        cerr << " FATAL: invalid routing -routing " << GlobalParams::routing_algorithm << ", check with noxim -help" << endl;
+        exit(-1);
+      }
 
-        selectionStrategy = SelectionStrategies::get(GlobalParams::selection_strategy);
+      selectionStrategy = SelectionStrategies::get(GlobalParams::selection_strategy);
 
-        if (selectionStrategy == 0)
-        {
-            cerr << " FATAL: invalid selection strategy -sel " << GlobalParams::selection_strategy << ", check with noxim -help" << endl;
-            exit(-1);
-        }
+      if (selectionStrategy == 0)
+      {
+        cerr << " FATAL: invalid selection strategy -sel " << GlobalParams::selection_strategy << ", check with noxim -help" << endl;
+        exit(-1);
+      }
     }
 
   private:
@@ -119,17 +119,17 @@ SC_MODULE(Router)
 
     // wrappers
     int selectionFunction(const vector <int> &directions,
-			  const RouteData & route_data);
+        const RouteData & route_data);
     vector < int >routingFunction(const RouteData & route_data);
- 
+
     NoP_data getCurrentNoPData();
     void NoP_report() const;
     int NoPScore(const NoP_data & nop_data, const vector <int> & nop_channels) const;
     int reflexDirection(int direction) const;
     int getNeighborId(int _id, int direction) const;
-   
+
     vector<int> getNextHops(int src, int dst);
-    int start_from_port;	     // Port from which to start the reservation cycle
+    int start_from_port;       // Port from which to start the reservation cycle
     int start_from_vc[DIRECTIONS+1]; // VC from which to start the reservation cycle for the specific port
   public:
     unsigned int local_drained;

@@ -29,8 +29,8 @@ using namespace std;
 #define DIRECTION_WEST          3
 #define DIRECTION_LOCAL         4
 
-#define MAX_VIRTUAL_CHANNELS	8
-#define DEFAULT_VC 		0
+#define MAX_VIRTUAL_CHANNELS  8
+#define DEFAULT_VC            0
 
 #define RT_AVAILABLE 1
 #define RT_ALREADY_SAME -1
@@ -51,8 +51,8 @@ using namespace std;
 #define ROUTING_TABLE_BASED    "TABLE_BASED"
 
 
-// Channel selection 
-#define CHSEL_RANDOM 0
+// Channel selection
+#define CHSEL_RANDOM     0
 #define CHSEL_FIRST_FREE 1
 
 // Traffic distribution
@@ -63,8 +63,8 @@ using namespace std;
 #define TRAFFIC_TABLE_BASED    "TRAFFIC_TABLE_BASED"
 #define TRAFFIC_BIT_REVERSAL   "TRAFFIC_BIT_REVERSAL"
 #define TRAFFIC_SHUFFLE        "TRAFFIC_SHUFFLE"
-#define TRAFFIC_LOCAL	       "TRAFFIC_LOCAL"
-#define TRAFFIC_ULOCAL	       "TRAFFIC_ULOCAL"
+#define TRAFFIC_LOCAL          "TRAFFIC_LOCAL"
+#define TRAFFIC_ULOCAL         "TRAFFIC_ULOCAL"
 
 // Verbosity levels
 #define VERBOSE_OFF            "VERBOSE_OFF"
@@ -75,49 +75,49 @@ using namespace std;
 
 // Wireless MAC constants
 #define RELEASE_CHANNEL 1
-#define HOLD_CHANNEL 	2
+#define HOLD_CHANNEL   2
 
 struct GlobalParams {
-    static string verbose_mode;
-    static int trace_mode;
-    static string trace_filename;
-    static string topology;
-    static int mesh_dim_x;
-    static int mesh_dim_y;
-    static double r2r_link_length;
-    static double r2h_link_length;
-    static int buffer_depth;
-    static int flit_size;
-    static int min_packet_size;
-    static int max_packet_size;
-    static string routing_algorithm;
-    static string routing_table_filename;
-    static string selection_strategy;
-    static string encoding_model;
-    static double packet_injection_rate;
-    static double probability_of_retransmission;
-    static double wired_flit_loss_rate;
-    static double wireless_flit_loss_rate;
-    static double wired_bit_error_rate;
-    static double wireless_bit_error_rate;
-    static double locality;
-    static string traffic_distribution;
-    static string traffic_table_filename;
-    static string config_filename;
-    static int clock_period_ps;
-    static int simulation_time;
-    static int n_virtual_channels;
-    static int reset_time;
-    static int stats_warm_up_time;
-    static int rnd_generator_seed;
-    static bool detailed;
-    static vector <pair <int, double> > hotspots;
-    static double dyad_threshold;
-    static unsigned int max_volume_to_be_drained;
-    static bool show_buffer_stats;
-    // out of yaml configuration
-    static bool ascii_monitor;
-    static int channel_selection;
+  static string verbose_mode;
+  static int trace_mode;
+  static string trace_filename;
+  static string topology;
+  static int mesh_dim_x;
+  static int mesh_dim_y;
+  static double r2r_link_length;
+  static double r2h_link_length;
+  static int buffer_depth;
+  static int flit_size;
+  static int min_packet_size;
+  static int max_packet_size;
+  static string routing_algorithm;
+  static string routing_table_filename;
+  static string selection_strategy;
+  static string encoding_model;
+  static double packet_injection_rate;
+  static double probability_of_retransmission;
+  static double wired_flit_loss_rate;
+  static double wireless_flit_loss_rate;
+  static double wired_bit_error_rate;
+  static double wireless_bit_error_rate;
+  static double locality;
+  static string traffic_distribution;
+  static string traffic_table_filename;
+  static string config_filename;
+  static int clock_period_ps;
+  static int simulation_time;
+  static int n_virtual_channels;
+  static int reset_time;
+  static int stats_warm_up_time;
+  static int rnd_generator_seed;
+  static bool detailed;
+  static vector <pair <int, double> > hotspots;
+  static double dyad_threshold;
+  static unsigned int max_volume_to_be_drained;
+  static bool show_buffer_stats;
+  // out of yaml configuration
+  static bool ascii_monitor;
+  static int channel_selection;
 };
 
 #endif

@@ -8,17 +8,17 @@
 using namespace std;
 
 class Routing_XY : RoutingAlgorithm {
-	public:
-		vector<int> route(Router * router, const RouteData & routeData);
+  public:
+    vector<int> route(Router * router, const RouteData & routeData);
 
-		static Routing_XY * getInstance();
+    static Routing_XY * getInstance();
 
-	private:
-		Routing_XY(){};
-		~Routing_XY(){};
+  private:
+    Routing_XY(){};
+    ~Routing_XY(){};
 
-		static Routing_XY * routing_XY;
-		static RoutingAlgorithmsRegister routingAlgorithmsRegister;
+    static Routing_XY * routing_XY;
+    static RoutingAlgorithmsRegister routingAlgorithmsRegister;
 };
 
 #endif

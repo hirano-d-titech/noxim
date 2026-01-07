@@ -8,18 +8,18 @@
 using namespace std;
 
 class Selection_NOP : SelectionStrategy {
-	public:
-        int apply(Router * router, const vector < int >&directions, const RouteData & route_data);
-        void perCycleUpdate(Router * router);
+  public:
+    int apply(Router * router, const vector < int >&directions, const RouteData & route_data);
+    void perCycleUpdate(Router * router);
 
-		static Selection_NOP * getInstance();
+    static Selection_NOP * getInstance();
 
-	private:
-		Selection_NOP(){};
-		~Selection_NOP(){};
+  private:
+    Selection_NOP(){};
+    ~Selection_NOP(){};
 
-		static Selection_NOP * selection_NOP;
-		static SelectionStrategiesRegister selectionStrategiesRegister;
+    static Selection_NOP * selection_NOP;
+    static SelectionStrategiesRegister selectionStrategiesRegister;
 };
 
 #endif
