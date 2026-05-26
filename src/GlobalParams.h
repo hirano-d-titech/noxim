@@ -95,7 +95,9 @@ struct GlobalParams {
   static string selection_strategy;
   static string encoding_model;
   static double packet_injection_rate;
-  static double probability_of_retransmission;
+  static int timeout_base_cycles;
+  static int timeout_factor_cycles;
+  static unsigned int total_retransmissions;
   static double wired_flit_loss_rate;
   static double wireless_flit_loss_rate;
   static double wired_bit_error_rate;

@@ -12,6 +12,7 @@
 #define __NOXIMPROCESSINGELEMENT_H__
 
 #include <queue>
+#include <map>
 #include <systemc.h>
 
 #include "DataStructs.h"
@@ -21,6 +22,12 @@
 #include "encodingModels/EncodingModels.h"
 
 using namespace std;
+
+struct SentPacketInfo {
+  Packet packet;
+  double sent_time;
+  int retransmit_count;
+};
 
 SC_MODULE(ProcessingElement)
 {
@@ -84,8 +91,14 @@ SC_MODULE(ProcessingElement)
   int findRandomDestination(int local_id,int hops);
   unsigned int getQueueSize() const;
 
+  int packet_seq_num;
+  std::map<int, SentPacketInfo> outstanding_packets;
+  void retransmitPacket(int packet_id);
+
   // Constructor
   SC_CTOR(ProcessingElement) {
+    packet_seq_num = 0;
+
     SC_METHOD(rxProcess);
     sensitive << reset;
     sensitive << clock.pos();

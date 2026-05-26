@@ -336,14 +336,12 @@ void GlobalStats::showStats(std::ostream & out, bool detailed)
   out << endl;
 #endif
 
-  auto ecm = EncodingModels::get(GlobalParams::encoding_model);
-
-  //int total_cycles = GlobalParams::simulation_time - GlobalParams::stats_warm_up_time;
   out << "% Total received packets: " << getReceivedPackets() << endl;
-  out << "% Failure/Decode packets Ratio: " << (double)ecm->getFailureCount() / ecm->getDecodeCount() << endl;
-  out << "% Error/Success packets Ratio: " << (double)ecm->getErrorCount() / (ecm->getDecodeCount() - ecm->getFailureCount()) << endl;
+  out << "% Failure/Decode packets Ratio: " << getFailureDecodeRatio() << endl;
+  out << "% Error/Success packets Ratio: " << getErrorSuccessRatio() << endl;
   out << "% Total received flits: " << getReceivedFlits() << endl;
   out << "% Received/Ideal flits Ratio: " << getReceivedIdealFlitRatio() << endl;
+  out << "% Global average retransmissions/Ideal flits: " << getAverageRetransmissions() << endl;
   out << "% Global average delay (cycles): " << getAverageDelay() << endl;
   out << "% Max delay (cycles): " << getMaxDelay() << endl;
   out << "% Network throughput (flits/cycle): " << getAggregatedThroughput() << endl;
@@ -390,4 +388,26 @@ double GlobalStats::getReceivedIdealFlitRatio()
     assert(false);
   }
   return ratio;
+}
+
+double GlobalStats::getAverageRetransmissions()
+{
+  int total_cycles = GlobalParams::simulation_time - GlobalParams::stats_warm_up_time;
+  double ideal_flits = GlobalParams::packet_injection_rate * (GlobalParams::min_packet_size +
+              GlobalParams::max_packet_size)/2.0 * total_cycles * GlobalParams::mesh_dim_y * GlobalParams::mesh_dim_x;
+  return (ideal_flits > 0.0) ? (double)GlobalParams::total_retransmissions / ideal_flits : 0.0;
+}
+
+double GlobalStats::getFailureDecodeRatio()
+{
+  auto ecm = EncodingModels::get(GlobalParams::encoding_model);
+  unsigned int decode = ecm->getDecodeCount();
+  return (decode > 0) ? (double)ecm->getFailureCount() / decode : 0.0;
+}
+
+double GlobalStats::getErrorSuccessRatio()
+{
+  auto ecm = EncodingModels::get(GlobalParams::encoding_model);
+  unsigned int success = ecm->getDecodeCount() - ecm->getFailureCount();
+  return (success > 0) ? (double)ecm->getErrorCount() / success : 0.0;
 }

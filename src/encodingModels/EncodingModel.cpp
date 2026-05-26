@@ -23,7 +23,9 @@ vector < Payload > EncodingModel::generatePayloads(const Packet &packet)
 
 Packet EncodingModel::reconstructPacket(const vector < Flit > &flits)
 {
-  return Packet{flits[0].src_id, flits[0].dst_id, flits[0].vc_id, flits[0].timestamp, flits[0].sequence_length};
+  Packet p = Packet{flits[0].src_id, flits[0].dst_id, flits[0].vc_id, flits[0].timestamp, flits[0].sequence_length};
+  p.packet_id = flits[0].packet_id;
+  return p;
 }
 
 bool EncodingModel::predictPayloadsOver(const vector < Flit > &flits, vector< Payload > &received, vector< Payload > &predicted)

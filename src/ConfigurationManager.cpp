@@ -53,7 +53,8 @@ void loadConfiguration() {
   GlobalParams::selection_strategy = readParam<string>(config, "selection_strategy");
   GlobalParams::encoding_model = readParam<string>(config, "encoding_model", "RAW");
   GlobalParams::packet_injection_rate = readParam<double>(config, "packet_injection_rate");
-  GlobalParams::probability_of_retransmission = readParam<double>(config, "probability_of_retransmission");
+  GlobalParams::timeout_base_cycles = readParam<int>(config, "timeout_base_cycles", 200);
+  GlobalParams::timeout_factor_cycles = readParam<int>(config, "timeout_factor_cycles", 50);
   GlobalParams::wired_flit_loss_rate = readParam<double>(config, "wired_flit_loss_rate", 1E-5);
   GlobalParams::wireless_flit_loss_rate = readParam<double>(config, "wireless_flit_loss_rate", 0.01);
   GlobalParams::wired_bit_error_rate = readParam<double>(config, "wired_bit_error_rate", 1E-9);
@@ -152,7 +153,8 @@ void showConfig()
       << "- selection_strategy = " << GlobalParams::selection_strategy << endl
       << "- encoding_model = " << GlobalParams::encoding_model << endl
       << "- packet_injection_rate = " << GlobalParams::packet_injection_rate << endl
-      << "- probability_of_retransmission = " << GlobalParams::probability_of_retransmission << endl
+      << "- timeout_base_cycles = " << GlobalParams::timeout_base_cycles << endl
+      << "- timeout_factor_cycles = " << GlobalParams::timeout_factor_cycles << endl
       << "- traffic_distribution = " << GlobalParams::traffic_distribution << endl
       << "- clock_period = " << GlobalParams::clock_period_ps << "ps" << endl
       << "- simulation_time = " << GlobalParams::simulation_time << endl
@@ -350,22 +352,20 @@ void parseCmdLine(int arg_num, char *arg_vet[])
         GlobalParams::packet_injection_rate = atof(arg_vet[++i]);
         char *distribution = arg_vet[i+1<arg_num?++i:i];
         if (!strcmp(distribution, "poisson"))
-          GlobalParams::probability_of_retransmission = GlobalParams::packet_injection_rate;
+        {
+          // No longer needed after removing probability_of_retransmission
+        }
         else if (!strcmp(distribution, "burst")) 
         {
-          double burstness = atof(arg_vet[++i]);
-          GlobalParams::probability_of_retransmission = GlobalParams::packet_injection_rate / (1 - burstness);
+          i++; // burstness を読み飛ばす
         }
         else if (!strcmp(distribution, "pareto")) {
-          double Aon = atof(arg_vet[++i]);
-          double Aoff = atof(arg_vet[++i]);
-          double r = atof(arg_vet[++i]);
-          GlobalParams::probability_of_retransmission =
-          GlobalParams::packet_injection_rate *
-          pow((1 - r), (1 / Aoff - 1 / Aon));
+          i++; // Aon を読み飛ばす
+          i++; // Aoff を読み飛ばす
+          i++; // r を読み飛ばす
         }
         else if (!strcmp(distribution, "custom"))
-          GlobalParams::probability_of_retransmission = atof(arg_vet[++i]);
+          i++; // 確率値を読み飛ばす
         else assert("Invalid pir format" && false);
       }
       else if (!strcmp(arg_vet[i], "-traffic"))

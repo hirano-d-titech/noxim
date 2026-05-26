@@ -74,6 +74,9 @@ class GlobalStats {
 
 
     double getReceivedIdealFlitRatio();
+    double getAverageRetransmissions();
+    double getFailureDecodeRatio();
+    double getErrorSuccessRatio();
 
 
 

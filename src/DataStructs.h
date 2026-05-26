@@ -46,9 +46,10 @@ struct Packet {
   int size;
   int flit_left;    // Number of remaining flits inside the packet
   bool use_low_voltage_path;
+  int packet_id; // パケットを識別する一意なID。デフォルトは NOT_VALID
 
   // Constructors
-  Packet() { }
+  Packet() : packet_id(NOT_VALID) { }
 
   Packet(const int s, const int d, const int vc, const double ts, const int sz) {
     make(s, d, vc, ts, sz);
@@ -62,11 +63,14 @@ struct Packet {
     size = sz;
     flit_left = sz;
     use_low_voltage_path = false;
+    packet_id = NOT_VALID;
   }
 
   Packet reverse()
   {
-    return Packet{dst_id, src_id, vc_id, sc_time_stamp().to_double() / GlobalParams::clock_period_ps, size};
+    Packet p = Packet{dst_id, src_id, vc_id, sc_time_stamp().to_double() / GlobalParams::clock_period_ps, size};
+    p.packet_id = packet_id;
+    return p;
   }
 };
 
@@ -74,16 +78,19 @@ struct Packet {
 struct Ack {
     int src_id;
     int dst_id;
+    int packet_id;
+    bool is_nack;
 
-    Ack() : src_id(NOT_VALID), dst_id(NOT_VALID) {}
-    Ack(int s, int d) : src_id(s), dst_id(d) {}
+    Ack() : src_id(NOT_VALID), dst_id(NOT_VALID), packet_id(NOT_VALID), is_nack(false) {}
+    Ack(int s, int d, int pid, bool nack = false) : src_id(s), dst_id(d), packet_id(pid), is_nack(nack) {}
 
     inline bool operator ==(const Ack & ack) const {
-      return (ack.src_id == src_id && ack.dst_id == dst_id);
+      return (ack.src_id == src_id && ack.dst_id == dst_id && 
+              ack.packet_id == packet_id && ack.is_nack == is_nack);
     }
 
     inline bool isValid() const {
-      return (src_id != NOT_VALID && dst_id != NOT_VALID);
+      return (src_id != NOT_VALID && dst_id != NOT_VALID && packet_id != NOT_VALID);
     }
 };
 
@@ -151,8 +158,9 @@ struct Flit {
   int hop_no;      // Current number of hops from source to destination
   int hub_hop_no;     // Current number of passed wireless-hops
   bool use_low_voltage_path;
+  int packet_id; // 対応するパケットの一意ID
 
-  Flit(){}
+  Flit() : packet_id(NOT_VALID) {}
 
   Flit(Packet packet){
     src_id = packet.src_id;
@@ -163,6 +171,7 @@ struct Flit {
     hop_no = 0;
     hub_hop_no = 0;
     use_low_voltage_path = packet.use_low_voltage_path;
+    packet_id = packet.packet_id;
   }
 
   inline bool operator ==(const Flit & flit) const {
@@ -173,7 +182,8 @@ struct Flit {
       && flit.sequence_length == sequence_length
       && flit.payload == payload && flit.timestamp == timestamp
       && flit.hop_no == hop_no
-      && flit.use_low_voltage_path == use_low_voltage_path);
+      && flit.use_low_voltage_path == use_low_voltage_path
+      && flit.packet_id == packet_id);
   }
 };
 

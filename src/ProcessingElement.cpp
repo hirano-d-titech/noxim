@@ -26,6 +26,7 @@ void ProcessingElement::rxProcess()
   else
   {
     bool tail_received = false;
+    bool decode_success = true;
     Packet received_packet;
 
     if (req_rx.read() == 1 - current_level_rx)
@@ -33,10 +34,7 @@ void ProcessingElement::rxProcess()
       Flit flit_next = flit_rx.read();
       flit_buffer.push_back(flit_next);
       if (flit_next.flit_type == FLIT_TYPE_TAIL) {
-        if (!encodingModel->decode(flit_buffer, received_packet))
-        {
-          packet_queue.push(received_packet.reverse());
-        }
+        decode_success = encodingModel->decode(flit_buffer, received_packet);
         tail_received = true;
         flit_buffer.clear();
       }
@@ -46,7 +44,13 @@ void ProcessingElement::rxProcess()
 
     // send ack on end of packet reception
     if (tail_received) {
-      Ack ack_signal(received_packet.src_id, received_packet.dst_id);
+      if (GlobalParams::verbose_mode != VERBOSE_OFF) {
+        cout << "PE " << local_id << " @ " << sc_time_stamp().to_double() / GlobalParams::clock_period_ps 
+             << ": Received tail flit of packet_id " << received_packet.packet_id 
+             << " from PE " << received_packet.src_id
+             << ", decode " << (decode_success ? "SUCCESS (sending ACK)" : "FAILURE (sending NACK)") << endl;
+      }
+      Ack ack_signal(received_packet.src_id, received_packet.dst_id, received_packet.packet_id, !decode_success);
       ack_req.write(ack_signal);
     } else {
       // fill invalid ack to avoid uninitialized signal issues
@@ -62,14 +66,53 @@ void ProcessingElement::txProcess()
     req_tx.write(0);
     current_level_tx = 0;
     transmittedAtPreviousCycle = false;
+    outstanding_packets.clear();
   }
   else
   {
-    // check for incoming ACKs
+    double current_cycle = sc_time_stamp().to_double() / GlobalParams::clock_period_ps;
+
+    // check for incoming ACKs/NACKs
     const Ack &incoming_ack = ack_ack.read();
-    if (incoming_ack.isValid()) {
-      if (incoming_ack.src_id == local_id) {
-        // TODO: save sended packet and check Ack for correctness and improvements
+    if (incoming_ack.isValid() && incoming_ack.src_id == local_id) {
+      auto it = outstanding_packets.find(incoming_ack.packet_id);
+      if (it != outstanding_packets.end()) {
+        if (incoming_ack.is_nack) {
+          // NACK: Retransmit immediately
+          if (GlobalParams::verbose_mode != VERBOSE_OFF) {
+            cout << "PE " << local_id << " @ " << current_cycle << ": NACK received for packet_id " << incoming_ack.packet_id << ", triggering immediate retransmission (retransmit_count: " << it->second.retransmit_count + 1 << ")" << endl;
+          }
+          retransmitPacket(incoming_ack.packet_id);
+          GlobalParams::total_retransmissions++;
+          it->second.sent_time = current_cycle;
+          it->second.retransmit_count++;
+        } else {
+          // ACK: Success, erase from map
+          if (GlobalParams::verbose_mode != VERBOSE_OFF) {
+            cout << "PE " << local_id << " @ " << current_cycle << ": ACK received for packet_id " << incoming_ack.packet_id << ", successfully delivered after " << it->second.retransmit_count << " retransmissions." << endl;
+          }
+          outstanding_packets.erase(it);
+        }
+      }
+    }
+
+    // timeout polling
+    for (auto &pair : outstanding_packets) {
+      SentPacketInfo &info = pair.second;
+      Coord src = id2Coord(info.packet.src_id);
+      Coord dst = id2Coord(info.packet.dst_id);
+      int manhattan_dist = abs(src.x - dst.x) + abs(src.y - dst.y);
+      double timeout_limit = GlobalParams::timeout_base_cycles + GlobalParams::timeout_factor_cycles * manhattan_dist;
+
+      if (current_cycle - info.sent_time > timeout_limit) {
+        // Timeout! Retransmit
+        if (GlobalParams::verbose_mode != VERBOSE_OFF) {
+          cout << "PE " << local_id << " @ " << current_cycle << ": Timeout (" << (current_cycle - info.sent_time) << " > " << timeout_limit << ") for packet_id " << info.packet.packet_id << ", retransmitting (retransmit_count: " << info.retransmit_count + 1 << ")" << endl;
+        }
+        retransmitPacket(info.packet.packet_id);
+        GlobalParams::total_retransmissions++;
+        info.sent_time = current_cycle;
+        info.retransmit_count++;
       }
     }
 
@@ -77,6 +120,7 @@ void ProcessingElement::txProcess()
 
     if (canShot(packet))
     {
+      packet.packet_id = packet_seq_num++;
       packet_queue.push(packet);
       transmittedAtPreviousCycle = true;
     }
@@ -89,10 +133,30 @@ void ProcessingElement::txProcess()
     {
       if (!packet_queue.empty())
       {
+        Packet p_info = packet_queue.front();
         Flit flit = nextFlit();  // Generate a new flit
         flit_tx->write(flit);  // Send the generated flit
         current_level_tx = 1 - current_level_tx;  // Negate the old value for Alternating Bit Protocol (ABP)
         req_tx.write(current_level_tx);
+
+        if (flit.flit_type == FLIT_TYPE_TAIL) {
+          auto it = outstanding_packets.find(p_info.packet_id);
+          if (it != outstanding_packets.end()) {
+            it->second.sent_time = current_cycle;
+            if (GlobalParams::verbose_mode != VERBOSE_OFF) {
+              cout << "PE " << local_id << " @ " << current_cycle << ": Retransmitted tail flit for packet_id " << p_info.packet_id << " sent" << endl;
+            }
+          } else {
+            SentPacketInfo info;
+            info.packet = p_info;
+            info.sent_time = current_cycle;
+            info.retransmit_count = 0;
+            outstanding_packets[p_info.packet_id] = info;
+            if (GlobalParams::verbose_mode != VERBOSE_OFF) {
+              cout << "PE " << local_id << " @ " << current_cycle << ": New packet_id " << p_info.packet_id << " tail flit sent, registered outstanding" << endl;
+            }
+          }
+        }
       }
     }
   }
@@ -142,10 +206,7 @@ bool ProcessingElement::canShot(Packet & packet)
 
   if (GlobalParams::traffic_distribution != TRAFFIC_TABLE_BASED)
   {
-    if (!transmittedAtPreviousCycle)
-      threshold = GlobalParams::packet_injection_rate;
-    else
-      threshold = GlobalParams::probability_of_retransmission;
+    threshold = GlobalParams::packet_injection_rate;
 
     shot = (((double) rand()) / RAND_MAX < threshold);
     if (shot) {
@@ -477,5 +538,16 @@ int ProcessingElement::getRandomSize()
 unsigned int ProcessingElement::getQueueSize() const
 {
   return packet_queue.size();
+}
+
+void ProcessingElement::retransmitPacket(int packet_id)
+{
+  auto it = outstanding_packets.find(packet_id);
+  if (it != outstanding_packets.end())
+  {
+    Packet p = it->second.packet;
+    p.flit_left = p.size;
+    packet_queue.push(p);
+  }
 }
 
