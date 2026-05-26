@@ -141,6 +141,12 @@ inline ostream & operator <<(ostream & os, const Coord & coord)
   return os;
 }
 
+inline ostream & operator <<(ostream & os, const Ack & ack)
+{
+  os << "Ack[" << ack.src_id << "->" << ack.dst_id << "]";
+  return os;
+}
+
 // Trace overloading
 
 inline void sc_trace(sc_trace_file * &tf, const Flit & flit, string & name)
@@ -166,6 +172,12 @@ inline void sc_trace(sc_trace_file * &tf, const ChannelStatus & bs, string & nam
 {
   sc_trace(tf, bs.free_slots, name + ".free_slots");
   sc_trace(tf, bs.available, name + ".available");
+}
+
+inline void sc_trace(sc_trace_file * &tf, const Ack & ack, string & name)
+{
+  sc_trace(tf, ack.src_id, name + ".src_id");
+  sc_trace(tf, ack.dst_id, name + ".dst_id");
 }
 
 // Misc common functions
@@ -204,11 +216,22 @@ inline int coord2Id(const Coord & coord)
   return id;
 }
 
+inline int getManhattanDistance(int id_a, int id_b)
+{
+  Coord a = id2Coord(id_a);
+  Coord b = id2Coord(id_b);
+  int dx = a.x - b.x;
+  int dy = a.y - b.y;
+  return (dx < 0 ? -dx : dx) + (dy < 0 ? -dy : dy);
+}
+
 inline void printMap(string label, const map<string,double> & m,std::ostream & out)
 {
   out << label << " = [" << endl;
   for (map<string,double>::const_iterator i = m.begin();i!=m.end();i++)
+  {
     out << "\t" << std::scientific << i->second << "\t % " << i->first << endl;
+  }
 
   out << "];" << endl;
 }

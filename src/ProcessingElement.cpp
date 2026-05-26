@@ -21,24 +21,37 @@ void ProcessingElement::rxProcess()
   {
     ack_rx.write(0);
     current_level_rx = 0;
+    ack_req.write(Ack());
   }
   else
   {
+    bool tail_received = false;
+    Packet received_packet;
+
     if (req_rx.read() == 1 - current_level_rx)
     {
       Flit flit_next = flit_rx.read();
       flit_buffer.push_back(flit_next);
       if (flit_next.flit_type == FLIT_TYPE_TAIL) {
-        Packet received_packet;
         if (!encodingModel->decode(flit_buffer, received_packet))
         {
           packet_queue.push(received_packet.reverse());
         }
+        tail_received = true;
         flit_buffer.clear();
       }
       current_level_rx = 1 - current_level_rx;  // Negate the old value for Alternating Bit Protocol (ABP)
     }
     ack_rx.write(current_level_rx);
+
+    // send ack on end of packet reception
+    if (tail_received) {
+      Ack ack_signal(received_packet.src_id, received_packet.dst_id);
+      ack_req.write(ack_signal);
+    } else {
+      // fill invalid ack to avoid uninitialized signal issues
+      ack_req.write(Ack());
+    }
   }
 }
 
@@ -52,6 +65,14 @@ void ProcessingElement::txProcess()
   }
   else
   {
+    // check for incoming ACKs
+    const Ack &incoming_ack = ack_ack.read();
+    if (incoming_ack.isValid()) {
+      if (incoming_ack.src_id == local_id) {
+        // TODO: save sended packet and check Ack for correctness and improvements
+      }
+    }
+
     Packet packet;
 
     if (canShot(packet))

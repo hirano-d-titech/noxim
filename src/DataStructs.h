@@ -70,6 +70,23 @@ struct Packet {
   }
 };
 
+// Ack -- Ack signal definition
+struct Ack {
+    int src_id;
+    int dst_id;
+
+    Ack() : src_id(NOT_VALID), dst_id(NOT_VALID) {}
+    Ack(int s, int d) : src_id(s), dst_id(d) {}
+
+    inline bool operator ==(const Ack & ack) const {
+      return (ack.src_id == src_id && ack.dst_id == dst_id);
+    }
+
+    inline bool isValid() const {
+      return (src_id != NOT_VALID && dst_id != NOT_VALID);
+    }
+};
+
 // RouteData -- data required to perform routing
 struct RouteData {
   int current_id;

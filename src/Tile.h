@@ -42,6 +42,9 @@ SC_MODULE(Tile)
     sc_out < NoP_data > NoP_data_out[DIRECTIONS];
     sc_in < NoP_data > NoP_data_in[DIRECTIONS];
 
+    sc_out<Ack> ack_req;
+    sc_in<Ack> ack_ack;
+
     sc_signal <int> free_slots_local;
     sc_signal <int> free_slots_neighbor_local;
 
@@ -121,6 +124,9 @@ SC_MODULE(Tile)
       r->free_slots[DIRECTION_LOCAL] (free_slots_local);
       r->free_slots_neighbor[DIRECTION_LOCAL] (free_slots_neighbor_local);
       pe->free_slots_neighbor(free_slots_neighbor_local);
+
+      pe->ack_req(ack_req);
+      pe->ack_ack(ack_ack);
     }
 };
 

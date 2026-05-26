@@ -59,8 +59,17 @@ void NoC::buildMesh()
     t[i] = new Tile*[GlobalParams::mesh_dim_y];
   }
 
-
   // Create the mesh as a matrix of tiles
+  int num_tiles = GlobalParams::mesh_dim_x * GlobalParams::mesh_dim_y;
+
+  ack_ch = new Acknowledge("AckChannel");
+  ack_ch->clock(clock);
+  ack_ch->reset(reset);
+  ack_req_signals.init(num_tiles);
+  ack_ack_signals.init(num_tiles);
+  ack_ch->req_rx.bind(ack_req_signals);
+  ack_ch->ack_tx.bind(ack_ack_signals);
+
   for (int j = 0; j < GlobalParams::mesh_dim_y; j++) {
     for (int i = 0; i < GlobalParams::mesh_dim_x; i++) {
       // Create the single Tile with a proper name
@@ -160,6 +169,9 @@ void NoC::buildMesh()
       t[i][j]->NoP_data_in[DIRECTION_EAST] (nop_data[i + 1][j].west);
       t[i][j]->NoP_data_in[DIRECTION_SOUTH] (nop_data[i][j + 1].north);
       t[i][j]->NoP_data_in[DIRECTION_WEST] (nop_data[i][j].east);
+
+      t[i][j]->ack_req(ack_req_signals[tile_id]);
+      t[i][j]->ack_ack(ack_ack_signals[tile_id]);
     }
   }
 

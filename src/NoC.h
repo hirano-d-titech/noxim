@@ -15,6 +15,7 @@
 #include "Tile.h"
 #include "GlobalRoutingTable.h"
 #include "GlobalTrafficTable.h"
+#include "Acknowledge.h"
 
 using namespace std;
 
@@ -48,6 +49,11 @@ SC_MODULE(NoC)
     // Matrix of tiles
     Tile ***t;
     Tile ** core;
+
+    // Virtual ACK channel
+    Acknowledge *ack_ch;
+    sc_vector<sc_signal<Ack>> ack_req_signals;
+    sc_vector<sc_signal<Ack>> ack_ack_signals;
 
     // Global tables
     GlobalRoutingTable grtable;
