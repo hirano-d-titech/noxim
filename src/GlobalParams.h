@@ -115,6 +115,10 @@ struct GlobalParams {
   static double dyad_threshold;
   static unsigned int max_volume_to_be_drained;
   static bool show_buffer_stats;
+  static int default_delay_status;
+  static int max_delay_cycles;
+  static double delay_increase_probability;
+  static double delay_decrease_probability;
   // out of yaml configuration
   static bool ascii_monitor;
   static int channel_selection;

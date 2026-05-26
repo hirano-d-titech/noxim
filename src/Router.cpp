@@ -32,6 +32,7 @@ void Router::rxProcess()
       ack_rx[i].write(0);
       current_level_rx[i] = 0;
       buffer_full_status_rx[i].write(bfs);
+      while(!delay_buffer[i].empty()) delay_buffer[i].pop();
     }
     routed_flits = 0;
     local_drained = 0;
@@ -51,34 +52,72 @@ void Router::rxProcess()
       if (req_rx[i].read() == 1 - current_level_rx[i])
       {
         Flit received_flit = flit_rx[i].read();
-        //LOG<<"request opposite to the current_level, reading flit "<<received_flit<<endl;
         received_flit.hop_no++;
-        int vc = received_flit.vc_id;
 
-        if (!buffer[i][vc].IsFull()) 
-        {
-          // Store the incoming flit in the circular buffer
-          buffer[i][vc].Push(received_flit);
-          LOG << " Flit " << received_flit << " collected from Input[" << i << "][" << vc <<"]" << endl;
+        update_delay_status();
 
-          // Negate the old value for Alternating Bit Protocol (ABP)
-          //LOG<<"INVERTING CL FROM "<< current_level_rx[i]<< " TO "<<  1 - current_level_rx[i]<<endl;
-          current_level_rx[i] = 1 - current_level_rx[i];
-        }
-        else  // buffer full
-        {
-          // should not happen with the new TBufferFullStatus control signals    
-          // except for flit coming from local PE, which don't use it 
-          LOG << " Flit " << received_flit << " buffer full Input[" << i << "][" << vc <<"]" << endl;
-          assert(i== DIRECTION_LOCAL);
-        }
+        // 現在のシミュレーションサイクル数を取得して目標放出サイクルを算出
+        double current_cycle = sc_time_stamp().to_double() / GlobalParams::clock_period_ps;
+        int delay_val = (delay_status < 0) ? 0 : min(delay_status, GlobalParams::max_delay_cycles);
+        int target_cycle = (int)current_cycle + delay_val;
+
+        // キューにフリットと目標サイクルをプッシュ
+        delay_buffer[i].push(make_pair(received_flit, target_cycle));
+        current_level_rx[i] = 1 - current_level_rx[i];
       }
 
       ack_rx[i].write(current_level_rx[i]);
+
+      // 遅延消化処理
+      double current_cycle = sc_time_stamp().to_double() / GlobalParams::clock_period_ps;
+      if (!delay_buffer[i].empty())
+      {
+        pair<Flit, int>& head = delay_buffer[i].front();
+        
+        // 放出目標サイクルに達しているかチェック
+        if ((int)current_cycle >= head.second)
+        {
+          Flit& flit_to_process = head.first;
+          int vc = flit_to_process.vc_id;
+
+          if (delay_status >= GlobalParams::max_delay_cycles)
+          {
+            // 最大遅延に達している場合（破損）：ドロップ
+            LOG << " Flit " << flit_to_process << " dropped from Input[" << i << "] due to router broken" << endl;
+            delay_buffer[i].pop();
+          }
+          else if (!buffer[i][vc].IsFull()) 
+          {
+            // バッファに空きがあれば投入し、キューから削除
+            buffer[i][vc].Push(flit_to_process);
+            LOG << " Flit " << flit_to_process << " collected from Input[" << i << "][" << vc <<"]" << endl;
+            delay_buffer[i].pop();
+          }
+          else
+          {
+            // バッファフル：投入もポップもせず、次のサイクルで再試行
+            LOG << " Flit " << flit_to_process << " buffer full Input[" << i << "][" << vc <<"]" << endl;
+            assert(i == DIRECTION_LOCAL);
+          }
+        }
+      }
+
       // updates the mask of VCs to prevent incoming data on full buffers
+      // 遅延キューに保留されている未処理フリットもバッファ占有数に加算する
+      int pending_count[MAX_VIRTUAL_CHANNELS] = {0};
+      std::queue<std::pair<Flit, int>> tmp_q = delay_buffer[i];
+      while (!tmp_q.empty()) {
+        int vc_id = tmp_q.front().first.vc_id;
+        if (vc_id >= 0 && vc_id < GlobalParams::n_virtual_channels) {
+          pending_count[vc_id]++;
+        }
+        tmp_q.pop();
+      }
+
       TBufferFullStatus bfs;
-      for (int vc=0;vc<GlobalParams::n_virtual_channels;vc++)
-        bfs.mask[vc] = buffer[i][vc].IsFull();
+      for (int vc=0;vc<GlobalParams::n_virtual_channels;vc++) {
+        bfs.mask[vc] = (buffer[i][vc].Size() + pending_count[vc] >= buffer[i][vc].GetMaxBufferSize());
+      }
       buffer_full_status_rx[i].write(bfs);
     }
   }
@@ -273,6 +312,12 @@ void Router::perCycleUpdate()
     for (int i = 0; i < DIRECTIONS + 1; i++)
       free_slots[i].write(buffer[i][DEFAULT_VC].GetMaxBufferSize());
   } else {
+    // 確率的遅延減少（回復）処理
+    if (delay_status > 0) {
+      if (get_delay_decrease_probability() > (double)rand() / RAND_MAX) {
+        delay_status--;
+      }
+    }
     selectionStrategy->perCycleUpdate(this);
   }
 }
@@ -349,6 +394,8 @@ void Router::configure(const int _id,
 {
   local_id = _id;
   stats.configure(_id, _warm_up_time);
+
+  delay_status = GlobalParams::default_delay_status;
 
   start_from_port = DIRECTION_LOCAL;
 
@@ -463,4 +510,24 @@ void Router::ShowBuffersStats(std::ostream & out)
   for (int i=0; i<DIRECTIONS+1; i++)
     for (int vc=0; vc<GlobalParams::n_virtual_channels;vc++)
       buffer[i][vc].ShowStats(out);
+}
+
+void Router::update_delay_status()
+{
+  if (delay_status < 0) return;
+
+  if (get_delay_increase_probability() > (double)rand() / RAND_MAX)
+  {
+    delay_status++;
+  }
+}
+
+double Router::get_delay_increase_probability()
+{
+  return GlobalParams::delay_increase_probability;
+}
+
+double Router::get_delay_decrease_probability()
+{
+  return GlobalParams::delay_decrease_probability;
 }

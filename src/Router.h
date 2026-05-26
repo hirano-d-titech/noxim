@@ -12,6 +12,8 @@
 #define __NOXIMROUTER_H__
 
 #include <systemc.h>
+#include <queue>
+#include <utility>
 #include "DataStructs.h"
 #include "Buffer.h"
 #include "Stats.h"
@@ -71,7 +73,11 @@ SC_MODULE(Router)
     unsigned long routed_flits;
     RoutingAlgorithm * routingAlgorithm; 
     SelectionStrategy * selectionStrategy; 
-    
+
+    // Delay status
+    int delay_status;
+    std::queue<std::pair<Flit, int>> delay_buffer[DIRECTIONS + 1];
+
     // Functions
 
     void process();
@@ -83,6 +89,10 @@ SC_MODULE(Router)
        GlobalRoutingTable & grt);
 
     unsigned long getRoutedFlits();  // Returns the number of routed flits 
+  
+    void update_delay_status();
+    double get_delay_increase_probability();
+    double get_delay_decrease_probability();
 
     // Constructor
 

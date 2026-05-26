@@ -50,6 +50,10 @@ double GlobalParams::dyad_threshold;
 unsigned int GlobalParams::max_volume_to_be_drained;
 vector <pair <int, double> > GlobalParams::hotspots;
 bool GlobalParams::show_buffer_stats;
+int GlobalParams::default_delay_status;
+int GlobalParams::max_delay_cycles;
+double GlobalParams::delay_increase_probability;
+double GlobalParams::delay_decrease_probability;
 
 // need-to-delete in non-wireless-noxim
 int GlobalParams::channel_selection;

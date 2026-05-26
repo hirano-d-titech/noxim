@@ -71,6 +71,11 @@ void loadConfiguration() {
   GlobalParams::max_volume_to_be_drained = readParam<unsigned int>(config, "max_volume_to_be_drained");
   //GlobalParams::hotspots;
   GlobalParams::show_buffer_stats = readParam<bool>(config, "show_buffer_stats");
+
+  GlobalParams::default_delay_status = readParam<int>(config, "default_delay_status", -1);
+  GlobalParams::max_delay_cycles = readParam<int>(config, "max_delay_cycles", 100);
+  GlobalParams::delay_increase_probability = readParam<double>(config, "delay_increase_probability", 0.0001);
+  GlobalParams::delay_decrease_probability = readParam<double>(config, "delay_decrease_probability", 0.00001);
 }
 
 void showHelp(char selfname[])
