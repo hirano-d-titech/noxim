@@ -135,14 +135,14 @@ SC_MODULE(Router)
     NoP_data getCurrentNoPData();
     void NoP_report() const;
     int NoPScore(const NoP_data & nop_data, const vector <int> & nop_channels) const;
-    int reflexDirection(int direction) const;
-    int getNeighborId(int _id, int direction) const;
-
     vector<int> getNextHops(int src, int dst);
     int start_from_port;       // Port from which to start the reservation cycle
     int start_from_vc[DIRECTIONS+1]; // VC from which to start the reservation cycle for the specific port
   public:
     unsigned int local_drained;
+
+    int reflexDirection(int direction) const;
+    int getNeighborId(int _id, int direction) const;
 
     bool inCongestion();
     void ShowBuffersStats(std::ostream & out);

@@ -151,7 +151,7 @@ void Router::txProcess()
 
         if (!buffer[i][vc].IsEmpty()) 
         {
-          Flit flit = buffer[i][vc].Front();
+          Flit & flit = buffer[i][vc].FrontRef();
 
           if (flit.flit_type == FLIT_TYPE_HEAD) 
           {
@@ -163,6 +163,7 @@ void Router::txProcess()
             route_data.dst_id = flit.dst_id;
             route_data.dir_in = i;
             route_data.vc_id = flit.vc_id;
+            route_data.flit = &flit;
 
             // TODO: see PER POSTERI (adaptive routing should not recompute route if already reserved)
             int o = route(route_data);
@@ -328,7 +329,12 @@ vector < int > Router::routingFunction(const RouteData & route_data)
   if (GlobalParams::verbose_mode > VERBOSE_OFF)
     LOG << "Wired routing for dst = " << route_data.dst_id << endl;
 
-  return routingAlgorithm->route(this, route_data);
+  if (route_data.flit != nullptr) {
+    return routingAlgorithm->route(this, *route_data.flit, route_data);
+  } else {
+    Flit dummy_flit;
+    return routingAlgorithm->route(this, dummy_flit, route_data);
+  }
 }
 
 int Router::route(const RouteData & route_data)

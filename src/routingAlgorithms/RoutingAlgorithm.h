@@ -12,7 +12,7 @@ struct Router;
 class RoutingAlgorithm
 {
   public:
-    virtual vector<int> route(Router * router, const RouteData & routeData) = 0;
+    virtual vector<int> route(Router * router, Flit & flit, const RouteData & routeData) = 0;
 };
 
 #endif

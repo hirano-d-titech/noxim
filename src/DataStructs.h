@@ -14,6 +14,15 @@
 #include <systemc.h>
 #include "GlobalParams.h"
 
+// RouteMetadata -- metadata to perform custom routing
+struct RouteMetadata {
+  std::vector<int> custom_data;
+
+  inline bool operator ==(const RouteMetadata & other) const {
+    return (custom_data == other.custom_data);
+  }
+};
+
 // Coord -- XY coordinates type of the Tile inside the Mesh
 class Coord {
   public:
@@ -47,6 +56,7 @@ struct Packet {
   int flit_left;    // Number of remaining flits inside the packet
   bool use_low_voltage_path;
   int packet_id; // パケットを識別する一意なID。デフォルトは NOT_VALID
+  RouteMetadata route_metadata;
 
   // Constructors
   Packet() : packet_id(NOT_VALID) { }
@@ -70,6 +80,7 @@ struct Packet {
   {
     Packet p = Packet{dst_id, src_id, vc_id, sc_time_stamp().to_double() / GlobalParams::clock_period_ps, size};
     p.packet_id = packet_id;
+    p.route_metadata = route_metadata;
     return p;
   }
 };
@@ -94,6 +105,8 @@ struct Ack {
     }
 };
 
+struct Flit; // Forward declaration
+
 // RouteData -- data required to perform routing
 struct RouteData {
   int current_id;
@@ -101,6 +114,9 @@ struct RouteData {
   int dst_id;
   int dir_in;      // direction from which the packet comes from
   int vc_id;
+  Flit * flit;
+
+  RouteData() : current_id(NOT_VALID), src_id(NOT_VALID), dst_id(NOT_VALID), dir_in(NOT_VALID), vc_id(NOT_VALID), flit(nullptr) {}
 };
 
 struct ChannelStatus {
@@ -159,6 +175,7 @@ struct Flit {
   int hub_hop_no;     // Current number of passed wireless-hops
   bool use_low_voltage_path;
   int packet_id; // 対応するパケットの一意ID
+  RouteMetadata route_metadata;
 
   Flit() : packet_id(NOT_VALID) {}
 
@@ -172,6 +189,7 @@ struct Flit {
     hub_hop_no = 0;
     use_low_voltage_path = packet.use_low_voltage_path;
     packet_id = packet.packet_id;
+    route_metadata = packet.route_metadata;
   }
 
   inline bool operator ==(const Flit & flit) const {
@@ -183,7 +201,8 @@ struct Flit {
       && flit.payload == payload && flit.timestamp == timestamp
       && flit.hop_no == hop_no
       && flit.use_low_voltage_path == use_low_voltage_path
-      && flit.packet_id == packet_id);
+      && flit.packet_id == packet_id
+      && flit.route_metadata == route_metadata);
   }
 };
 

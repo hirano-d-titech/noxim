@@ -25,6 +25,7 @@ Packet EncodingModel::reconstructPacket(const vector < Flit > &flits)
 {
   Packet p = Packet{flits[0].src_id, flits[0].dst_id, flits[0].vc_id, flits[0].timestamp, flits[0].sequence_length};
   p.packet_id = flits[0].packet_id;
+  p.route_metadata = flits[0].route_metadata;
   return p;
 }
 

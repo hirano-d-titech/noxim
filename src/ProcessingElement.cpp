@@ -10,6 +10,48 @@
 
 #include "ProcessingElement.h"
 
+static std::vector<int> generateRandomShortestClusterRoute(int src_id, int dst_id) {
+  std::vector<int> route;
+  route.push_back(0); // custom_data[0] is current_idx, initialized to 0
+
+  Coord src_coord = id2Coord(src_id);
+  Coord dst_coord = id2Coord(dst_id);
+
+  int scx = src_coord.x / 2;
+  int scy = src_coord.y / 2;
+  int dcx = dst_coord.x / 2;
+  int dcy = dst_coord.y / 2;
+
+  int cx = scx;
+  int cy = scy;
+
+  int mesh_cx = (GlobalParams::mesh_dim_x + 1) / 2;
+
+  // Add source cluster
+  route.push_back(cy * mesh_cx + cx);
+
+  while (cx != dcx || cy != dcy) {
+    int dx = dcx - cx;
+    int dy = dcy - cy;
+
+    if (dx == 0) {
+      cy += (dy > 0) ? 1 : -1;
+    } else if (dy == 0) {
+      cx += (dx > 0) ? 1 : -1;
+    } else {
+      // Randomly step along x or y
+      if (rand() % 2 == 0) {
+        cx += (dx > 0) ? 1 : -1;
+      } else {
+        cy += (dy > 0) ? 1 : -1;
+      }
+    }
+    route.push_back(cy * mesh_cx + cx);
+  }
+
+  return route;
+}
+
 int ProcessingElement::randInt(int min, int max)
 {
   return min + (int) ((double) (max - min + 1) * rand() / (RAND_MAX + 1.0));
@@ -120,6 +162,9 @@ void ProcessingElement::txProcess()
 
     if (canShot(packet))
     {
+      if (GlobalParams::routing_algorithm == "CLUSTER") {
+        packet.route_metadata.custom_data = generateRandomShortestClusterRoute(packet.src_id, packet.dst_id);
+      }
       packet.packet_id = packet_seq_num++;
       packet_queue.push(packet);
       transmittedAtPreviousCycle = true;
