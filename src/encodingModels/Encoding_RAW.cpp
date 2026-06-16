@@ -31,40 +31,6 @@ bool Encoding_RAW::encode(Packet &packet, queue < Flit > &sending_flits) {
 
 bool Encoding_RAW::decode(vector < Flit > &received_flits, Packet &packet) {
   packet = reconstructPacket(received_flits);
-  if (packet.size != (int)received_flits.size())
-  {
-    onDecodeFailure();
-    return false;
-  }
-
-  for (auto &&flit : received_flits)
-  {
-    if (pseudo_prob_repeat(GlobalParams::wired_flit_loss_rate, flit.hop_no) > rand01())
-    {
-      onDecodeFailure();
-      return false;
-    }
-
-    if (pseudo_prob_repeat(GlobalParams::wireless_flit_loss_rate, flit.hub_hop_no) > rand01())
-    {
-      onDecodeFailure();
-      return false;
-    }
-
-    auto len = flit.payload.data.length();
-    if (pseudo_prob_repeat(GlobalParams::wired_bit_error_rate, flit.hop_no * len) > rand01())
-    {
-      onDecodeSuccess(false);
-      return true;
-    }
-
-    if (pseudo_prob_repeat(GlobalParams::wireless_bit_error_rate, flit.hub_hop_no * len) > rand01())
-    {
-      onDecodeSuccess(false);
-      return true;
-    }
-  }
-
   onDecodeSuccess(true);
   return true;
 }

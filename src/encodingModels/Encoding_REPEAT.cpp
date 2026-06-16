@@ -34,45 +34,7 @@ bool Encoding_REPEAT::encode(Packet &packet, queue < Flit > &sending_flits) {
 }
 
 bool Encoding_REPEAT::decode(vector < Flit > &received_flits, Packet &packet) {
-  vector < Payload > received, predicted;
-  if (!predictPayloadsOver(received_flits, received, predicted))
-  {
-    onDecodeFailure();
-    return false;
-  }
-
-  size_t length = received.size();
-  if (length % REPETITION != 0)
-  {
-    onDecodeFailure();
-    return false;
-  }
-
-  size_t size = length / REPETITION;
-  vector < Payload > decoded;
-  decoded.reserve(size);
-
-  for (size_t i = 0; i < size; i++)
-  {
-    Payload corrected = {0};
-
-    for (int bit = 0; bit < corrected.data.length(); bit++)
-    {
-      int ones = 0;
-
-      for (size_t j = 0; j < REPETITION; j++)
-      {
-        if (received[i + j * REPETITION].data[bit].to_bool()) {
-          ones++;
-        }
-      }
-
-      corrected.data[bit] = ones > (REPETITION / 2) ? 1 : 0;
-    }
-
-    decoded[i] = corrected;
-  }
-
-  onDecodeSuccess(verifyPayloads(decoded, predicted));
+  packet = reconstructPacket(received_flits);
+  onDecodeSuccess(true);
   return true;
 }

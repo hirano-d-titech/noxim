@@ -54,15 +54,24 @@ void Router::rxProcess()
         Flit received_flit = flit_rx[i].read();
         received_flit.hop_no++;
 
-        update_delay_status();
+        active_in_current_cycle = true;
 
-        // 現在のシミュレーションサイクル数を取得して目標放出サイクルを算出
-        double current_cycle = sc_time_stamp().to_double() / GlobalParams::clock_period_ps;
-        int delay_val = (delay_status < 0) ? 0 : min(delay_status, GlobalParams::max_delay_cycles);
-        int target_cycle = (int)current_cycle + delay_val;
+        double loss_rate = degradation_monitor.getCurrentLossRate();
+        if (loss_rate > 0.0 && (rand() / (RAND_MAX + 1.0)) < loss_rate) {
+          LOG << " Flit " << received_flit << " dropped at Router " << local_id << " due to degradation wear (loss rate: " << loss_rate << ")" << endl;
+        } else {
+          double ber = degradation_monitor.getCurrentBER();
+          if (ber > 0.0) {
+            // bit error
+          }
 
-        // キューにフリットと目標サイクルをプッシュ
-        delay_buffer[i].push(make_pair(received_flit, target_cycle));
+          double current_cycle = sc_time_stamp().to_double() / GlobalParams::clock_period_ps;
+          int delay_val = degradation_monitor.getCurrentDelay();
+          int target_cycle = (int)current_cycle + delay_val;
+
+          delay_buffer[i].push(make_pair(received_flit, target_cycle));
+        }
+
         current_level_rx[i] = 1 - current_level_rx[i];
       }
 
@@ -80,13 +89,7 @@ void Router::rxProcess()
           Flit& flit_to_process = head.first;
           int vc = flit_to_process.vc_id;
 
-          if (delay_status >= GlobalParams::max_delay_cycles)
-          {
-            // 最大遅延に達している場合（破損）：ドロップ
-            LOG << " Flit " << flit_to_process << " dropped from Input[" << i << "] due to router broken" << endl;
-            delay_buffer[i].pop();
-          }
-          else if (!buffer[i][vc].IsFull()) 
+          if (!buffer[i][vc].IsFull()) 
           {
             // バッファに空きがあれば投入し、キューから削除
             buffer[i][vc].Push(flit_to_process);
@@ -313,12 +316,6 @@ void Router::perCycleUpdate()
     for (int i = 0; i < DIRECTIONS + 1; i++)
       free_slots[i].write(buffer[i][DEFAULT_VC].GetMaxBufferSize());
   } else {
-    // 確率的遅延減少（回復）処理
-    if (delay_status > 0) {
-      if (get_delay_decrease_probability() > (double)rand() / RAND_MAX) {
-        delay_status--;
-      }
-    }
     selectionStrategy->perCycleUpdate(this);
   }
 }
@@ -401,7 +398,7 @@ void Router::configure(const int _id,
   local_id = _id;
   stats.configure(_id, _warm_up_time);
 
-  delay_status = GlobalParams::default_delay_status;
+  active_in_current_cycle = false;
 
   start_from_port = DIRECTION_LOCAL;
 
@@ -516,24 +513,4 @@ void Router::ShowBuffersStats(std::ostream & out)
   for (int i=0; i<DIRECTIONS+1; i++)
     for (int vc=0; vc<GlobalParams::n_virtual_channels;vc++)
       buffer[i][vc].ShowStats(out);
-}
-
-void Router::update_delay_status()
-{
-  if (delay_status < 0) return;
-
-  if (get_delay_increase_probability() > (double)rand() / RAND_MAX)
-  {
-    delay_status++;
-  }
-}
-
-double Router::get_delay_increase_probability()
-{
-  return GlobalParams::delay_increase_probability;
-}
-
-double Router::get_delay_decrease_probability()
-{
-  return GlobalParams::delay_decrease_probability;
 }

@@ -33,10 +33,6 @@ double GlobalParams::packet_injection_rate;
 int GlobalParams::timeout_base_cycles;
 int GlobalParams::timeout_factor_cycles;
 unsigned int GlobalParams::total_retransmissions;
-double GlobalParams::wired_flit_loss_rate;
-double GlobalParams::wireless_flit_loss_rate;
-double GlobalParams::wired_bit_error_rate;
-double GlobalParams::wireless_bit_error_rate;
 double GlobalParams::locality;
 string GlobalParams::traffic_distribution;
 string GlobalParams::traffic_table_filename;
@@ -52,10 +48,9 @@ double GlobalParams::dyad_threshold;
 unsigned int GlobalParams::max_volume_to_be_drained;
 vector <pair <int, double> > GlobalParams::hotspots;
 bool GlobalParams::show_buffer_stats;
-int GlobalParams::default_delay_status;
-int GlobalParams::max_delay_cycles;
-double GlobalParams::delay_increase_probability;
-double GlobalParams::delay_decrease_probability;
+
+int GlobalParams::cluster_encoding_type;
+int GlobalParams::cluster_redundancy_bits;
 
 // need-to-delete in non-wireless-noxim
 int GlobalParams::channel_selection;

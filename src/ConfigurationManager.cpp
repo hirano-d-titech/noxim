@@ -55,10 +55,6 @@ void loadConfiguration() {
   GlobalParams::packet_injection_rate = readParam<double>(config, "packet_injection_rate");
   GlobalParams::timeout_base_cycles = readParam<int>(config, "timeout_base_cycles", 200);
   GlobalParams::timeout_factor_cycles = readParam<int>(config, "timeout_factor_cycles", 50);
-  GlobalParams::wired_flit_loss_rate = readParam<double>(config, "wired_flit_loss_rate", 1E-5);
-  GlobalParams::wireless_flit_loss_rate = readParam<double>(config, "wireless_flit_loss_rate", 0.01);
-  GlobalParams::wired_bit_error_rate = readParam<double>(config, "wired_bit_error_rate", 1E-9);
-  GlobalParams::wireless_bit_error_rate = readParam<double>(config, "wireless_bit_error_rate", 1E-4);
   GlobalParams::traffic_distribution = readParam<string>(config, "traffic_distribution");
   GlobalParams::traffic_table_filename = readParam<string>(config, "traffic_table_filename");
   GlobalParams::clock_period_ps = readParam<int>(config, "clock_period_ps");
@@ -73,10 +69,8 @@ void loadConfiguration() {
   //GlobalParams::hotspots;
   GlobalParams::show_buffer_stats = readParam<bool>(config, "show_buffer_stats");
 
-  GlobalParams::default_delay_status = readParam<int>(config, "default_delay_status", -1);
-  GlobalParams::max_delay_cycles = readParam<int>(config, "max_delay_cycles", 100);
-  GlobalParams::delay_increase_probability = readParam<double>(config, "delay_increase_probability", 0.0001);
-  GlobalParams::delay_decrease_probability = readParam<double>(config, "delay_decrease_probability", 0.00001);
+  GlobalParams::cluster_encoding_type = readParam<int>(config, "cluster_encoding_type", 0);
+  GlobalParams::cluster_redundancy_bits = readParam<int>(config, "cluster_redundancy_bits", 16);
 }
 
 void showHelp(char selfname[])
@@ -159,7 +153,9 @@ void showConfig()
       << "- clock_period = " << GlobalParams::clock_period_ps << "ps" << endl
       << "- simulation_time = " << GlobalParams::simulation_time << endl
       << "- warm_up_time = " << GlobalParams::stats_warm_up_time << endl
-      << "- rnd_generator_seed = " << GlobalParams::rnd_generator_seed << endl;
+      << "- rnd_generator_seed = " << GlobalParams::rnd_generator_seed << endl
+      << "- cluster_encoding_type = " << GlobalParams::cluster_encoding_type << endl
+      << "- cluster_redundancy_bits = " << GlobalParams::cluster_redundancy_bits << endl;
 }
 
 void checkConfiguration()
@@ -410,6 +406,10 @@ void parseCmdLine(int arg_num, char *arg_vet[])
         GlobalParams::max_volume_to_be_drained = atoi(arg_vet[++i]);
       else if (!strcmp(arg_vet[i], "-sim"))
         GlobalParams::simulation_time = atoi(arg_vet[++i]);
+      else if (!strcmp(arg_vet[i], "-cluster_enc"))
+        GlobalParams::cluster_encoding_type = atoi(arg_vet[++i]);
+      else if (!strcmp(arg_vet[i], "-cluster_rbits"))
+        GlobalParams::cluster_redundancy_bits = atoi(arg_vet[++i]);
       else if (!strcmp(arg_vet[i], "-asciimonitor")) 
         GlobalParams::ascii_monitor = true;
       else if (!strcmp(arg_vet[i], "-config"))

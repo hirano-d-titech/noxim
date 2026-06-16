@@ -21,6 +21,7 @@
 #include "LocalRoutingTable.h"
 #include "ReservationTable.h"
 #include "Utils.h"
+#include "DegradationMonitor.h"
 #include "routingAlgorithms/RoutingAlgorithm.h"
 #include "routingAlgorithms/RoutingAlgorithms.h"
 #include "selectionStrategies/SelectionStrategy.h"
@@ -74,8 +75,8 @@ SC_MODULE(Router)
     RoutingAlgorithm * routingAlgorithm; 
     SelectionStrategy * selectionStrategy; 
 
-    // Delay status
-    int delay_status;
+    DegradationMonitor degradation_monitor;
+    bool active_in_current_cycle;
     std::queue<std::pair<Flit, int>> delay_buffer[DIRECTIONS + 1];
 
     // Functions
@@ -88,11 +89,7 @@ SC_MODULE(Router)
        const unsigned int _max_buffer_size,
        GlobalRoutingTable & grt);
 
-    unsigned long getRoutedFlits();  // Returns the number of routed flits 
-  
-    void update_delay_status();
-    double get_delay_increase_probability();
-    double get_delay_decrease_probability();
+    unsigned long getRoutedFlits();  // Returns the number of routed flits
 
     // Constructor
 

@@ -94,41 +94,8 @@ bool EncodingModel::verifyPayloads(const vector < Payload > decoded, const vecto
 
 void EncodingModel::simulate_hops(vector < Flit > &flits)
 {
-  vector < Flit > after;
-  for (auto &&flit : flits)
-  {
-    bool lost = false;
-    for (int i = 0; i < flit.hop_no; i++)
-    {
-      if (rand01() < GlobalParams::wired_flit_loss_rate) {
-        lost = true;
-        break;
-      }
-      if (rand01() < GlobalParams::wired_bit_error_rate) {
-        flit.payload.data ^= (1 << (rand() % 32));
-      }
-    }
-    if (!lost) after.push_back(flit);
-  }
-  flits.swap(after);
-
-  after.clear();
-  for (auto &&flit : flits)
-  {
-    bool lost = false;
-    for (int i = 0; i < flit.hub_hop_no; i++)
-    {
-      if (rand01() < GlobalParams::wireless_flit_loss_rate) {
-        lost = true;
-        break;
-      }
-      if (rand01() < GlobalParams::wireless_bit_error_rate) {
-        flit.payload.data ^= (1 << (rand() % 32));
-      }
-    }
-    if (!lost) after.push_back(flit);
-  }
-  flits.swap(after);
+  // Retired E2E hop-based error/loss simulation.
+  // Errors and losses are now dynamically modeled within each Router.
 }
 
 double EncodingModel::pesudo_prob_poisson(int n, int k, double p){

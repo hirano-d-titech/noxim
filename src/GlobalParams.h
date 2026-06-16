@@ -98,10 +98,6 @@ struct GlobalParams {
   static int timeout_base_cycles;
   static int timeout_factor_cycles;
   static unsigned int total_retransmissions;
-  static double wired_flit_loss_rate;
-  static double wireless_flit_loss_rate;
-  static double wired_bit_error_rate;
-  static double wireless_bit_error_rate;
   static double locality;
   static string traffic_distribution;
   static string traffic_table_filename;
@@ -117,10 +113,8 @@ struct GlobalParams {
   static double dyad_threshold;
   static unsigned int max_volume_to_be_drained;
   static bool show_buffer_stats;
-  static int default_delay_status;
-  static int max_delay_cycles;
-  static double delay_increase_probability;
-  static double delay_decrease_probability;
+  static int cluster_encoding_type;       // Cluster-level encoding type (0=NONE, 1=PARITY, 2=SECDED)
+  static int cluster_redundancy_bits;     // Number of redundancy bits added at cluster boundary
   // out of yaml configuration
   static bool ascii_monitor;
   static int channel_selection;
