@@ -51,6 +51,11 @@ bool GlobalParams::show_buffer_stats;
 
 int GlobalParams::cluster_encoding_type;
 int GlobalParams::cluster_redundancy_bits;
+double GlobalParams::eval_success = 1.0;
+double GlobalParams::eval_corrected = -2.0;
+double GlobalParams::eval_fatal = -10.0;
+bool GlobalParams::eval_cluster = false;
+int GlobalParams::recovery_interval = 100;
 
 // need-to-delete in non-wireless-noxim
 int GlobalParams::channel_selection;

@@ -38,6 +38,7 @@ void Acknowledge::update() {
             pending.dst_id = ack.dst_id;
             pending.packet_id = ack.packet_id;
             pending.is_nack = ack.is_nack;
+            pending.cluster_evaluations = ack.cluster_evaluations;
             pending.remaining_delay = manhattan_distance;
 
             pending_acks.push_back(pending);
@@ -51,7 +52,9 @@ void Acknowledge::update() {
       it->remaining_delay--;
       if (it->remaining_delay <= 0) {
         if (it->src_id >= 0 && it->src_id < (int)ack_queues.size()) {
-          ack_queues[it->src_id].push(Ack(it->src_id, it->dst_id, it->packet_id, it->is_nack));
+          Ack new_ack(it->src_id, it->dst_id, it->packet_id, it->is_nack);
+          new_ack.cluster_evaluations = it->cluster_evaluations;
+          ack_queues[it->src_id].push(new_ack);
         }
         it = pending_acks.erase(it);
       } else {

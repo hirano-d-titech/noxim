@@ -13,13 +13,7 @@ Routing_CLUSTER * Routing_CLUSTER::getInstance() {
 }
 
 // Helper: Get cluster ID for a node ID
-static int getClusterId(int node_id) {
-  Coord coord = id2Coord(node_id);
-  int cx = coord.x / 2;
-  int cy = coord.y / 2;
-  int mesh_cx = (GlobalParams::mesh_dim_x + 1) / 2;
-  return cy * mesh_cx + cx;
-}
+// Now using global getClusterId() from Utils.h
 
 // Helper: Check if coordinates are valid
 static bool isValidCoord(const Coord & coord) {

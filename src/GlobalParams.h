@@ -115,6 +115,11 @@ struct GlobalParams {
   static bool show_buffer_stats;
   static int cluster_encoding_type;       // Cluster-level encoding type (0=NONE, 1=PARITY, 2=SECDED)
   static int cluster_redundancy_bits;     // Number of redundancy bits added at cluster boundary
+  static double eval_success;              // Evaluation value for decoding success (e.g. +1.0)
+  static double eval_corrected;            // Evaluation value for corrected bit error (e.g. -2.0)
+  static double eval_fatal;                // Evaluation value for fatal decode failure (e.g. -10.0)
+  static bool eval_cluster;                // Print cluster evaluation boards at the end of simulation
+  static int recovery_interval;            // Interval in cycles for negative evaluation recovery
   // out of yaml configuration
   static bool ascii_monitor;
   static int channel_selection;

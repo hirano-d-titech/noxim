@@ -10,47 +10,7 @@
 
 #include "ProcessingElement.h"
 
-static std::vector<int> generateRandomShortestClusterRoute(int src_id, int dst_id) {
-  std::vector<int> route;
-  route.push_back(0); // custom_data[0] is current_idx, initialized to 0
 
-  Coord src_coord = id2Coord(src_id);
-  Coord dst_coord = id2Coord(dst_id);
-
-  int scx = src_coord.x / 2;
-  int scy = src_coord.y / 2;
-  int dcx = dst_coord.x / 2;
-  int dcy = dst_coord.y / 2;
-
-  int cx = scx;
-  int cy = scy;
-
-  int mesh_cx = (GlobalParams::mesh_dim_x + 1) / 2;
-
-  // Add source cluster
-  route.push_back(cy * mesh_cx + cx);
-
-  while (cx != dcx || cy != dcy) {
-    int dx = dcx - cx;
-    int dy = dcy - cy;
-
-    if (dx == 0) {
-      cy += (dy > 0) ? 1 : -1;
-    } else if (dy == 0) {
-      cx += (dx > 0) ? 1 : -1;
-    } else {
-      // Randomly step along x or y
-      if (rand() % 2 == 0) {
-        cx += (dx > 0) ? 1 : -1;
-      } else {
-        cy += (dy > 0) ? 1 : -1;
-      }
-    }
-    route.push_back(cy * mesh_cx + cx);
-  }
-
-  return route;
-}
 
 int ProcessingElement::randInt(int min, int max)
 {
@@ -70,6 +30,7 @@ void ProcessingElement::rxProcess()
     bool tail_received = false;
     bool decode_success = true;
     Packet received_packet;
+    std::map<int, double> current_evaluations;
 
     if (req_rx.read() == 1 - current_level_rx)
     {
@@ -77,6 +38,46 @@ void ProcessingElement::rxProcess()
       flit_buffer.push_back(flit_next);
       if (flit_next.flit_type == FLIT_TYPE_TAIL) {
         decode_success = encodingModel->decode(flit_buffer, received_packet);
+        
+        bool virtual_decode_success = true;
+        if (!flit_buffer.empty()) {
+          const ClusterEncodingMeta &meta = flit_buffer[0].cluster_enc_meta;
+          const std::map<int, int> &errors_map = flit_buffer[0].virtual_errors;
+          
+          // LIFO scan (from last passed cluster to first)
+          for (int idx = meta.encoding_history_index - 1; idx >= 0; idx--) {
+            int cluster_id = meta.cluster_history[idx];
+            ClusterEncodingType enc_type = meta.encoding_history[idx];
+            
+            int errors = 0;
+            auto err_it = errors_map.find(cluster_id);
+            if (err_it != errors_map.end()) {
+              errors = err_it->second;
+            }
+            
+            if (enc_type == CLUSTER_ENC_PARITY) {
+              if (errors == 0) {
+                current_evaluations[cluster_id] = GlobalParams::eval_success;
+              } else {
+                current_evaluations[cluster_id] = GlobalParams::eval_fatal;
+                virtual_decode_success = false;
+                break; // Stop scanning inner clusters
+              }
+            } else if (enc_type == CLUSTER_ENC_SECDED) {
+              if (errors == 0) {
+                current_evaluations[cluster_id] = GlobalParams::eval_success;
+              } else if (errors == 1) {
+                current_evaluations[cluster_id] = GlobalParams::eval_corrected;
+              } else {
+                current_evaluations[cluster_id] = GlobalParams::eval_fatal;
+                virtual_decode_success = false;
+                break; // Stop scanning inner clusters
+              }
+            }
+          }
+        }
+        
+        decode_success = decode_success && virtual_decode_success;
         tail_received = true;
         flit_buffer.clear();
       }
@@ -93,6 +94,7 @@ void ProcessingElement::rxProcess()
              << ", decode " << (decode_success ? "SUCCESS (sending ACK)" : "FAILURE (sending NACK)") << endl;
       }
       Ack ack_signal(received_packet.src_id, received_packet.dst_id, received_packet.packet_id, !decode_success);
+      ack_signal.cluster_evaluations = current_evaluations;
       ack_req.write(ack_signal);
     } else {
       // fill invalid ack to avoid uninitialized signal issues
@@ -109,14 +111,43 @@ void ProcessingElement::txProcess()
     current_level_tx = 0;
     transmittedAtPreviousCycle = false;
     outstanding_packets.clear();
+    last_recovery_cycle = 0;
   }
   else
   {
     double current_cycle = sc_time_stamp().to_double() / GlobalParams::clock_period_ps;
+    int current_cycle_int = static_cast<int>(current_cycle);
+
+    // Recovery of negative cluster evaluations over time
+    if (current_cycle_int > 0 &&
+        current_cycle_int % GlobalParams::recovery_interval == 0 &&
+        current_cycle_int != last_recovery_cycle) {
+      last_recovery_cycle = current_cycle_int;
+      for (auto &eval : cluster_evaluations) {
+        if (eval.second < 0.0) {
+          eval.second += 1.0;
+          if (eval.second > 0.0) {
+            eval.second = 0.0;
+          }
+          if (GlobalParams::verbose_mode != VERBOSE_OFF) {
+            cout << "PE " << local_id << " @ " << current_cycle << ": Recovered cluster " << eval.first << " evaluation to " << eval.second << endl;
+          }
+        }
+      }
+      routing_manager.recalculateAllRoutes(local_id, cluster_evaluations);
+    }
 
     // check for incoming ACKs/NACKs
     const Ack &incoming_ack = ack_ack.read();
     if (incoming_ack.isValid() && incoming_ack.src_id == local_id) {
+      // Record feedback evaluations in this PE
+      for (auto const &eval : incoming_ack.cluster_evaluations) {
+        cluster_evaluations[eval.first] = eval.second;
+        if (GlobalParams::verbose_mode != VERBOSE_OFF) {
+          cout << "PE " << local_id << " @ " << current_cycle << ": Recorded feedback for cluster " << eval.first << " with evaluation value: " << eval.second << endl;
+        }
+      }
+
       auto it = outstanding_packets.find(incoming_ack.packet_id);
       if (it != outstanding_packets.end()) {
         if (incoming_ack.is_nack) {
@@ -163,7 +194,7 @@ void ProcessingElement::txProcess()
     if (canShot(packet))
     {
       if (GlobalParams::routing_algorithm == "CLUSTER") {
-        packet.route_metadata.custom_data = generateRandomShortestClusterRoute(packet.src_id, packet.dst_id);
+        packet.route_metadata.custom_data = routing_manager.getRoute(packet.src_id, packet.dst_id);
       }
       packet.packet_id = packet_seq_num++;
       packet_queue.push(packet);

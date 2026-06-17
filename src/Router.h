@@ -33,6 +33,39 @@ using namespace std;
 
 extern unsigned int drained_volume;
 
+
+
+// Cluster boundary redundancy encoding state machine
+enum ClusterEncState {
+  CENC_IDLE,           // Waiting for cluster-crossing HEAD
+  CENC_PROCESSING,     // Tracking BODY/TAIL flits through
+  CENC_TAIL_PACKING,   // TAIL arrived, packing redundancy bits
+  CENC_EXTRA_FLIT,     // Sending the extra TAIL flit
+  CENC_RELEASE_WAIT    // Waiting to release port after extra flit
+};
+
+// Per-VC independent state for cluster encoding
+struct ClusterEncContext {
+  ClusterEncState state;
+  ClusterEncodingType encoding_type;     // Encoding type to apply
+  int redundancy_bits;                   // Number of redundancy bits to add
+  int effective_bits_after;              // Effective bit length after adding redundancy
+  int original_sequence_length;          // Original packet flit count
+  bool needs_extra_flit;                 // Whether an extra flit is needed
+  Flit extra_flit;                       // The extra TAIL flit to send
+  int last_processed_cycle;              // Last cycle this context was processed (prevent dup)
+  int output_port;                       // Target output port
+  int input_port;                        // Source input port (for reservation release)
+  ClusterEncodingMeta updated_enc_meta;  // Updated encoding metadata to propagate
+
+  ClusterEncContext() : state(CENC_IDLE), encoding_type(CLUSTER_ENC_NONE),
+    redundancy_bits(0), effective_bits_after(0), original_sequence_length(0),
+    needs_extra_flit(false), last_processed_cycle(-1),
+    output_port(NOT_VALID), input_port(NOT_VALID), updated_enc_meta() {}
+
+  void reset() { *this = ClusterEncContext(); }
+};
+
 SC_MODULE(Router)
 {
     friend class Selection_NOP;
@@ -63,6 +96,7 @@ SC_MODULE(Router)
     // Registers
 
     int local_id;                    // Unique ID
+    int my_cluster_id;               // Cluster ID of this router (2x2 clusters)
     int routing_type;                    // Type of routing algorithm
     int selection_type;
     BufferBank buffer[DIRECTIONS + 1];    // buffer[direction][virtual_channel] 
@@ -93,7 +127,13 @@ SC_MODULE(Router)
 
     // Constructor
 
-    SC_CTOR(Router) {
+    SC_CTOR(Router) : local_id(0), my_cluster_id(0) {
+      // Calculate my_cluster_id (assuming 2x2 clusters)
+      int cx = local_id % GlobalParams::mesh_dim_x / 2;
+      int cy = local_id / GlobalParams::mesh_dim_x / 2;
+      int mesh_cx = (GlobalParams::mesh_dim_x + 1) / 2;
+      my_cluster_id = cy * mesh_cx + cx;
+
       SC_METHOD(process);
       sensitive << reset;
       sensitive << clock.pos();
@@ -118,6 +158,12 @@ SC_MODULE(Router)
         exit(-1);
       }
     }
+
+    // Cluster boundary encoding context per output-port per VC
+    ClusterEncContext cluster_enc_ctx[DIRECTIONS + 1][MAX_VIRTUAL_CHANNELS];
+    bool isClusterBoundaryCrossing(int output_port) const;
+    void processClusterEncoding();
+    void decideClusterEncodingType(int output_port, int vc_id, ClusterEncodingType &type, int &redundancy_bits, int effective_bits, int src_id);
 
   private:
 

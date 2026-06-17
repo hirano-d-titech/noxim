@@ -37,6 +37,41 @@ class Coord {
 enum FlitType {
   FLIT_TYPE_HEAD, FLIT_TYPE_BODY, FLIT_TYPE_TAIL
 };
+// Cluster-level redundancy encoding constants
+#define MAX_CLUSTER_HOPS 8
+
+// Cluster-level encoding type
+enum ClusterEncodingType {
+  CLUSTER_ENC_NONE = 0,
+  CLUSTER_ENC_PARITY = 1,
+  CLUSTER_ENC_SECDED = 2
+};
+
+// Cluster-level encoding metadata per flit
+struct ClusterEncodingMeta {
+  int effective_bits;                                     // Current effective bit length
+  ClusterEncodingType encoding_history[MAX_CLUSTER_HOPS]; // Applied encoding type history
+  int cluster_history[MAX_CLUSTER_HOPS];                  // Passed cluster ID history
+  int encoding_history_index;                             // Current history index counter
+
+  ClusterEncodingMeta() : effective_bits(0), encoding_history_index(0) {
+    for (int i = 0; i < MAX_CLUSTER_HOPS; i++) {
+      encoding_history[i] = CLUSTER_ENC_NONE;
+      cluster_history[i] = -1;
+    }
+  }
+
+  inline bool operator ==(const ClusterEncodingMeta & other) const {
+    if (effective_bits != other.effective_bits) return false;
+    if (encoding_history_index != other.encoding_history_index) return false;
+    for (int i = 0; i < encoding_history_index; i++) {
+      if (encoding_history[i] != other.encoding_history[i]) return false;
+      if (cluster_history[i] != other.cluster_history[i]) return false;
+    }
+    return true;
+  }
+};
+
 
 // Payload -- Payload definition
 struct Payload {
@@ -91,13 +126,15 @@ struct Ack {
     int dst_id;
     int packet_id;
     bool is_nack;
+    std::map<int, double> cluster_evaluations; // Cluster ID -> Evaluation value (delay/load)
 
     Ack() : src_id(NOT_VALID), dst_id(NOT_VALID), packet_id(NOT_VALID), is_nack(false) {}
     Ack(int s, int d, int pid, bool nack = false) : src_id(s), dst_id(d), packet_id(pid), is_nack(nack) {}
 
     inline bool operator ==(const Ack & ack) const {
       return (ack.src_id == src_id && ack.dst_id == dst_id && 
-              ack.packet_id == packet_id && ack.is_nack == is_nack);
+              ack.packet_id == packet_id && ack.is_nack == is_nack &&
+              ack.cluster_evaluations == cluster_evaluations);
     }
 
     inline bool isValid() const {
@@ -161,6 +198,8 @@ struct TBufferFullStatus {
   bool mask[MAX_VIRTUAL_CHANNELS];
 };
 
+#include <map>
+
 // Flit -- Flit definition
 struct Flit {
   int src_id;
@@ -176,6 +215,8 @@ struct Flit {
   bool use_low_voltage_path;
   int packet_id; // 対応するパケットの一意ID
   RouteMetadata route_metadata;
+  ClusterEncodingMeta cluster_enc_meta; // Cluster-level encoding metadata
+  std::map<int, int> virtual_errors; // Passed cluster ID -> accumulated error bits count
 
   Flit() : packet_id(NOT_VALID) {}
 
@@ -190,6 +231,9 @@ struct Flit {
     use_low_voltage_path = packet.use_low_voltage_path;
     packet_id = packet.packet_id;
     route_metadata = packet.route_metadata;
+    // Initialize effective_bits to the total data bits in the packet
+    cluster_enc_meta = ClusterEncodingMeta();
+    cluster_enc_meta.effective_bits = GlobalParams::flit_size * packet.size;
   }
 
   inline bool operator ==(const Flit & flit) const {
@@ -202,7 +246,9 @@ struct Flit {
       && flit.hop_no == hop_no
       && flit.use_low_voltage_path == use_low_voltage_path
       && flit.packet_id == packet_id
-      && flit.route_metadata == route_metadata);
+      && flit.route_metadata == route_metadata
+      && flit.cluster_enc_meta == cluster_enc_meta
+      && flit.virtual_errors == virtual_errors);
   }
 };
 

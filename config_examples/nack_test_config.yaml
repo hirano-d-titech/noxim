@@ -36,4 +36,3 @@ delay_decrease_probability: 0.0005
 # ERROR AND ENCODING FOR NACK TESTING
 encoding_model: HAMMING
 wired_bit_error_rate: 0.01
-wireless_bit_error_rate: 0.01

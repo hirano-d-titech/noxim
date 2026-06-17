@@ -349,6 +349,41 @@ void GlobalStats::showStats(std::ostream & out, bool detailed)
 
   if (GlobalParams::show_buffer_stats)
     showBufferStats(out);
+
+  if (GlobalParams::eval_cluster)
+  {
+    out << endl << "=========================================" << endl;
+    out << "   CLUSTER EVALUATIONS BOARD PER NODE" << endl;
+    out << "=========================================" << endl;
+
+    int mesh_cx = (GlobalParams::mesh_dim_x + 1) / 2;
+    int mesh_cy = (GlobalParams::mesh_dim_y + 1) / 2;
+    int total_clusters = mesh_cx * mesh_cy;
+
+    for (int c = 0; c < total_clusters; c++)
+    {
+      out << "Cluster " << c << " Evaluations Board:" << endl;
+      for (int y = 0; y < GlobalParams::mesh_dim_y; y++)
+      {
+        for (int x = 0; x < GlobalParams::mesh_dim_x; x++)
+        {
+          double val = 0.0;
+          auto it = noc->t[x][y]->pe->cluster_evaluations.find(c);
+          if (it != noc->t[x][y]->pe->cluster_evaluations.end()) {
+            val = it->second;
+          }
+          int int_val = static_cast<int>(val);
+          if (int_val < -99) {
+            out << " BAD";
+          } else {
+            out << " " << setw(3) << int_val;
+          }
+        }
+        out << endl;
+      }
+      out << endl;
+    }
+  }
 }
 
 void GlobalStats::showBufferStats(std::ostream & out)

@@ -242,4 +242,14 @@ template<typename T> std::string i_to_string(const T& t){
   return s.str();
 }
 
+// Get cluster ID for a node ID (2x2 cluster grid)
+inline int getClusterId(int node_id)
+{
+  Coord coord = id2Coord(node_id);
+  int cx = coord.x / 2;
+  int cy = coord.y / 2;
+  int mesh_cx = (GlobalParams::mesh_dim_x + 1) / 2;
+  return cy * mesh_cx + cx;
+}
+
 #endif

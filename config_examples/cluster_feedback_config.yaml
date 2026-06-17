@@ -1,0 +1,68 @@
+# Cluster feedback simulation config of a 4x4 mesh
+#
+# NOC & WIRED CONFIGURATION
+#
+topology: MESH
+mesh_dim_x: 4
+mesh_dim_y: 4
+buffer_depth: 4
+flit_size: 32
+r2h_link_length: 2.0
+r2r_link_length: 1.0
+
+# Number of virtual channels (Even VCs use SECDED, Odd VCs use PARITY encoding)
+n_virtual_channels: 2
+
+# Routing algorithm:
+#   CLUSTER (Only CLUSTER routing is available in this branch)
+routing_algorithm: CLUSTER
+routing_table_filename: ""
+
+dyad_threshold: 0.6
+
+# Selection Strategies:
+#   RANDOM
+#   BUFFER_LEVEL
+#   NOP
+selection_strategy: RANDOM
+
+# SIMULATION PARAMETERS
+clock_period_ps: 1000
+reset_time: 1000
+simulation_time: 10000
+stats_warm_up_time: 1000
+detailed: false
+max_volume_to_be_drained: 0
+show_buffer_stats: false
+
+# Verbosity level (VERBOSE_OFF, VERBOSE_LOW, VERBOSE_MEDIUM, VERBOSE_HIGH)
+verbose_mode: VERBOSE_OFF
+
+trace_mode: false
+trace_filename: ""
+
+min_packet_size: 8
+max_packet_size: 8
+packet_injection_rate: 0.01
+
+# Spatial traffic distribution:
+#   TRAFFIC_RANDOM
+#   TRAFFIC_TRANSPOSE1
+#   TRAFFIC_TRANSPOSE2
+#   TRAFFIC_HOTSPOT
+#   TRAFFIC_TABLE_BASED
+#   TRAFFIC_BIT_REVERSAL
+#   TRAFFIC_SHUFFLE
+traffic_distribution: TRAFFIC_RANDOM
+traffic_table_filename: "t.txt"
+
+# CLUSTER EVALUATION PARAMETERS FOR FEEDBACK
+# Value added to the evaluations of traversed clusters when decoding is successful without error.
+eval_success: 1.0
+# Value added to the evaluations of traversed clusters when a single-bit error is successfully corrected (SECDED).
+eval_corrected: -2.0
+# Value added to the evaluations of traversed clusters when a fatal (uncorrectable) error occurs.
+eval_fatal: -10.0
+
+# Interval in cycles for negative evaluation recovery (adds +1.0 to negative evaluations)
+recovery_interval: 100

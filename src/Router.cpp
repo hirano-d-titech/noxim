@@ -9,6 +9,9 @@
  */
 
 #include "Router.h"
+#include "NoC.h"
+
+extern NoC *n;
 
 
 inline int toggleKthBit(int n, int k)
@@ -18,8 +21,18 @@ inline int toggleKthBit(int n, int k)
 
 void Router::process()
 {
-  txProcess();
-  rxProcess();
+  if (reset.read())
+  {
+    txProcess();
+    rxProcess();
+  }
+  else
+  {
+    active_in_current_cycle = false;
+    txProcess();
+    rxProcess();
+    degradation_monitor.updateState(active_in_current_cycle);
+  }
 }
 
 void Router::rxProcess()
@@ -62,7 +75,15 @@ void Router::rxProcess()
         } else {
           double ber = degradation_monitor.getCurrentBER();
           if (ber > 0.0) {
-            // bit error
+            int flipped_bits = 0;
+            for (int b = 0; b < GlobalParams::flit_size; b++) {
+              if ((rand() / (RAND_MAX + 1.0)) < ber) {
+                flipped_bits++;
+              }
+            }
+            if (flipped_bits > 0) {
+              received_flit.virtual_errors[my_cluster_id] += flipped_bits;
+            }
           }
 
           double current_cycle = sc_time_stamp().to_double() / GlobalParams::clock_period_ps;
@@ -136,9 +157,14 @@ void Router::txProcess()
       req_tx[i].write(0);
       current_level_tx[i] = 0;
     }
+    // Reset cluster encoding contexts
+    for (int i = 0; i < DIRECTIONS + 1; i++)
+      for (int vc = 0; vc < GlobalParams::n_virtual_channels; vc++)
+        cluster_enc_ctx[i][vc].reset();
   }
   else
   {
+    int current_cycle = (int)(sc_time_stamp().to_double() / GlobalParams::clock_period_ps);
     // 1st phase: Reservation
     for (int j = 0; j < DIRECTIONS + 1; j++)
     {
@@ -205,6 +231,9 @@ void Router::txProcess()
 
     start_from_port = (start_from_port + 1) % (DIRECTIONS + 1);
 
+    // Pre-forwarding: Process cluster encoding extra flit / release states
+    processClusterEncoding();
+
     // 2nd phase: Forwarding
     //if (local_id==6) LOG<<"*TX*****local_id="<<local_id<<"__ack_tx[0]= "<<ack_tx[0].read()<<endl;
     for (int i = 0; i < DIRECTIONS + 1; i++) 
@@ -221,13 +250,115 @@ void Router::txProcess()
         // can happen
         if (!buffer[i][vc].IsEmpty())  
         {
+          ClusterEncContext & ctx = cluster_enc_ctx[o][vc];
+
+          if (isClusterBoundaryCrossing(o))
+          {
+            if (ctx.state == CENC_EXTRA_FLIT || ctx.state == CENC_RELEASE_WAIT)
+            {
+              continue; // Skip normal forwarding to let processClusterEncoding handle the extra flit
+            }
+          }
+
           Flit flit = buffer[i][vc].Front();
+
           //LOG<< "*****TX***Direction= "<<i<< "************"<<endl;
           //LOG<<"_cl_tx="<<current_level_tx[o]<<"req_tx="<<req_tx[o].read()<<" _ack= "<<ack_tx[o].read()<< endl;
 
-          if ( (current_level_tx[o] == ack_tx[o].read()) &&
-              (buffer_full_status_tx[o].read().mask[vc] == false) )
+          bool cycle_allowed = true;
+          if (isClusterBoundaryCrossing(o))
           {
+            if (current_cycle <= ctx.last_processed_cycle)
+              cycle_allowed = false;
+          }
+
+          if ( (current_level_tx[o] == ack_tx[o].read()) &&
+              (buffer_full_status_tx[o].read().mask[vc] == false) &&
+              cycle_allowed )
+          {
+            if (isClusterBoundaryCrossing(o))
+            {
+              if (flit.flit_type == FLIT_TYPE_HEAD)
+              {
+                ClusterEncodingType decided_type;
+                int decided_redundancy;
+                decideClusterEncodingType(o, vc, decided_type, decided_redundancy, flit.cluster_enc_meta.effective_bits, flit.src_id);
+
+                if (decided_type == CLUSTER_ENC_NONE)
+                {
+                  ctx.reset();
+                }
+                else
+                {
+                  ctx.state = CENC_PROCESSING;
+                  ctx.encoding_type = decided_type;
+                  ctx.redundancy_bits = decided_redundancy;
+                  ctx.input_port = i;
+                  ctx.output_port = o;
+                  ctx.last_processed_cycle = current_cycle;
+                  ctx.original_sequence_length = flit.sequence_length;
+
+                  ctx.effective_bits_after = flit.cluster_enc_meta.effective_bits + ctx.redundancy_bits;
+                  ctx.needs_extra_flit = (ctx.effective_bits_after > ctx.original_sequence_length * GlobalParams::flit_size);
+
+                  if (ctx.needs_extra_flit)
+                  {
+                    flit.sequence_length = ctx.original_sequence_length + 1;
+                  }
+                  flit.cluster_enc_meta.effective_bits = ctx.effective_bits_after;
+                   if (flit.cluster_enc_meta.encoding_history_index < MAX_CLUSTER_HOPS)
+                   {
+                     flit.cluster_enc_meta.encoding_history[flit.cluster_enc_meta.encoding_history_index] = ctx.encoding_type;
+                     flit.cluster_enc_meta.cluster_history[flit.cluster_enc_meta.encoding_history_index] = my_cluster_id;
+                     flit.cluster_enc_meta.encoding_history_index++;
+                   }
+
+                  ctx.updated_enc_meta = flit.cluster_enc_meta;
+
+                  LOG << " [ClusterEnc] Input[" << i << "][" << vc << "] HEAD boundary crossing to Output[" << o << "], decided_type=" << ctx.encoding_type << ", original_len=" << ctx.original_sequence_length << ", new_len=" << flit.sequence_length << ", eff_bits=" << ctx.effective_bits_after << ", needs_extra=" << ctx.needs_extra_flit << endl;
+                }
+              }
+              else if (ctx.state == CENC_PROCESSING)
+              {
+                if (flit.flit_type == FLIT_TYPE_BODY)
+                {
+                  flit.sequence_length = ctx.needs_extra_flit ? ctx.original_sequence_length + 1 : ctx.original_sequence_length;
+                  flit.cluster_enc_meta = ctx.updated_enc_meta;
+                  ctx.last_processed_cycle = current_cycle;
+
+                  LOG << " [ClusterEnc] Input[" << i << "][" << vc << "] BODY tracking crossing boundary to Output[" << o << "]" << endl;
+                }
+                else if (flit.flit_type == FLIT_TYPE_TAIL)
+                {
+                  flit.sequence_length = ctx.needs_extra_flit ? ctx.original_sequence_length + 1 : ctx.original_sequence_length;
+                  flit.cluster_enc_meta = ctx.updated_enc_meta;
+                  ctx.last_processed_cycle = current_cycle;
+
+                  flit.payload.data = 0; // virtual packing
+
+                  if (!ctx.needs_extra_flit)
+                  {
+                    LOG << " [ClusterEnc] Input[" << i << "][" << vc << "] TAIL boundary crossing to Output[" << o << "] (fits, no extra flit)" << endl;
+                    ctx.reset();
+                  }
+                  else
+                  {
+                    flit.flit_type = FLIT_TYPE_BODY;
+
+                    Flit extra_flit = flit;
+                    extra_flit.flit_type = FLIT_TYPE_TAIL;
+                    extra_flit.sequence_no = ctx.original_sequence_length;
+                    extra_flit.payload.data = 0; // 0-filled
+
+                    ctx.extra_flit = extra_flit;
+                    ctx.state = CENC_EXTRA_FLIT;
+
+                    LOG << " [ClusterEnc] Input[" << i << "][" << vc << "] TAIL boundary crossing to Output[" << o << "] (overflows, splitting and locking port)" << endl;
+                  }
+                }
+              }
+            }
+
             //if (GlobalParams::verbose_mode > VERBOSE_OFF)
             LOG << "Input[" << i << "][" << vc << "] forwarded to Output[" << o << "], flit: " << flit << endl;
 
@@ -236,6 +367,7 @@ void Router::txProcess()
             current_level_tx[o] = 1 - current_level_tx[o];
             req_tx[o].write(current_level_tx[o]);
             buffer[i][vc].Pop();
+            active_in_current_cycle = true;
 
             if (flit.flit_type == FLIT_TYPE_TAIL)
             {
@@ -308,6 +440,105 @@ NoP_data Router::getCurrentNoPData()
   NoP_data.sender_id = local_id;
 
   return NoP_data;
+}
+
+// ============================================================
+// Cluster Boundary Encoding - Helper
+// ============================================================
+bool Router::isClusterBoundaryCrossing(int output_port) const
+{
+  if (output_port == DIRECTION_LOCAL || output_port < 0 || output_port >= DIRECTIONS)
+    return false;
+  int neighbor_id = getNeighborId(local_id, output_port);
+  if (neighbor_id == NOT_VALID) return false;
+  return getClusterId(local_id) != getClusterId(neighbor_id);
+}
+
+void Router::decideClusterEncodingType(int output_port, int vc_id, ClusterEncodingType &type, int &redundancy_bits, int effective_bits, int src_id)
+{
+  int neighbor_id = getNeighborId(local_id, output_port);
+  int target_cluster_id = getClusterId(neighbor_id);
+
+  double trust_score = 0.0;
+  Tile *src_tile = n->searchNode(src_id);
+  if (src_tile && src_tile->pe) {
+    auto it = src_tile->pe->cluster_evaluations.find(target_cluster_id);
+    if (it != src_tile->pe->cluster_evaluations.end()) {
+      trust_score = it->second;
+    }
+  }
+
+  if (trust_score <= 0.0) {
+    type = CLUSTER_ENC_SECDED;
+    // Calculate SECDED parity bits (2^p >= E + p + 1)
+    int p = 3;
+    while ((1 << p) < (effective_bits + p + 1)) {
+      p++;
+    }
+    redundancy_bits = p + 1; // SECDED is Hamming + 1 parity bit
+  } else {
+    type = CLUSTER_ENC_PARITY;
+    redundancy_bits = 1; // 1-bit parity
+  }
+}
+
+// ============================================================
+// Cluster Boundary Encoding - State Machine Processing
+// Called at the beginning of txProcess (before normal forwarding)
+// to handle CENC_EXTRA_FLIT and CENC_RELEASE_WAIT states.
+// ============================================================
+void Router::processClusterEncoding()
+{
+  int current_cycle = (int)(sc_time_stamp().to_double() / GlobalParams::clock_period_ps);
+
+  for (int o = 0; o < DIRECTIONS + 1; o++)
+  {
+    for (int vc = 0; vc < GlobalParams::n_virtual_channels; vc++)
+    {
+      ClusterEncContext & ctx = cluster_enc_ctx[o][vc];
+
+      if (ctx.state == CENC_EXTRA_FLIT)
+      {
+        // Send the extra TAIL flit on the output port
+        if (current_level_tx[o] == ack_tx[o].read() &&
+            buffer_full_status_tx[o].read().mask[vc] == false)
+        {
+          LOG << " [ClusterEnc] Sending extra TAIL flit on Output[" << o << "] VC[" << vc << "]" << endl;
+
+           ctx.extra_flit.hop_no++;
+           flit_tx[o].write(ctx.extra_flit);
+           current_level_tx[o] = 1 - current_level_tx[o];
+           req_tx[o].write(current_level_tx[o]);
+           active_in_current_cycle = true;
+
+           // Transition to RELEASE_WAIT
+           ctx.state = CENC_RELEASE_WAIT;
+           ctx.last_processed_cycle = current_cycle;
+        }
+      }
+      else if (ctx.state == CENC_RELEASE_WAIT)
+      {
+        // Ensure at least 1 cycle has passed since extra flit was sent
+        if (current_cycle > ctx.last_processed_cycle)
+        {
+          LOG << " [ClusterEnc] Releasing port Output[" << o << "] VC[" << vc << "] after extra TAIL" << endl;
+
+          // Now release the reservation that was held
+          TReservation r;
+          r.input = ctx.input_port;
+          r.vc = vc;
+          reservation_table.release(r, o);
+
+          // Stats for non-local, non-PE-generated flits
+          if (o != DIRECTION_LOCAL && ctx.input_port != DIRECTION_LOCAL)
+            routed_flits++;
+
+          // Full reset of context
+          ctx.reset();
+        }
+      }
+    }
+  }
 }
 
 void Router::perCycleUpdate()
@@ -396,6 +627,15 @@ void Router::configure(const int _id,
           GlobalRoutingTable & grt)
 {
   local_id = _id;
+  
+  // Calculate my_cluster_id (assuming 2x2 clusters)
+  int cx = local_id % GlobalParams::mesh_dim_x / 2;
+  int cy = local_id / GlobalParams::mesh_dim_x / 2;
+  int mesh_cx = (GlobalParams::mesh_dim_x + 1) / 2;
+  my_cluster_id = cy * mesh_cx + cx;
+
+  LOG << " [Degradation] Router " << local_id << " configured in cluster " << my_cluster_id << endl;
+
   stats.configure(_id, _warm_up_time);
 
   active_in_current_cycle = false;
@@ -418,6 +658,11 @@ void Router::configure(const int _id,
     start_from_vc[i] = 0;
   }
 
+
+  // Initialize cluster encoding contexts
+  for (int i = 0; i < DIRECTIONS + 1; i++)
+    for (int vc = 0; vc < GlobalParams::n_virtual_channels; vc++)
+      cluster_enc_ctx[i][vc].reset();
 
   if (GlobalParams::topology == TOPOLOGY_MESH)
   {
