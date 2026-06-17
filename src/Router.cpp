@@ -45,7 +45,9 @@ void Router::rxProcess()
       ack_rx[i].write(0);
       current_level_rx[i] = 0;
       buffer_full_status_rx[i].write(bfs);
-      while(!delay_buffer[i].empty()) delay_buffer[i].pop();
+      for (int vc = 0; vc < MAX_VIRTUAL_CHANNELS; vc++) {
+        while(!delay_buffer[i][vc].empty()) delay_buffer[i][vc].pop();
+      }
     }
     routed_flits = 0;
     local_drained = 0;
@@ -89,8 +91,13 @@ void Router::rxProcess()
           double current_cycle = sc_time_stamp().to_double() / GlobalParams::clock_period_ps;
           int delay_val = degradation_monitor.getCurrentDelay();
           int target_cycle = (int)current_cycle + delay_val;
+          int vc = received_flit.vc_id;
 
-          delay_buffer[i].push(make_pair(received_flit, target_cycle));
+          if (vc >= 0 && vc < MAX_VIRTUAL_CHANNELS) {
+            delay_buffer[i][vc].push(make_pair(received_flit, target_cycle));
+          } else {
+            assert(false);
+          }
         }
 
         current_level_rx[i] = 1 - current_level_rx[i];
@@ -100,28 +107,30 @@ void Router::rxProcess()
 
       // 遅延消化処理
       double current_cycle = sc_time_stamp().to_double() / GlobalParams::clock_period_ps;
-      if (!delay_buffer[i].empty())
+      for (int vc = 0; vc < GlobalParams::n_virtual_channels; vc++)
       {
-        pair<Flit, int>& head = delay_buffer[i].front();
-        
-        // 放出目標サイクルに達しているかチェック
-        if ((int)current_cycle >= head.second)
+        if (!delay_buffer[i][vc].empty())
         {
-          Flit& flit_to_process = head.first;
-          int vc = flit_to_process.vc_id;
+          pair<Flit, int>& head = delay_buffer[i][vc].front();
+          
+          // 放出目標サイクルに達しているかチェック
+          if ((int)current_cycle >= head.second)
+          {
+            Flit& flit_to_process = head.first;
 
-          if (!buffer[i][vc].IsFull()) 
-          {
-            // バッファに空きがあれば投入し、キューから削除
-            buffer[i][vc].Push(flit_to_process);
-            LOG << " Flit " << flit_to_process << " collected from Input[" << i << "][" << vc <<"]" << endl;
-            delay_buffer[i].pop();
-          }
-          else
-          {
-            // バッファフル：投入もポップもせず、次のサイクルで再試行
-            LOG << " Flit " << flit_to_process << " buffer full Input[" << i << "][" << vc <<"]" << endl;
-            assert(i == DIRECTION_LOCAL);
+            if (!buffer[i][vc].IsFull()) 
+            {
+              // バッファに空きがあれば投入し、キューから削除
+              buffer[i][vc].Push(flit_to_process);
+              LOG << " Flit " << flit_to_process << " collected from Input[" << i << "][" << vc <<"]" << endl;
+              delay_buffer[i][vc].pop();
+            }
+            else
+            {
+              // バッファフル：投入もポップもせず、次のサイクルで再試行
+              LOG << " Flit " << flit_to_process << " buffer full Input[" << i << "][" << vc <<"]" << endl;
+              assert(i == DIRECTION_LOCAL);
+            }
           }
         }
       }
@@ -129,13 +138,8 @@ void Router::rxProcess()
       // updates the mask of VCs to prevent incoming data on full buffers
       // 遅延キューに保留されている未処理フリットもバッファ占有数に加算する
       int pending_count[MAX_VIRTUAL_CHANNELS] = {0};
-      std::queue<std::pair<Flit, int>> tmp_q = delay_buffer[i];
-      while (!tmp_q.empty()) {
-        int vc_id = tmp_q.front().first.vc_id;
-        if (vc_id >= 0 && vc_id < GlobalParams::n_virtual_channels) {
-          pending_count[vc_id]++;
-        }
-        tmp_q.pop();
+      for (int vc = 0; vc < GlobalParams::n_virtual_channels; vc++) {
+        pending_count[vc] = delay_buffer[i][vc].size();
       }
 
       TBufferFullStatus bfs;

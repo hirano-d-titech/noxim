@@ -111,7 +111,7 @@ SC_MODULE(Router)
 
     DegradationMonitor degradation_monitor;
     bool active_in_current_cycle;
-    std::queue<std::pair<Flit, int>> delay_buffer[DIRECTIONS + 1];
+    std::queue<std::pair<Flit, int>> delay_buffer[DIRECTIONS + 1][MAX_VIRTUAL_CHANNELS];
 
     // Functions
 

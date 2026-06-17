@@ -53,8 +53,8 @@ void loadConfiguration() {
   GlobalParams::selection_strategy = readParam<string>(config, "selection_strategy");
   GlobalParams::encoding_model = readParam<string>(config, "encoding_model", "RAW");
   GlobalParams::packet_injection_rate = readParam<double>(config, "packet_injection_rate");
-  GlobalParams::timeout_base_cycles = readParam<int>(config, "timeout_base_cycles", 200);
-  GlobalParams::timeout_factor_cycles = readParam<int>(config, "timeout_factor_cycles", 50);
+  GlobalParams::timeout_base_cycles = readParam<int>(config, "timeout_base_cycles", 600);
+  GlobalParams::timeout_factor_cycles = readParam<int>(config, "timeout_factor_cycles", 100);
   GlobalParams::traffic_distribution = readParam<string>(config, "traffic_distribution");
   GlobalParams::traffic_table_filename = readParam<string>(config, "traffic_table_filename");
   GlobalParams::clock_period_ps = readParam<int>(config, "clock_period_ps");

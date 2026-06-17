@@ -31,7 +31,7 @@ void DegradationMonitor::decreaseTemperature() {
 
 // permanent wear / aging accumulation (irreversible)
 void DegradationMonitor::increaseWear() {
-  accumulated_wear += 0.001;
+  accumulated_wear += 0.0001;
 }
 
 // transient temperature delay penalty
@@ -41,7 +41,7 @@ int DegradationMonitor::getThermalDelay() const {
 
 // permanent wear delay penalty
 int DegradationMonitor::getWearDelay() const {
-  return static_cast<int>(accumulated_wear * 10.0);
+  return static_cast<int>(accumulated_wear * 3.0);
 }
 
 int DegradationMonitor::getCurrentDelay() const {
@@ -52,12 +52,12 @@ int DegradationMonitor::getCurrentDelay() const {
 
 // transient temperature BER penalty
 double DegradationMonitor::getThermalBER() const {
-  return current_temperature * 0.0001;
+  return current_temperature * 0.000002;
 }
 
 // permanent wear BER penalty
 double DegradationMonitor::getWearBER() const {
-  return accumulated_wear * 0.01;
+  return accumulated_wear * 0.00002;
 }
 
 double DegradationMonitor::getCurrentBER() const {
@@ -67,10 +67,11 @@ double DegradationMonitor::getCurrentBER() const {
 }
 
 double DegradationMonitor::getCurrentLossRate() const {
-  // flit loss happens only after wear passes a certain threshold (1.0)
-  double threshold = 1.0;
+  // flit loss happens only after wear passes a certain threshold (3.0)
+  double threshold = 3.0;
   if (accumulated_wear > threshold) {
-    return 0.01 + (accumulated_wear - threshold) * 0.05;
+    return 0.001 + (accumulated_wear - threshold) * 0.005;
   }
   return 0.0;
 }
+
