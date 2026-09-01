@@ -1,3 +1,8 @@
 .vscode/**
 
 repomix-output.xml
+
+# Only settings.local.json under .claude/ is meant to be tracked;
+# everything else there is scratch/working state for the coding agent.
+.claude/*
+!.claude/settings.local.json

@@ -14,7 +14,6 @@ struct PendingAck {
   int dst_id;
   int packet_id;
   bool is_nack;
-  std::map<int, double> cluster_evaluations;
   int remaining_delay;
 };
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Noxim is a cycle-accurate SystemC-based Network-on-Chip (NoC) simulator. This fork (branch `feat/limited_noxim`) is a deliberately reduced version of upstream Noxim: wireless/Hub features, power consumption modeling, and non-MESH topologies have been removed. The active line of work is around **error-correcting encoding models** (RAW, REPEAT, HAMMING, ILH — interleaved Hamming) applied to flits in a 2D mesh. See `src/encodingModels/`.
+Noxim is a cycle-accurate SystemC-based Network-on-Chip (NoC) simulator. This fork (branch `feat/limited_noxim`) is a deliberately reduced version of upstream Noxim: wireless/Hub features, power consumption modeling, and non-MESH topologies have been removed. The per-flit error-correcting encoding models (RAW, REPEAT, HAMMING, ILH — interleaved Hamming, see `src/encodingModels/`) were the original focus, but the active line of work has since moved to **cluster-level dynamic encoding and degradation-aware adaptive routing** — see "Active Feature Branch" below for the current design.
 
 ## Build, run, test
 
@@ -37,15 +37,16 @@ To enable debug logging via the `LOG` macro, uncomment `DEBUG := -g -DDEBUG` in 
 `src/Main.cpp` is the SystemC `sc_main`. It calls `configure()` to load YAML + parse CLI overrides into `GlobalParams` (static class — every module reads its config from there), instantiates a single `NoC` module, drives reset, then runs for `simulation_time` cycles. On completion (or on `SIGQUIT`) `GlobalStats` walks the NoC and prints aggregate stats.
 
 ### Module hierarchy (SystemC SC_MODULEs)
-- **`NoC`** (`src/NoC.{h,cpp}`) — top-level. Currently only `TOPOLOGY_MESH` is supported; `buildMesh()` allocates the tile grid and wires N/S/E/W `req`/`ack`/`flit`/`free_slots`/`buffer_full_status` signals between neighbors. Holds `GlobalRoutingTable` and `GlobalTrafficTable`.
+- **`NoC`** (`src/NoC.{h,cpp}`) — top-level. Currently only `TOPOLOGY_MESH` is supported; `buildMesh()` allocates the tile grid and wires N/S/E/W `req`/`ack`/`flit`/`free_slots`/`buffer_full_status` signals between neighbors. Holds `GlobalRoutingTable` and `GlobalTrafficTable`. Also instantiates `Acknowledge` (`ack_ch`) and binds every tile's `ack_req`/`ack_ack` ports to it.
 - **`Tile`** (`src/Tile.h`) — a Router + a ProcessingElement, plus per-tile signals.
-- **`Router`** (`src/Router.{h,cpp}`) — input buffers (one `Buffer` per direction per VC), `ReservationTable` for output-port arbitration, plugs in a `RoutingAlgorithm` and `SelectionStrategy` by name from `GlobalParams`.
-- **`ProcessingElement`** (`src/ProcessingElement.{h,cpp}`) — injects/sinks packets according to the configured traffic distribution and packet injection rate; this is where the encoding model wraps outgoing packets and unwraps incoming flits.
+- **`Router`** (`src/Router.{h,cpp}`) — input buffers (one `Buffer` per direction per VC), `ReservationTable` for output-port arbitration, plugs in a `RoutingAlgorithm` and `SelectionStrategy` by name from `GlobalParams`. Also owns a `DegradationMonitor` and applies dynamic cluster-boundary encoding (see "Active Feature Branch" below).
+- **`ProcessingElement`** (`src/ProcessingElement.{h,cpp}`) — injects/sinks packets according to the configured traffic distribution and packet injection rate; this is where the encoding model wraps outgoing packets and unwraps incoming flits. Also drives the cluster-evaluation learning loop and route caching (see "Active Feature Branch" below).
+- **`Acknowledge`** (`src/Acknowledge.{h,cpp}`) — a child module of `NoC`, separate from the flit-routed network, that queues `Ack` (success/fail) signals from receiver PEs and delivers them back to the corresponding sender PE after a fixed Manhattan-distance delay.
 
 ### Plugin-style extension points
-Three subdirectories under `src/` use the same self-registration pattern: a base class (`RoutingAlgorithm`, `SelectionStrategy`, `EncodingModel`), a static map (`RoutingAlgorithms::routingAlgorithmsMap` and friends), and a `*Register` struct that each concrete implementation declares as a static member to insert itself into the map at startup. The YAML config selects an implementation by string name (e.g. `routing_algorithm: XY`), which is looked up via `RoutingAlgorithms::get(name)`.
+Three subdirectories under `src/` use the same self-registration pattern: a base class (`RoutingAlgorithm`, `SelectionStrategy`, `EncodingModel`), a static map (`RoutingAlgorithms::routingAlgorithmsMap` and friends), and a `*Register` struct that each concrete implementation declares as a static member to insert itself into the map at startup. The YAML config selects an implementation by string name (e.g. `routing_algorithm: CLUSTER`), which is looked up via `RoutingAlgorithms::get(name)`.
 
-- `src/routingAlgorithms/` — `XY`, `WEST_FIRST`, `NORTH_LAST`, `NEGATIVE_FIRST`, `ODD_EVEN`, `DYAD`, `TABLE_BASED`
+- `src/routingAlgorithms/` — `CLUSTER` only (deterministic cluster-level routing via `ClusterRoutingManager`, see "Active Feature Branch" below). The previously-available `XY`, `WEST_FIRST`, `NORTH_LAST`, `NEGATIVE_FIRST`, `ODD_EVEN`, `DYAD`, `TABLE_BASED` algorithms were deleted in `b3c56cd breaking: cluster algorithm` — don't assume they still exist, and don't reintroduce them without explicit instruction.
 - `src/selectionStrategies/` — `RANDOM`, `BUFFER_LEVEL`, `NOP`
 - `src/encodingModels/` — `RAW`, `REPEAT`, `HAMMING`, `ILH` (interleaved Hamming). The base class in `EncodingModel.h` provides shared helpers for hop simulation, payload prediction, and decode success/failure counters.
 
@@ -61,6 +62,7 @@ To add a new plugin: create `.h`/`.cpp` in the appropriate subdirectory, declare
 - `exec/`, `other/`, and `doc/` are not part of the build. `other/` contains auxiliary CLI tools (e.g. `noxim_explorer.cpp` for design-space exploration) with their own `Makefile`.
 - `.claudeignore` excludes `doc/`, `exec/`, `other/`, `.vscode/`, and generated artifacts (`repomix-output.xml`, `src/tags`) from Claude's view.
 - This fork has removed wireless, Hub, multi-channel-radio, and power-consumption code paths from upstream Noxim. Don't reintroduce these without explicit instruction — references to `Hub`, `Channel`, or power tables in old upstream code/docs no longer apply.
+- **Scratch/working files belong under `.claude/`, not `doc/` or the repo root.** Analysis notes, design write-ups, and other intermediate artifacts produced while working a task (e.g. what previously landed under `doc/analysis/`) should be written into `.claude/` instead. `.gitignore` excludes everything under `.claude/` except `.claude/settings.local.json`, so anything placed there naturally stays out of commits. Only commit source/doc changes that are actually part of the deliverable — don't let scratch files ride along in a commit.
 
 ## Development Guidelines (開発ガイドライン)
 
@@ -96,19 +98,20 @@ We have introduced a closed-loop reliability and degradation tracking system on 
 - Router simulates bit error injection on every received flit using its current BER.
 - Accumulates the error count in the `Flit::virtual_errors[my_cluster_id]` map. No actual data payload is modified.
 
-### 4. LIFO Virtual Decoding & ACK/NACK PE Feedback Loop (`ProcessingElement.cpp`)
-- **PE Receiver (rxProcess)**:
+### 4. LIFO Virtual Decoding & Locally-Learned Cluster Trust Scores (`ProcessingElement.cpp`)
+Reworked for 課題6 (ACK/feedback compression, see `.claude/research_summary_and_next_steps.md` §9 for the design rationale and open follow-ups) — the `Ack` signal no longer carries per-cluster detail, only success/failure. Each PE instead learns cluster trust scores from two independent, additive (`+=`, not overwrite) sources into the *same* `cluster_evaluations` map:
+- **PE Receiver (rxProcess)** — learns about clusters on paths addressed to *itself*:
   - Reassembles incoming flits in `flit_buffer`.
   - Upon receiving `FLIT_TYPE_TAIL`, performs virtual decoding by scanning the traversed path in reverse (**LIFO order**) from the last cluster to the first.
-  - Applies ECC rules for each cluster:
-    - **`PARITY`**: 0 errors -> success (+1.0); $\ge 1$ errors -> fatal (-10.0).
-    - **`SECDED`**: 0 errors -> success (+1.0); 1 error -> corrected (-2.0); $\ge 2$ errors -> fatal (-10.0).
-  - If a fatal error occurs, the loop terminates immediately (inner clusters are not evaluated) and registers `eval_fatal` to the cluster, sending a `PACKET_NACK` back to the source PE.
-  - Successful packets trigger a `PACKET_ACK` carrying all gathered `cluster_evaluations`.
-- **PE Sender (txProcess)**:
-  - Receives `Ack` signal and records feedback in `cluster_evaluations` (acting as the cluster Trust Score).
+  - Applies ECC rules for each cluster and accumulates the result directly into its own `cluster_evaluations`:
+    - **`PARITY`**: 0 errors -> `+= eval_success`; $\ge 1$ errors -> `+= eval_fatal`, then stop scanning inner clusters.
+    - **`SECDED`**: 0 errors -> `+= eval_success`; 1 error -> `+= eval_corrected`; $\ge 2$ errors -> `+= eval_fatal`, then stop scanning inner clusters.
+  - Sends back an `Ack` carrying only `is_nack` (no `cluster_evaluations` field — that field was removed from `Ack`/`PendingAck`).
+- **PE Sender (txProcess)** — learns about clusters on paths it sent *through*:
+  - On receiving an `Ack` for an outstanding packet, applies a *uniform* `+= eval_fatal` (NACK) or `+= eval_success` (ACK) to every cluster on that packet's route (read from `outstanding_packets[...].packet.route_metadata.custom_data`), since no per-cluster detail arrives on the wire. Repeated failures on the same cluster (e.g. one common to many failing routes) compound.
   - If `is_nack` is true, immediately triggers retransmission of the packet. Otherwise, erases it from the outstanding list.
   - **Periodic Evaluation Recovery**: Every `recovery_interval` cycles, PEs scan their `cluster_evaluations` and increment negative values by `+1.0` (clamped to `0.0`), simulating recovery of stressed paths over time.
+- The `Ack` itself travels via the dedicated `Acknowledge` module (see "Module hierarchy" above), not the flit-routed network.
 
 ### 5. Visualization Grid Board (`-evalcluster`)
 - CLI parameter `-evalcluster` or configuration YAML param `eval_cluster: true` outputs a `mesh_dim_y` × `mesh_dim_x` grid of the PE evaluation values for each cluster at simulation end.

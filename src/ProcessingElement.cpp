@@ -30,7 +30,6 @@ void ProcessingElement::rxProcess()
     bool tail_received = false;
     bool decode_success = true;
     Packet received_packet;
-    std::map<int, double> current_evaluations;
 
     if (req_rx.read() == 1 - current_level_rx)
     {
@@ -55,21 +54,22 @@ void ProcessingElement::rxProcess()
               errors = err_it->second;
             }
             
+            // Learned locally by this PE (as receiver); no longer shipped back to the sender via Ack.
             if (enc_type == CLUSTER_ENC_PARITY) {
               if (errors == 0) {
-                current_evaluations[cluster_id] = GlobalParams::eval_success;
+                cluster_evaluations[cluster_id] += GlobalParams::eval_success;
               } else {
-                current_evaluations[cluster_id] = GlobalParams::eval_fatal;
+                cluster_evaluations[cluster_id] += GlobalParams::eval_fatal;
                 virtual_decode_success = false;
                 break; // Stop scanning inner clusters
               }
             } else if (enc_type == CLUSTER_ENC_SECDED) {
               if (errors == 0) {
-                current_evaluations[cluster_id] = GlobalParams::eval_success;
+                cluster_evaluations[cluster_id] += GlobalParams::eval_success;
               } else if (errors == 1) {
-                current_evaluations[cluster_id] = GlobalParams::eval_corrected;
+                cluster_evaluations[cluster_id] += GlobalParams::eval_corrected;
               } else {
-                current_evaluations[cluster_id] = GlobalParams::eval_fatal;
+                cluster_evaluations[cluster_id] += GlobalParams::eval_fatal;
                 virtual_decode_success = false;
                 break; // Stop scanning inner clusters
               }
@@ -94,7 +94,6 @@ void ProcessingElement::rxProcess()
              << ", decode " << (decode_success ? "SUCCESS (sending ACK)" : "FAILURE (sending NACK)") << endl;
       }
       Ack ack_signal(received_packet.src_id, received_packet.dst_id, received_packet.packet_id, !decode_success);
-      ack_signal.cluster_evaluations = current_evaluations;
       ack_req.write(ack_signal);
     } else {
       // fill invalid ack to avoid uninitialized signal issues
@@ -140,16 +139,20 @@ void ProcessingElement::txProcess()
     // check for incoming ACKs/NACKs
     const Ack &incoming_ack = ack_ack.read();
     if (incoming_ack.isValid() && incoming_ack.src_id == local_id) {
-      // Record feedback evaluations in this PE
-      for (auto const &eval : incoming_ack.cluster_evaluations) {
-        cluster_evaluations[eval.first] = eval.second;
-        if (GlobalParams::verbose_mode != VERBOSE_OFF) {
-          cout << "PE " << local_id << " @ " << current_cycle << ": Recorded feedback for cluster " << eval.first << " with evaluation value: " << eval.second << endl;
-        }
-      }
-
       auto it = outstanding_packets.find(incoming_ack.packet_id);
       if (it != outstanding_packets.end()) {
+        // Ack carries success/failure only (no per-cluster detail): apply a uniform
+        // reward/penalty to every cluster on the route this packet took. Repeated
+        // outcomes on the same cluster accumulate, so a cluster common to many
+        // failing routes (e.g. near the destination) is penalized the most.
+        const vector<int> &route = it->second.packet.route_metadata.custom_data;
+        double delta = incoming_ack.is_nack ? GlobalParams::eval_fatal : GlobalParams::eval_success;
+        if (route.size() >= 2) {
+          for (size_t i = 1; i < route.size(); i++) {
+            cluster_evaluations[route[i]] += delta;
+          }
+        }
+
         if (incoming_ack.is_nack) {
           // NACK: Retransmit immediately
           if (GlobalParams::verbose_mode != VERBOSE_OFF) {

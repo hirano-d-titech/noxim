@@ -125,16 +125,14 @@ struct Ack {
     int src_id;
     int dst_id;
     int packet_id;
-    bool is_nack;
-    std::map<int, double> cluster_evaluations; // Cluster ID -> Evaluation value (delay/load)
+    bool is_nack; // decode success/failure only; cluster-level detail is learned locally, not carried on the wire
 
     Ack() : src_id(NOT_VALID), dst_id(NOT_VALID), packet_id(NOT_VALID), is_nack(false) {}
     Ack(int s, int d, int pid, bool nack = false) : src_id(s), dst_id(d), packet_id(pid), is_nack(nack) {}
 
     inline bool operator ==(const Ack & ack) const {
-      return (ack.src_id == src_id && ack.dst_id == dst_id && 
-              ack.packet_id == packet_id && ack.is_nack == is_nack &&
-              ack.cluster_evaluations == cluster_evaluations);
+      return (ack.src_id == src_id && ack.dst_id == dst_id &&
+              ack.packet_id == packet_id && ack.is_nack == is_nack);
     }
 
     inline bool isValid() const {
