@@ -20,7 +20,6 @@
 using namespace std;
 
 #define CONFIG_FILENAME        "config.yaml"
-#define POWER_CONFIG_FILENAME  "power.yaml"
 
 // Define the directions as numbers
 #define DIRECTIONS              4
@@ -29,12 +28,9 @@ using namespace std;
 #define DIRECTION_SOUTH         2
 #define DIRECTION_WEST          3
 #define DIRECTION_LOCAL         4
-#define DIRECTION_HUB           5
-#define DIRECTION_HUB_RELAY     5000
-#define DIRECTION_WIRELESS    747
 
-#define MAX_VIRTUAL_CHANNELS	8
-#define DEFAULT_VC 		0
+#define MAX_VIRTUAL_CHANNELS  8
+#define DEFAULT_VC            0
 
 #define RT_AVAILABLE 1
 #define RT_ALREADY_SAME -1
@@ -49,18 +45,14 @@ using namespace std;
 
 //Topologies
 #define TOPOLOGY_MESH          "MESH"
-//Delta Networks Topologies
-#define TOPOLOGY_BASELINE      "BASELINE"
-#define TOPOLOGY_BUTTERFLY     "BUTTERFLY"
-#define TOPOLOGY_OMEGA         "OMEGA"
 
 // Routing algorithms
 #define ROUTING_DYAD           "DYAD"
 #define ROUTING_TABLE_BASED    "TABLE_BASED"
 
 
-// Channel selection 
-#define CHSEL_RANDOM 0
+// Channel selection
+#define CHSEL_RANDOM     0
 #define CHSEL_FIRST_FREE 1
 
 // Traffic distribution
@@ -71,9 +63,8 @@ using namespace std;
 #define TRAFFIC_TABLE_BASED    "TRAFFIC_TABLE_BASED"
 #define TRAFFIC_BIT_REVERSAL   "TRAFFIC_BIT_REVERSAL"
 #define TRAFFIC_SHUFFLE        "TRAFFIC_SHUFFLE"
-#define TRAFFIC_BUTTERFLY      "TRAFFIC_BUTTERFLY"
-#define TRAFFIC_LOCAL	       "TRAFFIC_LOCAL"
-#define TRAFFIC_ULOCAL	       "TRAFFIC_ULOCAL"
+#define TRAFFIC_LOCAL          "TRAFFIC_LOCAL"
+#define TRAFFIC_ULOCAL         "TRAFFIC_ULOCAL"
 
 // Verbosity levels
 #define VERBOSE_OFF            "VERBOSE_OFF"
@@ -84,112 +75,54 @@ using namespace std;
 
 // Wireless MAC constants
 #define RELEASE_CHANNEL 1
-#define HOLD_CHANNEL 	2
-
-#define TOKEN_HOLD             "TOKEN_HOLD"
-#define TOKEN_MAX_HOLD         "TOKEN_MAX_HOLD"
-#define TOKEN_PACKET           "TOKEN_PACKET"
-
-typedef struct {
-    pair<double, double> ber;
-    int dataRate;
-    vector<string> macPolicy;
-} ChannelConfig;
-
-typedef struct {
-    vector<int> attachedNodes;
-    vector<int> rxChannels;
-    vector<int> txChannels;
-    int toTileBufferSize;
-    int fromTileBufferSize;
-    int txBufferSize;
-    int rxBufferSize;
-} HubConfig;
-
-typedef struct {
-    map<pair <int, int>, double> front;
-    map<pair <int, int>, double> pop;
-    map<pair <int, int>, double> push;
-    map<pair <int, int>, double> leakage;
-} BufferPowerConfig;
-
-typedef map<double, pair <double, double> > LinkBitLinePowerConfig;
-
-typedef struct {
-    map<pair<double, double>, pair<double, double> > crossbar_pm;
-    map<int, pair<double, double> > network_interface;
-    map<string, pair<double, double> > routing_algorithm_pm;
-    map<string, pair<double, double> > selection_strategy_pm;
-} RouterPowerConfig;
-
-typedef struct {
-    pair<double, double> transceiver_leakage;
-    pair<double, double> transceiver_biasing;
-    double rx_dynamic;
-    double rx_snooping;
-    double default_tx_energy;
-    map<pair <int, int>, double> transmitter_attenuation_map;
-} HubPowerConfig;
-
-typedef struct {
-    BufferPowerConfig bufferPowerConfig;
-    LinkBitLinePowerConfig linkBitLinePowerConfig;
-    RouterPowerConfig routerPowerConfig;
-    HubPowerConfig hubPowerConfig;
-} PowerConfig;
+#define HOLD_CHANNEL   2
 
 struct GlobalParams {
-    static string verbose_mode;
-    static int trace_mode;
-    static string trace_filename;
-    static string topology;
-    static int mesh_dim_x;
-    static int mesh_dim_y;
-    static int n_delta_tiles;
-    static double r2r_link_length;
-    static double r2h_link_length;
-    static int buffer_depth;
-    static int flit_size;
-    static int min_packet_size;
-    static int max_packet_size;
-    static string routing_algorithm;
-    static string routing_table_filename;
-    static string selection_strategy;
-    static string encoding_model;
-    static double packet_injection_rate;
-    static double probability_of_retransmission;
-    static double wired_flit_loss_rate;
-    static double wireless_flit_loss_rate;
-    static double wired_bit_error_rate;
-    static double wireless_bit_error_rate;
-    static double locality;
-    static string traffic_distribution;
-    static string traffic_table_filename;
-    static string config_filename;
-    static string power_config_filename;
-    static int clock_period_ps;
-    static int simulation_time;
-    static int n_virtual_channels;
-    static int reset_time;
-    static int stats_warm_up_time;
-    static int rnd_generator_seed;
-    static bool detailed;
-    static vector <pair <int, double> > hotspots;
-    static double dyad_threshold;
-    static unsigned int max_volume_to_be_drained;
-    static bool show_buffer_stats;
-    static bool use_winoc;
-    static int winoc_dst_hops;
-    static bool use_powermanager;
-    static ChannelConfig default_channel_configuration;
-    static map<int, ChannelConfig> channel_configuration;
-    static HubConfig default_hub_configuration;
-    static map<int, HubConfig> hub_configuration;
-    static map<int, int> hub_for_tile;
-    static PowerConfig power_configuration;
-    // out of yaml configuration
-    static bool ascii_monitor;
-    static int channel_selection;
+  static string verbose_mode;
+  static int trace_mode;
+  static string trace_filename;
+  static string topology;
+  static int mesh_dim_x;
+  static int mesh_dim_y;
+  static double r2r_link_length;
+  static double r2h_link_length;
+  static int buffer_depth;
+  static int flit_size;
+  static int min_packet_size;
+  static int max_packet_size;
+  static string routing_algorithm;
+  static string routing_table_filename;
+  static string selection_strategy;
+  static string encoding_model;
+  static double packet_injection_rate;
+  static int timeout_base_cycles;
+  static int timeout_factor_cycles;
+  static unsigned int total_retransmissions;
+  static double locality;
+  static string traffic_distribution;
+  static string traffic_table_filename;
+  static string config_filename;
+  static int clock_period_ps;
+  static int simulation_time;
+  static int n_virtual_channels;
+  static int reset_time;
+  static int stats_warm_up_time;
+  static int rnd_generator_seed;
+  static bool detailed;
+  static vector <pair <int, double> > hotspots;
+  static double dyad_threshold;
+  static unsigned int max_volume_to_be_drained;
+  static bool show_buffer_stats;
+  static int cluster_encoding_type;       // Cluster-level encoding type (0=NONE, 1=PARITY, 2=SECDED)
+  static int cluster_redundancy_bits;     // Number of redundancy bits added at cluster boundary
+  static double eval_success;              // Evaluation value for decoding success (e.g. +1.0)
+  static double eval_corrected;            // Evaluation value for corrected bit error (e.g. -2.0)
+  static double eval_fatal;                // Evaluation value for fatal decode failure (e.g. -10.0)
+  static bool eval_cluster;                // Print cluster evaluation boards at the end of simulation
+  static int recovery_interval;            // Interval in cycles for negative evaluation recovery
+  // out of yaml configuration
+  static bool ascii_monitor;
+  static int channel_selection;
 };
 
 #endif

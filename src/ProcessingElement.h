@@ -12,95 +12,114 @@
 #define __NOXIMPROCESSINGELEMENT_H__
 
 #include <queue>
+#include <map>
 #include <systemc.h>
 
 #include "DataStructs.h"
 #include "GlobalTrafficTable.h"
 #include "Utils.h"
+#include "ClusterRoutingManager.h"
 #include "encodingModels/EncodingModel.h"
 #include "encodingModels/EncodingModels.h"
 
 using namespace std;
 
+struct SentPacketInfo {
+  Packet packet;
+  double sent_time;
+  int retransmit_count;
+};
+
 SC_MODULE(ProcessingElement)
 {
 
-    // I/O Ports
-    sc_in_clk clock;		// The input clock for the PE
-    sc_in < bool > reset;	// The reset signal for the PE
+  // I/O Ports
+  sc_in_clk clock;    // The input clock for the PE
+  sc_in < bool > reset;  // The reset signal for the PE
 
-    sc_in < Flit > flit_rx;	// The input channel
-    sc_in < bool > req_rx;	// The request associated with the input channel
-    sc_out < bool > ack_rx;	// The outgoing ack signal associated with the input channel
-    sc_out < TBufferFullStatus > buffer_full_status_rx;	
+  sc_in < Flit > flit_rx;  // The input channel
+  sc_in < bool > req_rx;  // The request associated with the input channel
+  sc_out < bool > ack_rx;  // The outgoing ack signal associated with the input channel
+  sc_out < TBufferFullStatus > buffer_full_status_rx;  
 
-    sc_out < Flit > flit_tx;	// The output channel
-    sc_out < bool > req_tx;	// The request associated with the output channel
-    sc_in < bool > ack_tx;	// The outgoing ack signal associated with the output channel
-    sc_in < TBufferFullStatus > buffer_full_status_tx;
+  sc_out < Flit > flit_tx;  // The output channel
+  sc_out < bool > req_tx;  // The request associated with the output channel
+  sc_in < bool > ack_tx;  // The outgoing ack signal associated with the output channel
+  sc_in < TBufferFullStatus > buffer_full_status_tx;
 
-    sc_in < int >free_slots_neighbor;
+  sc_in < int >free_slots_neighbor;
 
-    // Registers
-    int local_id;		// Unique identification number
-    bool current_level_rx;	// Current level for Alternating Bit Protocol (ABP)
-    bool current_level_tx;	// Current level for Alternating Bit Protocol (ABP)
-    queue < Packet > packet_queue;	// Local queue of packets
-    queue < Flit > front_packet_flits; // Local queue of flits of front packets
-    vector < Flit > flit_buffer;
-    bool transmittedAtPreviousCycle;	// Used for distributions with memory
+  sc_out<Ack> ack_req;
+  sc_in<Ack> ack_ack;
 
-    // Functions
-    void rxProcess();		// The receiving process
-    void txProcess();		// The transmitting process
-    bool canShot(Packet & packet);	// True when the packet must be shot
-    Flit nextFlit();	// Take the next flit of the current packet
-    Packet trafficTest();	// used for testing traffic
-    Packet trafficRandom();	// Random destination distribution
-    Packet trafficTranspose1();	// Transpose 1 destination distribution
-    Packet trafficTranspose2();	// Transpose 2 destination distribution
-    Packet trafficBitReversal();	// Bit-reversal destination distribution
-    Packet trafficShuffle();	// Shuffle destination distribution
-    Packet trafficButterfly();	// Butterfly destination distribution
-    Packet trafficLocal();	// Random with locality
-    Packet trafficULocal();	// Random with locality
+  // Registers
+  int local_id;    // Unique identification number
+  bool current_level_rx;  // Current level for Alternating Bit Protocol (ABP)
+  bool current_level_tx;  // Current level for Alternating Bit Protocol (ABP)
+  queue < Packet > packet_queue;  // Local queue of packets
+  queue < Flit > front_packet_flits; // Local queue of flits of front packets
+  vector < Flit > flit_buffer;
+  std::map<int, double> cluster_evaluations; // Feedback evaluations for each cluster
+  ClusterRoutingManager routing_manager;
+  bool transmittedAtPreviousCycle;  // Used for distributions with memory
 
-    GlobalTrafficTable *traffic_table;	// Reference to the Global traffic Table
-    bool never_transmit;	// true if the PE does not transmit any packet 
-    //  (valid only for the table based traffic)
+  // Functions
+  void rxProcess();    // The receiving process
+  void txProcess();    // The transmitting process
+  bool canShot(Packet & packet);  // True when the packet must be shot
+  Flit nextFlit();  // Take the next flit of the current packet
+  Packet trafficTest();  // used for testing traffic
+  Packet trafficRandom();  // Random destination distribution
+  Packet trafficTranspose1();  // Transpose 1 destination distribution
+  Packet trafficTranspose2();  // Transpose 2 destination distribution
+  Packet trafficBitReversal();  // Bit-reversal destination distribution
+  Packet trafficShuffle();  // Shuffle destination distribution
+  Packet trafficLocal();  // Random with locality
+  Packet trafficULocal();  // Random with locality
 
-    EncodingModel * encodingModel;
+  GlobalTrafficTable *traffic_table;  // Reference to the Global traffic Table
+  bool never_transmit;  // true if the PE does not transmit any packet 
+  //  (valid only for the table based traffic)
 
-    void fixRanges(const Coord, Coord &);	// Fix the ranges of the destination
-    int randInt(int min, int max);	// Extracts a random integer number between min and max
-    int getRandomSize();	// Returns a random size in flits for the packet
-    void setBit(int &x, int w, int v);
-    int getBit(int x, int w);
-    double log2ceil(double x);
+  EncodingModel * encodingModel;
 
-    int roulett();
-    int findRandomDestination(int local_id,int hops);
-    unsigned int getQueueSize() const;
+  void fixRanges(const Coord, Coord &);  // Fix the ranges of the destination
+  int randInt(int min, int max);  // Extracts a random integer number between min and max
+  int getRandomSize();  // Returns a random size in flits for the packet
+  void setBit(int &x, int w, int v);
+  int getBit(int x, int w);
+  double log2ceil(double x);
 
-    // Constructor
-    SC_CTOR(ProcessingElement) {
-        SC_METHOD(rxProcess);
-        sensitive << reset;
-        sensitive << clock.pos();
+  int roulett();
+  int findRandomDestination(int local_id,int hops);
+  unsigned int getQueueSize() const;
 
-        SC_METHOD(txProcess);
-        sensitive << reset;
-        sensitive << clock.pos();
+  int last_recovery_cycle;
+  int packet_seq_num;
+  std::map<int, SentPacketInfo> outstanding_packets;
+  void retransmitPacket(int packet_id);
 
-        encodingModel = EncodingModels::get(GlobalParams::encoding_model);
+  // Constructor
+  SC_CTOR(ProcessingElement) : routing_manager(GlobalParams::mesh_dim_x) {
+    last_recovery_cycle = 0;
+    packet_seq_num = 0;
 
-        if (encodingModel == 0)
-        {
-            cerr << " FATAL: invalid encoding model -ecm " << GlobalParams::selection_strategy << ", check with noxim -help" << endl;
-            exit(-1);
-        }
+    SC_METHOD(rxProcess);
+    sensitive << reset;
+    sensitive << clock.pos();
+
+    SC_METHOD(txProcess);
+    sensitive << reset;
+    sensitive << clock.pos();
+
+    encodingModel = EncodingModels::get(GlobalParams::encoding_model);
+
+    if (encodingModel == 0)
+    {
+      cerr << " FATAL: invalid encoding model -ecm " << GlobalParams::selection_strategy << ", check with noxim -help" << endl;
+      exit(-1);
     }
-
+  }
 };
 
 #endif

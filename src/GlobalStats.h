@@ -42,7 +42,7 @@ class GlobalStats {
     double getMaxDelay(const int src_id, const int dst_id);
 
     // Returns tha matrix of max delay for any node of the network
-     vector < vector < double > > getMaxDelayMtx();
+    vector < vector < double > > getMaxDelayMtx();
 
     // Returns the aggregated average throughput (flits/cycles)
     double getAggregatedThroughput();
@@ -63,20 +63,9 @@ class GlobalStats {
     // Returns the total number of received flits
     unsigned int getReceivedFlits();
 
-    // number of packets that used the wireless network
-    unsigned int getWirelessPackets();
-
 
     // Returns the number of routed flits for each router
-     vector < vector < unsigned long > > getRoutedFlitsMtx();
-
-    // Returns the total dyamic power
-    double getDynamicPower();
-    // Returns the total static power
-    double getStaticPower();
-
-    // Returns the total power
-    double getTotalPower() { return getDynamicPower()+getStaticPower(); }
+    vector < vector < unsigned long > > getRoutedFlitsMtx();
 
     // Shows global statistics
     void showStats(std::ostream & out = std::cout, bool detailed = false);
@@ -84,11 +73,10 @@ class GlobalStats {
     void showBufferStats(std::ostream & out);
 
 
-    void showPowerBreakDown(std::ostream & out);
-
-    void showPowerManagerStats(std::ostream & out);
-
     double getReceivedIdealFlitRatio();
+    double getAverageRetransmissions();
+    double getFailureDecodeRatio();
+    double getErrorSuccessRatio();
 
 
 
@@ -98,7 +86,6 @@ class GlobalStats {
 
   private:
     const NoC *noc;
-    void updatePowerBreakDown(map<string,double> &dst,PowerBreakdown* src);
 };
 
 #endif

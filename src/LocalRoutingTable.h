@@ -28,17 +28,17 @@ class LocalRoutingTable {
     // Returns the set of admissible output channels for destination
     // destination_id and input channel in_link
     AdmissibleOutputs getAdmissibleOutputs(const LinkId &
-						in_link,
-						const int destination_id);
+            in_link,
+            const int destination_id);
 
     // Returns the set of admissible output channels for a destination
     // destination_id and a given input direction
     AdmissibleOutputs getAdmissibleOutputs(const int in_direction,
-						const int destination_id);
+            const int destination_id);
 
   private:
 
-     RoutingTableNode rt_node;
+    RoutingTableNode rt_node;
     int node_id;
 };
 

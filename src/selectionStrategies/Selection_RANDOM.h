@@ -8,18 +8,18 @@
 using namespace std;
 
 class Selection_RANDOM : SelectionStrategy {
-	public:
-        int apply(Router * router, const vector < int >&directions, const RouteData & route_data);
-        void perCycleUpdate(Router * router);
+  public:
+    int apply(Router * router, const vector < int >&directions, const RouteData & route_data);
+    void perCycleUpdate(Router * router);
 
-		static Selection_RANDOM * getInstance();
+    static Selection_RANDOM * getInstance();
 
-	private:
-		Selection_RANDOM(){};
-		~Selection_RANDOM(){};
+  private:
+    Selection_RANDOM(){};
+    ~Selection_RANDOM(){};
 
-		static Selection_RANDOM * selection_RANDOM;
-		static SelectionStrategiesRegister selectionStrategiesRegister;
+    static Selection_RANDOM * selection_RANDOM;
+    static SelectionStrategiesRegister selectionStrategiesRegister;
 };
 
 #endif

@@ -14,210 +14,240 @@
 #include <systemc.h>
 #include "GlobalParams.h"
 
+// RouteMetadata -- metadata to perform custom routing
+struct RouteMetadata {
+  std::vector<int> custom_data;
+
+  inline bool operator ==(const RouteMetadata & other) const {
+    return (custom_data == other.custom_data);
+  }
+};
+
 // Coord -- XY coordinates type of the Tile inside the Mesh
 class Coord {
   public:
-    int x;			// X coordinate
-    int y;			// Y coordinate
+    int x;      // X coordinate
+    int y;      // Y coordinate
 
     inline bool operator ==(const Coord & coord) const {
-	return (coord.x == x && coord.y == y);
+  return (coord.x == x && coord.y == y);
 }};
 
 // FlitType -- Flit type enumeration
 enum FlitType {
-    FLIT_TYPE_HEAD, FLIT_TYPE_BODY, FLIT_TYPE_TAIL
+  FLIT_TYPE_HEAD, FLIT_TYPE_BODY, FLIT_TYPE_TAIL
 };
+// Cluster-level redundancy encoding constants
+#define MAX_CLUSTER_HOPS 8
+
+// Cluster-level encoding type
+enum ClusterEncodingType {
+  CLUSTER_ENC_NONE = 0,
+  CLUSTER_ENC_PARITY = 1,
+  CLUSTER_ENC_SECDED = 2
+};
+
+// Cluster-level encoding metadata per flit
+struct ClusterEncodingMeta {
+  int effective_bits;                                     // Current effective bit length
+  ClusterEncodingType encoding_history[MAX_CLUSTER_HOPS]; // Applied encoding type history
+  int cluster_history[MAX_CLUSTER_HOPS];                  // Passed cluster ID history
+  int encoding_history_index;                             // Current history index counter
+
+  ClusterEncodingMeta() : effective_bits(0), encoding_history_index(0) {
+    for (int i = 0; i < MAX_CLUSTER_HOPS; i++) {
+      encoding_history[i] = CLUSTER_ENC_NONE;
+      cluster_history[i] = -1;
+    }
+  }
+
+  inline bool operator ==(const ClusterEncodingMeta & other) const {
+    if (effective_bits != other.effective_bits) return false;
+    if (encoding_history_index != other.encoding_history_index) return false;
+    for (int i = 0; i < encoding_history_index; i++) {
+      if (encoding_history[i] != other.encoding_history[i]) return false;
+      if (cluster_history[i] != other.cluster_history[i]) return false;
+    }
+    return true;
+  }
+};
+
 
 // Payload -- Payload definition
 struct Payload {
-    sc_uint<32> data;	// Bus for the data to be exchanged
+  sc_uint<32> data;  // Bus for the data to be exchanged
 
-    inline bool operator ==(const Payload & payload) const {
-	return (payload.data == data);
+  inline bool operator ==(const Payload & payload) const {
+  return (payload.data == data);
 }};
 
 // Packet -- Packet definition
 struct Packet {
+  int src_id;
+  int dst_id;
+  int vc_id;
+  double timestamp;    // SC timestamp at packet generation
+  int size;
+  int flit_left;    // Number of remaining flits inside the packet
+  bool use_low_voltage_path;
+  int packet_id; // パケットを識別する一意なID。デフォルトは NOT_VALID
+  RouteMetadata route_metadata;
+
+  // Constructors
+  Packet() : packet_id(NOT_VALID) { }
+
+  Packet(const int s, const int d, const int vc, const double ts, const int sz) {
+    make(s, d, vc, ts, sz);
+  }
+
+  void make(const int s, const int d, const int vc, const double ts, const int sz) {
+    src_id = s;
+    dst_id = d;
+    vc_id = vc;
+    timestamp = ts;
+    size = sz;
+    flit_left = sz;
+    use_low_voltage_path = false;
+    packet_id = NOT_VALID;
+  }
+
+  Packet reverse()
+  {
+    Packet p = Packet{dst_id, src_id, vc_id, sc_time_stamp().to_double() / GlobalParams::clock_period_ps, size};
+    p.packet_id = packet_id;
+    p.route_metadata = route_metadata;
+    return p;
+  }
+};
+
+// Ack -- Ack signal definition
+struct Ack {
     int src_id;
     int dst_id;
-    int vc_id;
-    double timestamp;		// SC timestamp at packet generation
-    int size;
-    int flit_left;		// Number of remaining flits inside the packet
-    bool use_low_voltage_path;
+    int packet_id;
+    bool is_nack; // decode success/failure only; cluster-level detail is learned locally, not carried on the wire
 
-    // Constructors
-    Packet() { }
+    Ack() : src_id(NOT_VALID), dst_id(NOT_VALID), packet_id(NOT_VALID), is_nack(false) {}
+    Ack(int s, int d, int pid, bool nack = false) : src_id(s), dst_id(d), packet_id(pid), is_nack(nack) {}
 
-    Packet(const int s, const int d, const int vc, const double ts, const int sz) {
-	make(s, d, vc, ts, sz);
+    inline bool operator ==(const Ack & ack) const {
+      return (ack.src_id == src_id && ack.dst_id == dst_id &&
+              ack.packet_id == packet_id && ack.is_nack == is_nack);
     }
 
-    void make(const int s, const int d, const int vc, const double ts, const int sz) {
-	src_id = s;
-	dst_id = d;
-	vc_id = vc;
-	timestamp = ts;
-	size = sz;
-	flit_left = sz;
-	use_low_voltage_path = false;
-    }
-
-    Packet reverse()
-    {
-        return Packet{dst_id, src_id, vc_id, sc_time_stamp().to_double() / GlobalParams::clock_period_ps, size};
+    inline bool isValid() const {
+      return (src_id != NOT_VALID && dst_id != NOT_VALID && packet_id != NOT_VALID);
     }
 };
+
+struct Flit; // Forward declaration
 
 // RouteData -- data required to perform routing
 struct RouteData {
-    int current_id;
-    int src_id;
-    int dst_id;
-    int dir_in;			// direction from which the packet comes from
-    int vc_id;
+  int current_id;
+  int src_id;
+  int dst_id;
+  int dir_in;      // direction from which the packet comes from
+  int vc_id;
+  Flit * flit;
+
+  RouteData() : current_id(NOT_VALID), src_id(NOT_VALID), dst_id(NOT_VALID), dir_in(NOT_VALID), vc_id(NOT_VALID), flit(nullptr) {}
 };
 
 struct ChannelStatus {
-    int free_slots;		// occupied buffer slots
-    bool available;		// 
-    inline bool operator ==(const ChannelStatus & bs) const {
-	return (free_slots == bs.free_slots && available == bs.available);
-    };
+  int free_slots;    // occupied buffer slots
+  bool available;    // 
+  inline bool operator ==(const ChannelStatus & bs) const {
+    return (free_slots == bs.free_slots && available == bs.available);
+  };
 };
 
 // NoP_data -- NoP Data definition
 struct NoP_data {
-    int sender_id;
-    ChannelStatus channel_status_neighbor[DIRECTIONS];
+  int sender_id;
+  ChannelStatus channel_status_neighbor[DIRECTIONS];
 
-    inline bool operator ==(const NoP_data & nop_data) const {
-	return (sender_id == nop_data.sender_id &&
-		nop_data.channel_status_neighbor[0] ==
-		channel_status_neighbor[0]
-		&& nop_data.channel_status_neighbor[1] ==
-		channel_status_neighbor[1]
-		&& nop_data.channel_status_neighbor[2] ==
-		channel_status_neighbor[2]
-		&& nop_data.channel_status_neighbor[3] ==
-		channel_status_neighbor[3]);
-    };
+  inline bool operator ==(const NoP_data & nop_data) const {
+  return (sender_id == nop_data.sender_id &&
+    nop_data.channel_status_neighbor[0] ==
+    channel_status_neighbor[0]
+    && nop_data.channel_status_neighbor[1] ==
+    channel_status_neighbor[1]
+    && nop_data.channel_status_neighbor[2] ==
+    channel_status_neighbor[2]
+    && nop_data.channel_status_neighbor[3] ==
+    channel_status_neighbor[3]);
+  };
 };
 
 struct TBufferFullStatus {
-    TBufferFullStatus()
-    {
-	for (int i=0;i<MAX_VIRTUAL_CHANNELS;i++)
-	    mask[i] = false;
-    };
-    inline bool operator ==(const TBufferFullStatus & bfs) const {
-	for (int i=0;i<MAX_VIRTUAL_CHANNELS;i++)
-	    if (mask[i] != bfs.mask[i]) return false;
-	return true;
-    };
-   
-    bool mask[MAX_VIRTUAL_CHANNELS];
+  TBufferFullStatus()
+  {
+    for (int i=0;i<MAX_VIRTUAL_CHANNELS;i++)
+      mask[i] = false;
+  };
+
+  inline bool operator ==(const TBufferFullStatus & bfs) const {
+    for (int i=0;i<MAX_VIRTUAL_CHANNELS;i++)
+      if (mask[i] != bfs.mask[i]) return false;
+    return true;
+  };
+
+  bool mask[MAX_VIRTUAL_CHANNELS];
 };
+
+#include <map>
 
 // Flit -- Flit definition
 struct Flit {
-    int src_id;
-    int dst_id;
-    int vc_id; // Virtual Channel
-    FlitType flit_type;	// The flit type (FLIT_TYPE_HEAD, FLIT_TYPE_BODY, FLIT_TYPE_TAIL)
-    int sequence_no;		// The sequence number of the flit inside the packet
-    int sequence_length;
-    Payload payload;	// Optional payload
-    double timestamp;		// Unix timestamp at packet generation
-    int hop_no;			// Current number of hops from source to destination
-    int hub_hop_no;     // Current number of passed wireless-hops
-    bool use_low_voltage_path;
+  int src_id;
+  int dst_id;
+  int vc_id; // Virtual Channel
+  FlitType flit_type;  // The flit type (FLIT_TYPE_HEAD, FLIT_TYPE_BODY, FLIT_TYPE_TAIL)
+  int sequence_no;    // The sequence number of the flit inside the packet
+  int sequence_length;
+  Payload payload;  // Optional payload
+  double timestamp;    // Unix timestamp at packet generation
+  int hop_no;      // Current number of hops from source to destination
+  int hub_hop_no;     // Current number of passed wireless-hops
+  bool use_low_voltage_path;
+  int packet_id; // 対応するパケットの一意ID
+  RouteMetadata route_metadata;
+  ClusterEncodingMeta cluster_enc_meta; // Cluster-level encoding metadata
+  std::map<int, int> virtual_errors; // Passed cluster ID -> accumulated error bits count
 
-    int hub_relay_node;
+  Flit() : packet_id(NOT_VALID) {}
 
-    Flit(){}
+  Flit(Packet packet){
+    src_id = packet.src_id;
+    dst_id = packet.dst_id;
+    vc_id = packet.vc_id;
+    timestamp = packet.timestamp;
+    sequence_length = packet.size;
+    hop_no = 0;
+    hub_hop_no = 0;
+    use_low_voltage_path = packet.use_low_voltage_path;
+    packet_id = packet.packet_id;
+    route_metadata = packet.route_metadata;
+    // Initialize effective_bits to the total data bits in the packet
+    cluster_enc_meta = ClusterEncodingMeta();
+    cluster_enc_meta.effective_bits = GlobalParams::flit_size * packet.size;
+  }
 
-    Flit(Packet packet){
-        src_id = packet.src_id;
-        dst_id = packet.dst_id;
-        vc_id = packet.vc_id;
-        timestamp = packet.timestamp;
-        sequence_length = packet.size;
-        hop_no = 0;
-        hub_hop_no = 0;
-        use_low_voltage_path = packet.use_low_voltage_path;
-        hub_relay_node = NOT_VALID;
-    }
-
-    inline bool operator ==(const Flit & flit) const {
-	return (flit.src_id == src_id && flit.dst_id == dst_id
-		&& flit.flit_type == flit_type
-		&& flit.vc_id == vc_id
-		&& flit.sequence_no == sequence_no
-		&& flit.sequence_length == sequence_length
-		&& flit.payload == payload && flit.timestamp == timestamp
-		&& flit.hop_no == hop_no
-		&& flit.use_low_voltage_path == use_low_voltage_path);
-}};
-
-
-typedef struct 
-{
-    string label;
-    double value;
-} PowerBreakdownEntry;
-
-
-enum
-{
-    BUFFER_PUSH_PWR_D,
-    BUFFER_POP_PWR_D,
-    BUFFER_FRONT_PWR_D,
-    BUFFER_TO_TILE_PUSH_PWR_D,
-    BUFFER_TO_TILE_POP_PWR_D,
-    BUFFER_TO_TILE_FRONT_PWR_D,
-    BUFFER_FROM_TILE_PUSH_PWR_D,
-    BUFFER_FROM_TILE_POP_PWR_D,
-    BUFFER_FROM_TILE_FRONT_PWR_D,
-    ANTENNA_BUFFER_PUSH_PWR_D,
-    ANTENNA_BUFFER_POP_PWR_D,
-    ANTENNA_BUFFER_FRONT_PWR_D,
-    ROUTING_PWR_D,
-    SELECTION_PWR_D,
-    CROSSBAR_PWR_D,
-    LINK_R2R_PWR_D,
-    LINK_R2H_PWR_D,
-    NI_PWR_D,
-    WIRELESS_TX,
-    WIRELESS_DYNAMIC_RX_PWR,
-    WIRELESS_SNOOPING,
-    NO_BREAKDOWN_ENTRIES_D
+  inline bool operator ==(const Flit & flit) const {
+    return (flit.src_id == src_id && flit.dst_id == dst_id
+      && flit.flit_type == flit_type
+      && flit.vc_id == vc_id
+      && flit.sequence_no == sequence_no
+      && flit.sequence_length == sequence_length
+      && flit.payload == payload && flit.timestamp == timestamp
+      && flit.hop_no == hop_no
+      && flit.use_low_voltage_path == use_low_voltage_path
+      && flit.packet_id == packet_id
+      && flit.route_metadata == route_metadata
+      && flit.cluster_enc_meta == cluster_enc_meta
+      && flit.virtual_errors == virtual_errors);
+  }
 };
-
-enum
-{
-    TRANSCEIVER_RX_PWR_BIASING,
-    TRANSCEIVER_TX_PWR_BIASING,
-    BUFFER_ROUTER_PWR_S,
-    BUFFER_TO_TILE_PWR_S,
-    BUFFER_FROM_TILE_PWR_S,
-    ANTENNA_BUFFER_PWR_S,
-    LINK_R2H_PWR_S,
-    ROUTING_PWR_S,
-    SELECTION_PWR_S,
-    CROSSBAR_PWR_S,
-    NI_PWR_S,
-    TRANSCEIVER_RX_PWR_S,
-    TRANSCEIVER_TX_PWR_S,
-    NO_BREAKDOWN_ENTRIES_S
-};
-
-typedef struct 
-{
-    int size;
-    PowerBreakdownEntry breakdown[NO_BREAKDOWN_ENTRIES_D+NO_BREAKDOWN_ENTRIES_S];
-} PowerBreakdown;
-
 
 #endif

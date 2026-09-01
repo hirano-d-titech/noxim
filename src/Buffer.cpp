@@ -29,97 +29,91 @@ Buffer::Buffer()
 
 void Buffer::setLabel(string l)
 {
-    //cout << "\n BUFFER LABEL: " << l << endl;
-    label = l;
+  //cout << "\n BUFFER LABEL: " << l << endl;
+  label = l;
 }
 
 string Buffer::getLabel() const
 {
-    return label;
+  return label;
 }
 
 void Buffer::Print()
 {
-    queue<Flit> m = buffer;
+  queue<Flit> m = buffer;
+  string bstr = "";
+  char  t[] = "HBT";
 
-    string bstr = "";
-   
-
-    char  t[] = "HBT";
-
-    cout << sc_time_stamp().to_double() / GlobalParams::clock_period_ps << "\t";
-    cout << label << " QUEUE *[";
-    while (!(m.empty()))
-    {
-	Flit f = m.front();
-	m.pop();
-	cout << bstr << t[f.flit_type] << f.sequence_no <<  "(" << f.dst_id << ") | ";
-    }
-    cout << "]*" << endl;
-    cout << endl;
+  cout << sc_time_stamp().to_double() / GlobalParams::clock_period_ps << "\t";
+  cout << label << " QUEUE *[";
+  while (!(m.empty()))
+  {
+    Flit f = m.front();
+    m.pop();
+    cout << bstr << t[f.flit_type] << f.sequence_no <<  "(" << f.dst_id << ") | ";
+  }
+  cout << "]*" << endl;
+  cout << endl;
 }
 
 
 void Buffer::deadlockCheck()
 {
-    // TOOD: add as parameter
-    int check_threshold = 50000;
+  // TODO: add as parameter
+  int check_threshold = 50000;
 
-    if (IsEmpty()) return;
+  if (IsEmpty()) return;
 
-    Flit f = buffer.front();
-    int seq = f.sequence_no;
+  Flit f = buffer.front();
+  int seq = f.sequence_no;
 
-    if (last_front_flit_seq==seq)
+  if (last_front_flit_seq==seq)
+  {
+    full_cycles_counter++;
+  }
+  else
+  {
+    if (deadlock_detected)
     {
-	full_cycles_counter++;
+      cout << " WRONG DEADLOCK detection, please increase the check_threshold " << endl;
+      assert(false);
     }
-    else
-    {
-	if (deadlock_detected) 
-	{
-	    cout << " WRONG DEADLOCK detection, please increase the check_threshold " << endl;
-	    assert(false);
-	}
-	last_front_flit_seq = seq;
-	full_cycles_counter=0;
-    }
+    last_front_flit_seq = seq;
+    full_cycles_counter=0;
+  }
 
-    if (full_cycles_counter>check_threshold && !deadlock_detected) 
-    {
-	double current_time = sc_time_stamp().to_double() / GlobalParams::clock_period_ps;
-	cout << "WARNING: DEADLOCK DETECTED at cycle " << current_time << " in buffer:  " << getLabel() << endl;
-	deadlock_detected = true;
-    }
+  if (full_cycles_counter>check_threshold && !deadlock_detected)
+  {
+    double current_time = sc_time_stamp().to_double() / GlobalParams::clock_period_ps;
+    cout << "WARNING: DEADLOCK DETECTED at cycle " << current_time << " in buffer:  " << getLabel() << endl;
+    deadlock_detected = true;
+  }
 }
 
 
 bool Buffer::deadlockFree()
 {
-    if (IsEmpty()) return true;
+  if (IsEmpty()) return true;
 
-    Flit f = buffer.front();
-    
-    int seq = f.sequence_no;
+  Flit f = buffer.front();
+  int seq = f.sequence_no;
 
+  if (last_front_flit_seq==seq)
+  {
+    full_cycles_counter++;
+  }
+  else
+  {
+    last_front_flit_seq = seq;
+    full_cycles_counter=0;
+  }
 
-    if (last_front_flit_seq==seq)
-    {
-	full_cycles_counter++;
-    }
-    else
-    {
-	last_front_flit_seq = seq;
-	full_cycles_counter=0;
-    }
+  if (full_cycles_counter>50000) 
+  {
+    return false;
+  }
 
-    if (full_cycles_counter>50000) 
-    {
-	return false;
-    }
-
-    return true;
-
+  return true;
 }
 
 void Buffer::Disable()
@@ -167,7 +161,7 @@ void Buffer::Push(const Flit & flit)
     Drop(flit);
   else
     buffer.push(flit);
-  
+
   UpdateMeanOccupancy();
 
   if (max_occupancy < buffer.size())
@@ -202,6 +196,14 @@ Flit Buffer::Front() const
     f = buffer.front();
 
   return f;
+}
+
+Flit & Buffer::FrontRef()
+{
+  if (IsEmpty())
+    Empty();
+
+  return buffer.front();
 }
 
 unsigned int Buffer::Size() const

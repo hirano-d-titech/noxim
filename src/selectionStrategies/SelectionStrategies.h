@@ -10,17 +10,17 @@ using namespace std;
 typedef map<string, SelectionStrategy* > SelectionStrategiesMap;
 
 class SelectionStrategies {
-	public:
-		static SelectionStrategiesMap * selectionStrategiesMap;
-		static SelectionStrategiesMap * getSelectionStrategiesMap();
+  public:
+    static SelectionStrategiesMap * selectionStrategiesMap;
+    static SelectionStrategiesMap * getSelectionStrategiesMap();
 
-		static SelectionStrategy * get(const string & selectionStrategyName);
+    static SelectionStrategy * get(const string & selectionStrategyName);
 };
 
 struct SelectionStrategiesRegister : SelectionStrategies {
-	SelectionStrategiesRegister(const string & selectionStrategyName, SelectionStrategy * selectionStrategy) {
-		getSelectionStrategiesMap()->insert(make_pair(selectionStrategyName, selectionStrategy));
-	}
+  SelectionStrategiesRegister(const string & selectionStrategyName, SelectionStrategy * selectionStrategy) {
+    getSelectionStrategiesMap()->insert(make_pair(selectionStrategyName, selectionStrategy));
+  }
 };
 
 #endif

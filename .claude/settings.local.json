@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//usr/lib/systemc-2.3.1/include/**)",
+      "Read(//usr/include/yaml-cpp/**)",
+      "Bash(make)"
+    ]
+  }
+}

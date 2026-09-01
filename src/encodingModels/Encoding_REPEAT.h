@@ -7,20 +7,20 @@
 using namespace std;
 
 class Encoding_REPEAT : public EncodingModel {
-    public:
-        bool encode(Packet &packet, queue < Flit > &sending_flits)override;
-        bool decode(vector < Flit > &received_flits, Packet &packet)override;
+  public:
+    bool encode(Packet &packet, queue < Flit > &sending_flits)override;
+    bool decode(vector < Flit > &received_flits, Packet &packet)override;
 
-        static Encoding_REPEAT * getInstance();
+    static Encoding_REPEAT * getInstance();
 
-    private:
-        Encoding_REPEAT(){};
-        ~Encoding_REPEAT(){};
+  private:
+    Encoding_REPEAT(){};
+    ~Encoding_REPEAT(){};
 
-        constexpr static int REPETITION = 3;
+    constexpr static int REPETITION = 3;
 
-        static Encoding_REPEAT * encoding_REPEAT;
-        static EncodingModelsRegister encodingModelsRegister;
+    static Encoding_REPEAT * encoding_REPEAT;
+    static EncodingModelsRegister encodingModelsRegister;
 };
 
 #endif

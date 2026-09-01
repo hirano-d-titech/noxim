@@ -19,8 +19,6 @@ string GlobalParams::topology;
 int GlobalParams::mesh_dim_x;
 int GlobalParams::mesh_dim_y;
 
-int GlobalParams::n_delta_tiles;
-
 double GlobalParams::r2r_link_length;
 double GlobalParams::r2h_link_length;
 int GlobalParams::buffer_depth;
@@ -32,16 +30,13 @@ string GlobalParams::routing_table_filename;
 string GlobalParams::selection_strategy;
 string GlobalParams::encoding_model;
 double GlobalParams::packet_injection_rate;
-double GlobalParams::probability_of_retransmission;
-double GlobalParams::wired_flit_loss_rate;
-double GlobalParams::wireless_flit_loss_rate;
-double GlobalParams::wired_bit_error_rate;
-double GlobalParams::wireless_bit_error_rate;
+int GlobalParams::timeout_base_cycles;
+int GlobalParams::timeout_factor_cycles;
+unsigned int GlobalParams::total_retransmissions;
 double GlobalParams::locality;
 string GlobalParams::traffic_distribution;
 string GlobalParams::traffic_table_filename;
 string GlobalParams::config_filename;
-string GlobalParams::power_config_filename;
 int GlobalParams::clock_period_ps;
 int GlobalParams::simulation_time;
 int GlobalParams::n_virtual_channels;
@@ -53,15 +48,17 @@ double GlobalParams::dyad_threshold;
 unsigned int GlobalParams::max_volume_to_be_drained;
 vector <pair <int, double> > GlobalParams::hotspots;
 bool GlobalParams::show_buffer_stats;
-bool GlobalParams::use_winoc;
-int GlobalParams::winoc_dst_hops;
-bool GlobalParams::use_powermanager;
-ChannelConfig GlobalParams::default_channel_configuration;
-map<int, ChannelConfig> GlobalParams::channel_configuration;
-HubConfig GlobalParams::default_hub_configuration;
-map<int, HubConfig> GlobalParams::hub_configuration;
-map<int, int> GlobalParams::hub_for_tile;
-PowerConfig GlobalParams::power_configuration;
+
+int GlobalParams::cluster_encoding_type;
+int GlobalParams::cluster_redundancy_bits;
+double GlobalParams::eval_success = 1.0;
+double GlobalParams::eval_corrected = -2.0;
+double GlobalParams::eval_fatal = -10.0;
+bool GlobalParams::eval_cluster = false;
+int GlobalParams::recovery_interval = 100;
+
+// need-to-delete in non-wireless-noxim
+int GlobalParams::channel_selection;
+
 // out of yaml configuration
 bool GlobalParams::ascii_monitor;
-int GlobalParams::channel_selection;

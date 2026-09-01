@@ -64,7 +64,6 @@ where [options] is one or more of the following ones:
 		transpose1	Transpose matrix 1 traffic distribution
 		transpose2	Transpose matrix 2 traffic distribution
 		bitreversal	Bit-reversal traffic distribution
-		butterfly	Butterfly traffic distribution
 		shuffle		Shuffle traffic distribution
 		table FILENAME	Traffic Table Based traffic distribution with table in the specified file
 	-hs ID P	Add node ID to hotspot nodes, with percentage P (0..1) (Only for 'random' traffic)

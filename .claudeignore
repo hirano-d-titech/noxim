@@ -1,0 +1,13 @@
+# ignore files
+
+src/tags
+.gitignore
+.repomixignore
+repomix-output.xml
+
+# ignore directories
+
+.vscode/**
+doc/**
+exec/**
+other/**
