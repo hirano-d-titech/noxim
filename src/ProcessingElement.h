@@ -18,7 +18,6 @@
 #include "DataStructs.h"
 #include "GlobalTrafficTable.h"
 #include "Utils.h"
-#include "ClusterRoutingManager.h"
 #include "encodingModels/EncodingModel.h"
 #include "encodingModels/EncodingModels.h"
 
@@ -60,7 +59,6 @@ SC_MODULE(ProcessingElement)
   queue < Flit > front_packet_flits; // Local queue of flits of front packets
   vector < Flit > flit_buffer;
   std::map<int, double> cluster_evaluations; // Feedback evaluations for each cluster
-  ClusterRoutingManager routing_manager;
   bool transmittedAtPreviousCycle;  // Used for distributions with memory
 
   // Functions
@@ -100,7 +98,7 @@ SC_MODULE(ProcessingElement)
   void retransmitPacket(int packet_id);
 
   // Constructor
-  SC_CTOR(ProcessingElement) : routing_manager(GlobalParams::mesh_dim_x) {
+  SC_CTOR(ProcessingElement) {
     last_recovery_cycle = 0;
     packet_seq_num = 0;
 

@@ -37,46 +37,13 @@ void ProcessingElement::rxProcess()
       flit_buffer.push_back(flit_next);
       if (flit_next.flit_type == FLIT_TYPE_TAIL) {
         decode_success = encodingModel->decode(flit_buffer, received_packet);
-        
-        bool virtual_decode_success = true;
-        if (!flit_buffer.empty()) {
-          const ClusterEncodingMeta &meta = flit_buffer[0].cluster_enc_meta;
-          const std::map<int, int> &errors_map = flit_buffer[0].virtual_errors;
-          
-          // LIFO scan (from last passed cluster to first)
-          for (int idx = meta.encoding_history_index - 1; idx >= 0; idx--) {
-            int cluster_id = meta.cluster_history[idx];
-            ClusterEncodingType enc_type = meta.encoding_history[idx];
-            
-            int errors = 0;
-            auto err_it = errors_map.find(cluster_id);
-            if (err_it != errors_map.end()) {
-              errors = err_it->second;
-            }
-            
-            // Learned locally by this PE (as receiver); no longer shipped back to the sender via Ack.
-            if (enc_type == CLUSTER_ENC_PARITY) {
-              if (errors == 0) {
-                cluster_evaluations[cluster_id] += GlobalParams::eval_success;
-              } else {
-                cluster_evaluations[cluster_id] += GlobalParams::eval_fatal;
-                virtual_decode_success = false;
-                break; // Stop scanning inner clusters
-              }
-            } else if (enc_type == CLUSTER_ENC_SECDED) {
-              if (errors == 0) {
-                cluster_evaluations[cluster_id] += GlobalParams::eval_success;
-              } else if (errors == 1) {
-                cluster_evaluations[cluster_id] += GlobalParams::eval_corrected;
-              } else {
-                cluster_evaluations[cluster_id] += GlobalParams::eval_fatal;
-                virtual_decode_success = false;
-                break; // Stop scanning inner clusters
-              }
-            }
-          }
-        }
-        
+
+        // Cluster-level integrity is now settled incrementally at every
+        // boundary crossing (Router::decodeAndLearnClusterEncoding, §3.6):
+        // just read the single path_ok flag the HEAD flit carried, no LIFO
+        // re-decode needed here.
+        bool virtual_decode_success = flit_buffer.empty() || flit_buffer[0].cluster_enc_meta.path_ok;
+
         decode_success = decode_success && virtual_decode_success;
         tail_received = true;
         flit_buffer.clear();
@@ -133,7 +100,6 @@ void ProcessingElement::txProcess()
           }
         }
       }
-      routing_manager.recalculateAllRoutes(local_id, cluster_evaluations);
     }
 
     // check for incoming ACKs/NACKs
@@ -141,18 +107,12 @@ void ProcessingElement::txProcess()
     if (incoming_ack.isValid() && incoming_ack.src_id == local_id) {
       auto it = outstanding_packets.find(incoming_ack.packet_id);
       if (it != outstanding_packets.end()) {
-        // Ack carries success/failure only (no per-cluster detail): apply a uniform
-        // reward/penalty to every cluster on the route this packet took. Repeated
-        // outcomes on the same cluster accumulate, so a cluster common to many
-        // failing routes (e.g. near the destination) is penalized the most.
-        const vector<int> &route = it->second.packet.route_metadata.custom_data;
-        double delta = incoming_ack.is_nack ? GlobalParams::eval_fatal : GlobalParams::eval_success;
-        if (route.size() >= 2) {
-          for (size_t i = 1; i < route.size(); i++) {
-            cluster_evaluations[route[i]] += delta;
-          }
-        }
-
+        // §3.9: the uniform per-route evaluation penalty is removed -- the
+        // staged decoding at every boundary crossing (Router::
+        // decodeAndLearnClusterEncoding, §3.6) already gives each crossed
+        // cluster a precise, individual evaluation, so this would only be
+        // double-counting. Only the immediate-retransmit-on-NACK behavior
+        // remains here.
         if (incoming_ack.is_nack) {
           // NACK: Retransmit immediately
           if (GlobalParams::verbose_mode != VERBOSE_OFF) {
@@ -196,9 +156,6 @@ void ProcessingElement::txProcess()
 
     if (canShot(packet))
     {
-      if (GlobalParams::routing_algorithm == "CLUSTER") {
-        packet.route_metadata.custom_data = routing_manager.getRoute(packet.src_id, packet.dst_id);
-      }
       packet.packet_id = packet_seq_num++;
       packet_queue.push(packet);
       transmittedAtPreviousCycle = true;
@@ -626,6 +583,11 @@ void ProcessingElement::retransmitPacket(int packet_id)
   {
     Packet p = it->second.packet;
     p.flit_left = p.size;
+    // Local adaptive routing decides fresh at every hop from the current
+    // position (§2), so a retransmission should start its journey from
+    // scratch rather than carrying forward the failed attempt's
+    // convex-detour-to-east flag.
+    p.route_metadata = RouteMetadata();
     packet_queue.push(p);
   }
 }

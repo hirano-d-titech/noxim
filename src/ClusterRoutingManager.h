@@ -2,241 +2,159 @@
 #define __CLUSTERROUTINGMANAGER_H__
 
 #include <vector>
-#include <map>
-#include <algorithm>
-#include <iostream>
 #include "GlobalParams.h"
 #include "Utils.h"
 
-class ClusterRoutingManager {
-private:
-  int N; // Mesh size N
-  int num_clusters; // N^2 / 4 (for routing cache, padded for actual size)
-  int max_route_len; // 3N/2 - 3
-  
-  // Route cache table: [dest_cluster_id][route step sequence of clusters]
-  std::vector<std::vector<int>> route_cache;
-  
-  bool is_routes_generated;
+// Pure, stateless helpers for local adaptive cluster-level routing.
+//
+// Unlike the previous design (a per-PE, all-destinations DFS route cache),
+// no path is ever precomputed or stored: every boundary-crossing router
+// decides only the *next* cluster, in O(1), using nothing but the current /
+// source / destination cluster coordinates and the sticky "have I ever moved
+// east" bit carried in RouteMetadata (see DataStructs.h). The heavier,
+// impure lookups (this PE's learned cluster_evaluations, a neighbor
+// router's DegradationMonitor delay) are fetched by the caller
+// (Routing_CLUSTER.cpp) and passed in here as plain numbers.
+namespace ClusterRouting {
 
-  // Helper: Generate WEST_LAST route (West-bound last turn model)
-  std::vector<int> generateWestLastRoute(int src_cluster, int dst_cluster) {
-    std::vector<int> path;
-    int mesh_cx = (GlobalParams::mesh_dim_x + 1) / 2;
+  enum ClusterDir { CLUSTER_DIR_NORTH, CLUSTER_DIR_EAST, CLUSTER_DIR_SOUTH, CLUSTER_DIR_WEST };
 
-    int scx = src_cluster % mesh_cx;
-    int scy = src_cluster / mesh_cx;
-    int dcx = dst_cluster % mesh_cx;
-    int dcy = dst_cluster / mesh_cx;
+  struct Candidate {
+    ClusterDir dir;
+    int cluster_id;
+  };
 
-    int cx = scx;
-    int cy = scy;
-
-    path.push_back(cy * mesh_cx + cx);
-
-    if (dcx < scx) {
-      // West-bound last: route North/South first, then West
-      while (cy != dcy) {
-        cy += (dcy > cy) ? 1 : -1;
-        path.push_back(cy * mesh_cx + cx);
-      }
-      while (cx != dcx) {
-        cx--;
-        path.push_back(cy * mesh_cx + cx);
-      }
-    } else {
-      // East-bound / North-South: standard XY routing
-      while (cx != dcx) {
-        cx++;
-        path.push_back(cy * mesh_cx + cx);
-      }
-      while (cy != dcy) {
-        cy += (dcy > cy) ? 1 : -1;
-        path.push_back(cy * mesh_cx + cx);
-      }
-    }
-    return path;
+  inline int clusterMeshWidth() {
+    return (GlobalParams::mesh_dim_x + 1) / 2;
   }
 
-  // DFS helper for finding optimal path under constraints
-  void dfsFindRoute(
-      int curr,
-      int target,
-      std::vector<int>& current_path,
-      std::vector<bool>& visited,
-      bool has_moved_east,
-      double current_cost,
-      std::vector<int>& best_path,
-      double& min_cost,
-      int mesh_cx,
-      int mesh_cy,
-      const std::map<int, double>& evaluations
-  ) {
-    if (curr == target) {
-      if (current_cost < min_cost) {
-        min_cost = current_cost;
-        best_path = current_path;
-      }
-      return;
-    }
-
-    // Branch and Bound pruning
-    if (current_cost >= min_cost) {
-      return;
-    }
-
-    // Path length constraint: max_route_len
-    if (current_path.size() >= (size_t)max_route_len) {
-      return;
-    }
-
-    int cx = curr % mesh_cx;
-    int cy = curr / mesh_cx;
-
-    struct Neighbor {
-      int id;
-      int x;
-      int y;
-    };
-
-    std::vector<Neighbor> neighbors;
-    if (cy > 0) neighbors.push_back({ (cy - 1) * mesh_cx + cx, cx, cy - 1 });
-    if (cx < mesh_cx - 1) neighbors.push_back({ cy * mesh_cx + (cx + 1), cx + 1, cy });
-    if (cy < mesh_cy - 1) neighbors.push_back({ (cy + 1) * mesh_cx + cx, cx, cy + 1 });
-    if (cx > 0) neighbors.push_back({ cy * mesh_cx + (cx - 1), cx - 1, cy });
-
-    for (const auto& next : neighbors) {
-      if (next.id >= (int)route_cache.size() || visited[next.id]) {
-        continue;
-      }
-
-      // 1. Odd-Even Turn Model constraints
-      if (current_path.size() >= 2) {
-        int prev = current_path[current_path.size() - 2];
-        int prev_x = prev % mesh_cx;
-        int prev_y = prev / mesh_cx;
-
-        // Even columns: E-N and E-S turns are prohibited
-        if (cx % 2 == 0) {
-          if (cx > prev_x && next.y != cy) {
-            continue; // Prohibited E-N/E-S turn
-          }
-        }
-        // Odd columns: N-W and S-W turns are prohibited
-        if (cx % 2 == 1) {
-          if (cy != prev_y && next.x < cx) {
-            continue; // Prohibited N-W/S-W turn
-          }
-        }
-      }
-
-      // 2. Convex detour to East restriction
-      bool next_has_moved_east = has_moved_east;
-      if (next.x > cx) {
-        next_has_moved_east = true;
-      } else if (next.x < cx) {
-        if (has_moved_east) {
-          continue; // Prohibited West step after East step
-        }
-      }
-
-      // Cost calculation: 1.0 (base hop) + penalty
-      double eval = 0.0;
-      auto it = evaluations.find(next.id);
-      if (it != evaluations.end()) {
-        eval = it->second;
-      }
-      double step_cost = 1.0 + (GlobalParams::eval_success - eval);
-
-      // Recurse
-      visited[next.id] = true;
-      current_path.push_back(next.id);
-
-      dfsFindRoute(next.id, target, current_path, visited, next_has_moved_east, current_cost + step_cost, best_path, min_cost, mesh_cx, mesh_cy, evaluations);
-
-      current_path.pop_back();
-      visited[next.id] = false;
-    }
+  inline void clusterCoord(int cluster_id, int &cx, int &cy) {
+    int mesh_cx = clusterMeshWidth();
+    cx = cluster_id % mesh_cx;
+    cy = cluster_id / mesh_cx;
   }
 
-public:
-  ClusterRoutingManager(int mesh_size) : N(mesh_size), is_routes_generated(false) {
-    num_clusters = (N * N) / 4;
-    max_route_len = (3 * N) / 2 - 3;
-    int mesh_cx = (N + 1) / 2;
-    int mesh_cy = (N + 1) / 2;
-    int actual_clusters = mesh_cx * mesh_cy;
-    // Resize to max of num_clusters and actual_clusters to prevent out-of-bounds
-    route_cache.resize(std::max(num_clusters, actual_clusters));
+  inline int clusterIdFromCoord(int cx, int cy) {
+    return cy * clusterMeshWidth() + cx;
   }
 
-  void recalculateAllRoutes(int src_node_id, const std::map<int, double>& evaluations) {
-    int src_cluster = getClusterId(src_node_id);
-    int mesh_cx = (N + 1) / 2;
-    int mesh_cy = (N + 1) / 2;
-    int num_destinations = route_cache.size();
+  // Legal next-cluster candidates from `current_cluster` towards
+  // `dest_cluster`, applying the Odd-Even Turn Model (parameterized by
+  // `src_cluster`, exactly like the classical per-node algorithm) and the
+  // convex-detour-to-east restriction (parameterized by `has_moved_east`).
+  // Returns at most 2 entries: one horizontal (E/W), one vertical (N/S) --
+  // whichever axes actually differ between current and destination cluster.
+  inline std::vector<Candidate> getLegalCandidates(int current_cluster, int dest_cluster,
+                                                    int src_cluster, bool has_moved_east) {
+    std::vector<Candidate> candidates;
 
-    for (int dst_cluster = 0; dst_cluster < num_destinations; ++dst_cluster) {
-      if (src_cluster == dst_cluster) {
-        route_cache[dst_cluster] = { src_cluster };
-        continue;
+    int ccx, ccy, dcx, dcy, scx, scy;
+    clusterCoord(current_cluster, ccx, ccy);
+    clusterCoord(dest_cluster, dcx, dcy);
+    clusterCoord(src_cluster, scx, scy);
+
+    int e0 = dcx - ccx;  // > 0: destination cluster is east
+    int e1 = ccy - dcy;  // > 0: destination cluster is north (smaller y == north)
+
+    bool want_horizontal = (e0 != 0);
+    bool want_vertical = (e1 != 0);
+    bool horizontal_legal = want_horizontal;
+    bool vertical_legal = want_vertical;
+
+    if (e0 > 0) {
+      if (want_vertical) {
+        // Odd-Even: the N/S detour is only legal from an odd column, or
+        // while still in the source column (mirrors routeOddEven()).
+        vertical_legal = (ccx % 2 == 1) || (ccx == scx);
+        horizontal_legal = (dcx % 2 == 1) || (e0 != 1);
       }
-
-      std::vector<int> best_path;
-      double min_cost = 1e9;
-
-      std::vector<int> current_path;
-      current_path.push_back(src_cluster);
-
-      std::vector<bool> visited(num_destinations, false);
-      visited[src_cluster] = true;
-
-      dfsFindRoute(src_cluster, dst_cluster, current_path, visited, false, 0.0, best_path, min_cost, mesh_cx, mesh_cy, evaluations);
-
-      if (!best_path.empty()) {
-        route_cache[dst_cluster] = best_path;
-        if (GlobalParams::verbose_mode != VERBOSE_OFF) {
-          std::cout << "PE " << src_node_id << " @ " << sc_time_stamp().to_double() / GlobalParams::clock_period_ps
-                    << ": Recalculated optimal route to cluster " << dst_cluster << ": ";
-          for (size_t i = 0; i < best_path.size(); ++i) {
-            std::cout << best_path[i] << (i + 1 < best_path.size() ? "->" : "");
-          }
-          std::cout << " (cost: " << min_cost << ")" << std::endl;
-        }
-      } else {
-        route_cache[dst_cluster] = generateWestLastRoute(src_cluster, dst_cluster);
+      // else: pure east, no turn constraint (horizontal_legal stays true).
+    } else if (e0 < 0) {
+      // WEST is always Odd-Even legal by itself...
+      if (want_vertical) {
+        vertical_legal = (ccx % 2 == 0);
       }
+      // ...but the convex-detour-to-east restriction forbids it once the
+      // packet has ever moved east.
+      if (has_moved_east) horizontal_legal = false;
     }
-    is_routes_generated = true;
+    // e0 == 0: pure vertical move, no turn constraint.
+
+    if (want_horizontal && horizontal_legal) {
+      ClusterDir dir = (e0 > 0) ? CLUSTER_DIR_EAST : CLUSTER_DIR_WEST;
+      int next_cx = ccx + (e0 > 0 ? 1 : -1);
+      candidates.push_back(Candidate{dir, clusterIdFromCoord(next_cx, ccy)});
+    }
+    if (want_vertical && vertical_legal) {
+      ClusterDir dir = (e1 > 0) ? CLUSTER_DIR_NORTH : CLUSTER_DIR_SOUTH;
+      int next_cy = ccy + (e1 > 0 ? -1 : 1);
+      candidates.push_back(Candidate{dir, clusterIdFromCoord(ccx, next_cy)});
+    }
+
+    return candidates;
   }
 
-  std::vector<int> getRoute(int src_node_id, int dst_node_id) {
-    int dst_cluster = getClusterId(dst_node_id);
-    std::vector<int> cluster_path;
+  // The unique node, within `current_cluster`'s 2x2 group, that has direct
+  // (single-hop) links to both external clusters needed to compare a
+  // diagonal destination -- i.e. the corner matching the destination's
+  // quadrant (NE quadrant -> NE corner, and so on). Only meaningful when a
+  // diagonal comparison is actually needed (2 legal candidates); callers
+  // with a single candidate should keep using getBestExitNode() instead.
+  inline int getDecisionCornerNode(int current_cluster, int dest_cluster) {
+    int ccx, ccy, dcx, dcy;
+    clusterCoord(current_cluster, ccx, ccy);
+    clusterCoord(dest_cluster, dcx, dcy);
 
-    if (!is_routes_generated) {
-      int src_cluster = getClusterId(src_node_id);
-      cluster_path = generateWestLastRoute(src_cluster, dst_cluster);
-    } else {
-      if (dst_cluster >= 0 && dst_cluster < (int)route_cache.size()) {
-        cluster_path = route_cache[dst_cluster];
-      }
-      if (cluster_path.empty()) {
-        int src_cluster = getClusterId(src_node_id);
-        cluster_path = generateWestLastRoute(src_cluster, dst_cluster);
-      }
-    }
+    int e0 = dcx - ccx;
+    int e1 = ccy - dcy;
 
-    std::vector<int> route;
-    route.push_back(0); // current_idx
-    route.insert(route.end(), cluster_path.begin(), cluster_path.end());
-
-    if (route.size() > (size_t)(1 + max_route_len)) {
-      route.resize(1 + max_route_len);
-    }
-
-    return route;
+    Coord corner;
+    corner.x = 2 * ccx + (e0 > 0 ? 1 : 0);
+    corner.y = 2 * ccy + (e1 > 0 ? 0 : 1);
+    return coord2Id(corner);
   }
-};
+
+  // step_cost(c) = 1.0 + (eval_success - evaluation(c)) + beta * delay(c)
+  // Always strictly positive as long as delay(c) >= 0 (see CLAUDE.md's
+  // "Step Cost Positivity" caution): the worst-case evaluation is bounded
+  // below zero, never above eval_success, so the eval term alone is >= 0.
+  inline double computeStepCost(double evaluation, double delay) {
+    return 1.0 + (GlobalParams::eval_success - evaluation) + GlobalParams::beta * delay;
+  }
+
+  // Picks which legal candidate to actually take:
+  //  - the destination cluster itself is always force-selected (3.3), to
+  //    guarantee progress rather than orbiting a degraded destination;
+  //  - a single candidate is taken as-is (no comparison needed);
+  //  - between two candidates, an East candidate is only preferred when it
+  //    is *clearly* cheaper (by more than epsilon) than the alternative --
+  //    otherwise the non-East candidate wins, including on ties (3.2).
+  inline size_t selectNextCluster(const std::vector<Candidate> &candidates, const std::vector<double> &costs,
+                                   int dest_cluster) {
+    for (size_t i = 0; i < candidates.size(); i++) {
+      if (candidates[i].cluster_id == dest_cluster) return i;
+    }
+
+    if (candidates.size() <= 1) return 0;
+
+    // candidates.size() == 2: at most one of them is CLUSTER_DIR_EAST.
+    size_t east_idx = candidates.size();
+    for (size_t i = 0; i < candidates.size(); i++) {
+      if (candidates[i].dir == CLUSTER_DIR_EAST) east_idx = i;
+    }
+
+    if (east_idx == candidates.size()) {
+      // Neither candidate is East (e.g. West vs North/South): plain min-cost.
+      return (costs[0] <= costs[1]) ? 0 : 1;
+    }
+
+    size_t other_idx = 1 - east_idx;
+    if (costs[east_idx] < costs[other_idx] - GlobalParams::epsilon) {
+      return east_idx;  // East is clearly better.
+    }
+    return other_idx;  // Tie or non-East is (at least not clearly worse).
+  }
+
+}  // namespace ClusterRouting
 
 #endif

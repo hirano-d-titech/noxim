@@ -56,6 +56,8 @@ double GlobalParams::eval_corrected = -2.0;
 double GlobalParams::eval_fatal = -10.0;
 bool GlobalParams::eval_cluster = false;
 int GlobalParams::recovery_interval = 100;
+double GlobalParams::beta = 0.1;
+double GlobalParams::epsilon = 0.5;
 
 // need-to-delete in non-wireless-noxim
 int GlobalParams::channel_selection;

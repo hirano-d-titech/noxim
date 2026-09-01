@@ -163,7 +163,16 @@ SC_MODULE(Router)
     ClusterEncContext cluster_enc_ctx[DIRECTIONS + 1][MAX_VIRTUAL_CHANNELS];
     bool isClusterBoundaryCrossing(int output_port) const;
     void processClusterEncoding();
-    void decideClusterEncodingType(int output_port, int vc_id, ClusterEncodingType &type, int &redundancy_bits, int effective_bits, int src_id);
+    // Evaluation source is this router's own local PE (§4.1), not the
+    // packet's source PE -- no src_id parameter needed.
+    void decideClusterEncodingType(int output_port, int vc_id, ClusterEncodingType &type, int &redundancy_bits, int effective_bits);
+    // Staged decoding (§3.6): called on HEAD-flit reception when the flit's
+    // pending cluster segment differs from this router's own cluster, i.e.
+    // right after crossing into a new cluster. Decodes the encoding that
+    // protected the cluster just left, learns locally from the result into
+    // this router's local PE's cluster_evaluations, and marks meta.path_ok
+    // false on a fatal (uncorrectable) outcome.
+    void decodeAndLearnClusterEncoding(ClusterEncodingMeta &meta);
 
   private:
 

@@ -66,3 +66,11 @@ eval_fatal: -10.0
 
 # Interval in cycles for negative evaluation recovery (adds +1.0 to negative evaluations)
 recovery_interval: 100
+
+# LOCAL ADAPTIVE CLUSTER ROUTING PARAMETERS
+# Weight of the delay term in the per-hop cluster routing cost function:
+#   step_cost(c) = 1.0 + (eval_success - evaluation(c)) + beta * delay(c)
+beta: 0.1
+# East-direction tie-break threshold: an East candidate is only preferred
+# over a non-East one when it is more than epsilon cheaper.
+epsilon: 0.5

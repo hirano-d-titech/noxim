@@ -75,16 +75,33 @@ void Router::rxProcess()
         if (loss_rate > 0.0 && (rand() / (RAND_MAX + 1.0)) < loss_rate) {
           LOG << " Flit " << received_flit << " dropped at Router " << local_id << " due to degradation wear (loss rate: " << loss_rate << ")" << endl;
         } else {
-          double ber = degradation_monitor.getCurrentBER();
-          if (ber > 0.0) {
-            int flipped_bits = 0;
-            for (int b = 0; b < GlobalParams::flit_size; b++) {
-              if ((rand() / (RAND_MAX + 1.0)) < ber) {
-                flipped_bits++;
-              }
+          // Staged decoding (§3.6): only the HEAD flit's cluster_enc_meta
+          // ever survives to matter (BODY/TAIL copies get overwritten with
+          // the HEAD-derived snapshot at every future boundary crossing --
+          // see the ctx.updated_enc_meta assignments in txProcess -- and at
+          // the final cluster nobody reads their copy either), so gate this
+          // to HEAD to avoid learning the same crossing 2-3x per packet.
+          if (received_flit.flit_type == FLIT_TYPE_HEAD) {
+            ClusterEncodingMeta &enc_meta = received_flit.cluster_enc_meta;
+            if (enc_meta.pending_cluster_id != my_cluster_id) {
+              // Just crossed into this cluster: decode the encoding that
+              // protected the cluster just left, learn from it locally,
+              // then start a fresh segment for this cluster.
+              decodeAndLearnClusterEncoding(enc_meta);
+              enc_meta.pending_type = CLUSTER_ENC_NONE;
+              enc_meta.pending_cluster_id = my_cluster_id;
+              enc_meta.pending_errors = 0;
             }
-            if (flipped_bits > 0) {
-              received_flit.virtual_errors[my_cluster_id] += flipped_bits;
+
+            double ber = degradation_monitor.getCurrentBER();
+            if (ber > 0.0) {
+              int flipped_bits = 0;
+              for (int b = 0; b < GlobalParams::flit_size; b++) {
+                if ((rand() / (RAND_MAX + 1.0)) < ber) {
+                  flipped_bits++;
+                }
+              }
+              enc_meta.pending_errors += flipped_bits;
             }
           }
 
@@ -286,7 +303,7 @@ void Router::txProcess()
               {
                 ClusterEncodingType decided_type;
                 int decided_redundancy;
-                decideClusterEncodingType(o, vc, decided_type, decided_redundancy, flit.cluster_enc_meta.effective_bits, flit.src_id);
+                decideClusterEncodingType(o, vc, decided_type, decided_redundancy, flit.cluster_enc_meta.effective_bits);
 
                 if (decided_type == CLUSTER_ENC_NONE)
                 {
@@ -310,12 +327,11 @@ void Router::txProcess()
                     flit.sequence_length = ctx.original_sequence_length + 1;
                   }
                   flit.cluster_enc_meta.effective_bits = ctx.effective_bits_after;
-                   if (flit.cluster_enc_meta.encoding_history_index < MAX_CLUSTER_HOPS)
-                   {
-                     flit.cluster_enc_meta.encoding_history[flit.cluster_enc_meta.encoding_history_index] = ctx.encoding_type;
-                     flit.cluster_enc_meta.cluster_history[flit.cluster_enc_meta.encoding_history_index] = my_cluster_id;
-                     flit.cluster_enc_meta.encoding_history_index++;
-                   }
+                  // Finalize the encoding that protected the cluster just
+                  // traversed (my_cluster_id); this is decoded and learned
+                  // from at the entry router of the next cluster (§3.6).
+                  flit.cluster_enc_meta.pending_type = ctx.encoding_type;
+                  flit.cluster_enc_meta.pending_cluster_id = my_cluster_id;
 
                   ctx.updated_enc_meta = flit.cluster_enc_meta;
 
@@ -458,16 +474,18 @@ bool Router::isClusterBoundaryCrossing(int output_port) const
   return getClusterId(local_id) != getClusterId(neighbor_id);
 }
 
-void Router::decideClusterEncodingType(int output_port, int vc_id, ClusterEncodingType &type, int &redundancy_bits, int effective_bits, int src_id)
+void Router::decideClusterEncodingType(int output_port, int vc_id, ClusterEncodingType &type, int &redundancy_bits, int effective_bits)
 {
   int neighbor_id = getNeighborId(local_id, output_port);
   int target_cluster_id = getClusterId(neighbor_id);
 
+  // §3.8/§4.1: evaluation source is this router's own local PE, not the
+  // packet's (potentially arbitrarily distant) source PE.
   double trust_score = 0.0;
-  Tile *src_tile = n->searchNode(src_id);
-  if (src_tile && src_tile->pe) {
-    auto it = src_tile->pe->cluster_evaluations.find(target_cluster_id);
-    if (it != src_tile->pe->cluster_evaluations.end()) {
+  Tile *local_tile = n->searchNode(local_id);
+  if (local_tile && local_tile->pe) {
+    auto it = local_tile->pe->cluster_evaluations.find(target_cluster_id);
+    if (it != local_tile->pe->cluster_evaluations.end()) {
       trust_score = it->second;
     }
   }
@@ -484,6 +502,45 @@ void Router::decideClusterEncodingType(int output_port, int vc_id, ClusterEncodi
     type = CLUSTER_ENC_PARITY;
     redundancy_bits = 1; // 1-bit parity
   }
+}
+
+void Router::decodeAndLearnClusterEncoding(ClusterEncodingMeta &meta)
+{
+  if (meta.pending_type == CLUSTER_ENC_NONE)
+    return; // Nothing was ever encoded for this segment (e.g. source cluster).
+
+  Tile *local_tile = n->searchNode(local_id);
+  if (!local_tile || !local_tile->pe) return;
+
+  int cluster_id = meta.pending_cluster_id;
+  int errors = meta.pending_errors;
+  double delta = 0.0;
+  bool fatal = false;
+
+  if (meta.pending_type == CLUSTER_ENC_PARITY) {
+    if (errors == 0) {
+      delta = GlobalParams::eval_success;
+    } else {
+      delta = GlobalParams::eval_fatal;
+      fatal = true;
+    }
+  } else if (meta.pending_type == CLUSTER_ENC_SECDED) {
+    if (errors == 0) {
+      delta = GlobalParams::eval_success;
+    } else if (errors == 1) {
+      delta = GlobalParams::eval_corrected;
+    } else {
+      delta = GlobalParams::eval_fatal;
+      fatal = true;
+    }
+  }
+
+  local_tile->pe->cluster_evaluations[cluster_id] += delta;
+  if (fatal) meta.path_ok = false;
+
+  LOG << " [ClusterEnc] Decoded cluster " << cluster_id << " (type=" << meta.pending_type
+      << ", errors=" << errors << "): evaluation " << (delta >= 0 ? "+" : "") << delta
+      << (fatal ? " (FATAL)" : "") << endl;
 }
 
 // ============================================================

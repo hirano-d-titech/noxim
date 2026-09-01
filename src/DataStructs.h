@@ -15,11 +15,15 @@
 #include "GlobalParams.h"
 
 // RouteMetadata -- metadata to perform custom routing
+// Local adaptive cluster routing decides the next cluster on the fly at each
+// boundary crossing; the only state that must survive along the path is the
+// convex-detour-to-east flag (see decideClusterEncodingType-adjacent routing
+// logic in Routing_CLUSTER.cpp).
 struct RouteMetadata {
-  std::vector<int> custom_data;
+  bool has_moved_east = false;
 
   inline bool operator ==(const RouteMetadata & other) const {
-    return (custom_data == other.custom_data);
+    return (has_moved_east == other.has_moved_east);
   }
 };
 
@@ -37,9 +41,6 @@ class Coord {
 enum FlitType {
   FLIT_TYPE_HEAD, FLIT_TYPE_BODY, FLIT_TYPE_TAIL
 };
-// Cluster-level redundancy encoding constants
-#define MAX_CLUSTER_HOPS 8
-
 // Cluster-level encoding type
 enum ClusterEncodingType {
   CLUSTER_ENC_NONE = 0,
@@ -47,28 +48,27 @@ enum ClusterEncodingType {
   CLUSTER_ENC_SECDED = 2
 };
 
-// Cluster-level encoding metadata per flit
+// Cluster-level encoding metadata per flit.
+// Decoding is now staged at every boundary crossing (the node entering a
+// cluster decodes the encoding that protected the cluster just left), so only
+// the single most recent (pending) encoding needs to travel with the flit --
+// there is no need to carry a full per-hop history to the destination.
 struct ClusterEncodingMeta {
-  int effective_bits;                                     // Current effective bit length
-  ClusterEncodingType encoding_history[MAX_CLUSTER_HOPS]; // Applied encoding type history
-  int cluster_history[MAX_CLUSTER_HOPS];                  // Passed cluster ID history
-  int encoding_history_index;                             // Current history index counter
+  int effective_bits;                 // Current effective bit length
+  ClusterEncodingType pending_type;   // Encoding type chosen at the last boundary crossing
+  int pending_cluster_id;             // Cluster currently protected by pending_type
+  int pending_errors;                 // Virtual errors accumulated so far within pending_cluster_id
+  bool path_ok;                       // False once any boundary crossing has decoded a fatal error
 
-  ClusterEncodingMeta() : effective_bits(0), encoding_history_index(0) {
-    for (int i = 0; i < MAX_CLUSTER_HOPS; i++) {
-      encoding_history[i] = CLUSTER_ENC_NONE;
-      cluster_history[i] = -1;
-    }
-  }
+  ClusterEncodingMeta() : effective_bits(0), pending_type(CLUSTER_ENC_NONE),
+    pending_cluster_id(NOT_VALID), pending_errors(0), path_ok(true) {}
 
   inline bool operator ==(const ClusterEncodingMeta & other) const {
-    if (effective_bits != other.effective_bits) return false;
-    if (encoding_history_index != other.encoding_history_index) return false;
-    for (int i = 0; i < encoding_history_index; i++) {
-      if (encoding_history[i] != other.encoding_history[i]) return false;
-      if (cluster_history[i] != other.cluster_history[i]) return false;
-    }
-    return true;
+    return (effective_bits == other.effective_bits &&
+            pending_type == other.pending_type &&
+            pending_cluster_id == other.pending_cluster_id &&
+            pending_errors == other.pending_errors &&
+            path_ok == other.path_ok);
   }
 };
 
@@ -196,8 +196,6 @@ struct TBufferFullStatus {
   bool mask[MAX_VIRTUAL_CHANNELS];
 };
 
-#include <map>
-
 // Flit -- Flit definition
 struct Flit {
   int src_id;
@@ -214,7 +212,6 @@ struct Flit {
   int packet_id; // 対応するパケットの一意ID
   RouteMetadata route_metadata;
   ClusterEncodingMeta cluster_enc_meta; // Cluster-level encoding metadata
-  std::map<int, int> virtual_errors; // Passed cluster ID -> accumulated error bits count
 
   Flit() : packet_id(NOT_VALID) {}
 
@@ -245,8 +242,7 @@ struct Flit {
       && flit.use_low_voltage_path == use_low_voltage_path
       && flit.packet_id == packet_id
       && flit.route_metadata == route_metadata
-      && flit.cluster_enc_meta == cluster_enc_meta
-      && flit.virtual_errors == virtual_errors);
+      && flit.cluster_enc_meta == cluster_enc_meta);
   }
 };
 

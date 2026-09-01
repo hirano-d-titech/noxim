@@ -76,6 +76,8 @@ void loadConfiguration() {
   GlobalParams::eval_fatal = readParam<double>(config, "eval_fatal", -10.0);
   GlobalParams::eval_cluster = readParam<bool>(config, "eval_cluster", false);
   GlobalParams::recovery_interval = readParam<int>(config, "recovery_interval", 250);
+  GlobalParams::beta = readParam<double>(config, "beta", 0.1);
+  GlobalParams::epsilon = readParam<double>(config, "epsilon", 0.5);
 }
 
 void showHelp(char selfname[])
@@ -127,6 +129,8 @@ void showHelp(char selfname[])
       << "\t-show_buf_stats\t\tShow buffers statistics" << endl
       << "\t-evalcluster\t\tPrint cluster evaluation boards at the end of simulation" << endl
       << "\t-recoveryinterval N\tSet evaluation recovery interval [cycles]" << endl
+      << "\t-beta N\t\t\tSet the delay-term weight in the local cluster routing cost function" << endl
+      << "\t-epsilon N\t\tSet the east-direction tie-break threshold in local cluster routing" << endl
       << "\t-volume N\t\tStop the simulation when either the maximum number of cycles has been reached or N flits have" << endl
       << "\t\t\t\tbeen delivered" << endl
       << "\t-asciimonitor\t\tShow status of the network while running (experimental)" << endl
@@ -164,7 +168,9 @@ void showConfig()
       << "- cluster_encoding_type = " << GlobalParams::cluster_encoding_type << endl
       << "- cluster_redundancy_bits = " << GlobalParams::cluster_redundancy_bits << endl
       << "- eval_cluster = " << GlobalParams::eval_cluster << endl
-      << "- recovery_interval = " << GlobalParams::recovery_interval << endl;
+      << "- recovery_interval = " << GlobalParams::recovery_interval << endl
+      << "- beta = " << GlobalParams::beta << endl
+      << "- epsilon = " << GlobalParams::epsilon << endl;
 }
 
 void checkConfiguration()
@@ -413,6 +419,10 @@ void parseCmdLine(int arg_num, char *arg_vet[])
         GlobalParams::eval_cluster = true;
       else if (!strcmp(arg_vet[i], "-recoveryinterval"))
         GlobalParams::recovery_interval = atoi(arg_vet[++i]);
+      else if (!strcmp(arg_vet[i], "-beta"))
+        GlobalParams::beta = atof(arg_vet[++i]);
+      else if (!strcmp(arg_vet[i], "-epsilon"))
+        GlobalParams::epsilon = atof(arg_vet[++i]);
       else if (!strcmp(arg_vet[i], "-show_buf_stats"))
         GlobalParams::show_buffer_stats = true;
       else if (!strcmp(arg_vet[i], "-volume"))

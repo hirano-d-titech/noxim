@@ -120,6 +120,8 @@ struct GlobalParams {
   static double eval_fatal;                // Evaluation value for fatal decode failure (e.g. -10.0)
   static bool eval_cluster;                // Print cluster evaluation boards at the end of simulation
   static int recovery_interval;            // Interval in cycles for negative evaluation recovery
+  static double beta;                      // Weight of the delay term in the local routing cost function
+  static double epsilon;                   // East-direction tie-break threshold in local routing
   // out of yaml configuration
   static bool ascii_monitor;
   static int channel_selection;
